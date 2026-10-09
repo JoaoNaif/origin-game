@@ -27,7 +27,7 @@ O prazer central é **quebrar a cabeça**: descobrir formações, personagens e 
 | D10 | **Ordem de turno:** fila por velocidade, cada personagem age no seu turno (resolve A1) | DECIDIDO |
 | D11 | **Grade 3x3** por jogador; o jogador escolhe **4 personagens** e monta a formação livremente nas 9 células (resolve A2, parcial) | DECIDIDO |
 | D12 | **A posição importa:** skills podem ter efeito por área na grade (ex.: afetar a linha ou a coluna do personagem; quem está fora não recebe). **É só um exemplo**: os tipos de área reais serão definidos na conversa de skills. O princípio fechado é que a formação é pensada junto com as skills | DECIDIDO (princípio) |
-| D13 | **Desgaste = risco x retorno** (lógica de mercado financeiro): quanto mais forte a skill, maior o risco/custo; skills básicas têm risco baixo e ganho baixo. Skills roubadas e muito fortes têm risco alto (resolve A3, conceito; detalhes na conversa de skills) | DECIDIDO |
+| D13 | **Desgaste = risco x retorno** (lógica de mercado financeiro): quanto mais forte a skill, maior o risco/custo; skills básicas têm risco baixo e ganho baixo. Skills muito fortes têm risco alto (resolve A3, conceito; detalhes na conversa de skills) | DECIDIDO |
 | D14 | **Diversidade por design:** o custo escalonado evita que todo personagem tenha os mesmos ataques; o valor de cada um depende da squad que o acompanha | DECIDIDO |
 | D15 | **Vitória:** derrotar todos os inimigos (por ora; objetivos alternativos ficam para depois) (resolve A4) | DECIDIDO |
 | D16 | **Sem vantagem/desvantagem entre linhagens.** Cada linhagem tem um **padrão de custo** (ex.: Fundamental = HP, Biológica = velocidade), com exceções permitidas | DECIDIDO |
@@ -35,13 +35,34 @@ O prazer central é **quebrar a cabeça**: descobrir formações, personagens e 
 | D19 | **Troca de posição durante o combate** é permitida e **custa a ação do turno** do personagem. Variações (trocar com aliado, só adjacente, skills que reposicionam) ficam para a conversa de skills | DECIDIDO |
 | D20 | **Cada jogador tem a sua própria grade 3x3**, uma de frente para a outra | DECIDIDO |
 | D21 | **Distância e bloqueio importam:** skill corpo a corpo não atinge quem está atrás de outro personagem vivo ("não passa por cima"); skills à distância e de linha/coluna podem alcançar. Personagem derrotado deixa de bloquear | DECIDIDO (princípio; regras exatas na conversa de skills) |
-| D22 | **Melee atinge apenas a célula-alvo selecionada, e só se ela estiver exposta** (primeira célula ocupada da coluna, sem passar por cima de ninguém). Exceções ficam por conta de skills específicas | DECIDIDO |
+| D22 | **Melee atinge apenas a célula-alvo selecionada, e só se ela estiver exposta** (primeira célula ocupada da **linha**, sem passar por cima de ninguém; a linha vai da frente para o fundo, ver D35). Exceções ficam por conta de skills específicas | DECIDIDO |
 | D23 | **Equilíbrio melee x ranged pelo risco x retorno:** corpo a corpo tem mais retorno por ter acesso limitado; à distância tem menos retorno e/ou mais risco. Ranged nunca pode ser estritamente superior | DECIDIDO (princípio) |
 | D24 | **Sistema de skills:** o que já está enraizado está registrado em [`skills_brief.md`](./skills_brief.md), que é o ponto de partida da conversa de skills | DECIDIDO |
-| D25 | **6 variantes:** Elemental, Psíquica, Biológica, Material, Vetorial, Fundamental. Personagem sem variante (raro) usa skills none (mais fracas, custo baixo, sem cooldown) | DECIDIDO |
+| D25 | **6 linhagens:** Elemental, Psíquica, Biológica, Material, Vetorial, Fundamental. Personagem sem linhagem (raro) usa skills none (mais fracas, custo baixo; as mais fortes têm cooldown curto) | DECIDIDO |
 | D26 | **Skill tem custo e cooldown** (cooldown em turnos do próprio personagem). **Cura é efeito à parte**; buff e debuff seguem o mesmo padrão | DECIDIDO |
-| D27 | **Traços** do personagem influenciam status e skills (por tipo e variante). Imutáveis, limite ~5 (a definir), adquiridos ao longo do tempo | DECIDIDO |
+| D27 | **Traços** do personagem influenciam status e skills (por tipo e variante). Imutáveis, limite 5 (ver D39), adquiridos ao longo do tempo | DECIDIDO |
 | D28 | **Campo de batalha:** gerado pela seed, visível no início, bônus de status a todos que cumprem os traços exigidos. Skill pode trocá-lo por N turnos, depois volta ao inicial | DECIDIDO |
+| D29 | **Termos:** linhagem = categoria do poder (Elemental...); variante = o poder em si (fogo, tempo...) e também quem tem poder | DECIDIDO |
+| D30 | **Fila em timeline** (contador por velocidade). Empate: vai primeiro quem tem a maior média de stats; se ainda empatar, sorteio via seed | DECIDIDO |
+| D31 | **Duração de efeitos** conta em turnos do próprio personagem afetado. **Sem ressurreição** | DECIDIDO |
+| D32 | **Desgaste e debuffs valem só dentro da batalha.** Cura não passa do HP máximo; escudo é efeito separado | DECIDIDO |
+| D33 | **Seed só no servidor**, nunca enviada ao cliente | DECIDIDO |
+| D34 | **Alcance e área são eixos separados.** Área: individual, linha, coluna, área (= grade inteira). Nenhum custo deve mexer muito na velocidade (a Biológica deixa de custar velocidade, ajusta D16) | DECIDIDO |
+| D35 | **Orientação da grade:** a **linha** vai da frente para o fundo; as **colunas** são as posições de profundidade (1ª coluna = frente) | DECIDIDO |
+| D36 | **Queda de dano na linha:** 100% / 60% / 30%, contada por personagem atingido (não por célula). Skills **perfurantes** não têm queda e custam mais. Skills de **área** (grade inteira) atingem todos sem queda, com custo maior | DECIDIDO |
+| D37 | **Empilhamento:** a mesma skill renova a duração (não soma); fontes diferentes somam até um teto; buff e debuff no mesmo atributo se somam direto | DECIDIDO |
+| D38 | **Sem ação possível** (skills em cooldown ou caras demais): o personagem pode **Defender** (recebe menos dano até o próximo turno). Não existe ataque básico grátis | DECIDIDO |
+| D39 | **Traços:** limite de 5 (ajustável). Ao bater uma meta do histórico, até 3 opções (sorteadas se houver mais); escolhe 1 ou descarta. Também por eventos | DECIDIDO |
+| D40 | **Campos de batalha** são criados pelo admin (dados); cada um define traços exigidos e bônus. A duração do campo trocado é da skill | DECIDIDO |
+| D41 | Personagem **só usa skills das suas próprias variantes** (2 variantes é possível; 3 é raríssimo). Skills liberadas por nível | DECIDIDO |
+| D42 | **Reposicionamento:** mover só para adjacente (custa o turno); trocar com aliado faz os dois perderem a ação; skills de empurrar/puxar/trocar existem; não pode empurrar para célula ocupada nem para fora da grade | DECIDIDO |
+| D43 | **4 skills por personagem** em batalha, montadas pelo jogador fora da partida a partir das skills liberadas; travadas durante a batalha | DECIDIDO |
+| D44 | **Traços:** com 5 ocupados não há oferta; oferta descartada não volta. **Empurrão barrado:** o movimento falha, o resto da skill acontece | DECIDIDO |
+| D45 | **Personagem:** detalhes em [`character_brief.md`](./character_brief.md). **7 stats:** HP, Ataque, Defesa, Velocidade, Precisão, Esquiva, Vontade. Sem mana | DECIDIDO |
+| D46 | **Nível 0 a 100:** stats crescem pelo perfil do personagem; skills liberadas em marcos. **Ranqueado nivela todos**; casual e PvE usam o nível real | DECIDIDO |
+| D47 | **Traços:** bônus moderado, podem ter lado negativo, divididos em categorias (combate, postura, origem). Sem traço de nascença | DECIDIDO |
+| D48 | **Distribuição de stats:** base fixa pelo perfil + pontos livres só nas **3 aptidões** do personagem, com teto por stat. Pontos crescem com o nível; redistribuição grátis fora da batalha | DECIDIDO |
+| D49 | **Despertar:** só alguns personagens têm; exige nível alto + evento único (títulos aumentam a chance); a skill despertada é mais forte e com mais Desgaste | DECIDIDO |
 | D18 | **Estrutura do código** segue o padrão do ZapWave (clean architecture, NestJS). Documento vivo, vai mudar (ver `CLAUDE.md`) | DECIDIDO |
 
 ## 3. Princípio da progressão por história
@@ -72,7 +93,8 @@ Tipos de vantagem off-combate a explorar:
 |---|---|---|
 | A2b | **Regras finas de alcance e bloqueio:** lista exata de tipos de alcance, skills que reposicionam (empurrar, puxar, trocar), variações da troca de posição, risco de "turtling" (formação que ninguém consegue romper) | Resolver na conversa de skills (ver `skills_brief.md`) |
 | A3b | **Mecânica do Desgaste:** como o risco se manifesta (custo em HP, velocidade, chance de falha, dano acumulado entre combates?) e como o "retorno" é medido | Conceito fechado (D13). **Conversa exclusiva sobre skills**, ponto central do jogo |
-| A3c | **Tabela de padrões de custo por variante** (Elemental, Material, Vetorial, Biológica, Psíquica, Fundamental) e quais exceções são permitidas | Derivado de D16 |
+| A3c | **Tabela de padrões de custo por linhagem** (Elemental, Material, Vetorial, Biológica, Psíquica, Fundamental) e quais exceções são permitidas | Proposta em `skills_brief.md` 9.4; falta o custo da Biológica |
+| A8 | **Fórmula de dano** e valores dos stats | Stats definidos (D45); falta a fórmula. Bloqueia valores de custo, dano e buffs |
 | A5 | **Estrutura do PvP:** ao vivo, relógio de turno, ranqueado, regras fixas | |
 | A6 | **Modelo de progressão:** conta, personagens, skills, equipamento | |
 | A7 | **Conflitos do `world_build.md`** (seção 13) que afetam dados do jogo | Decidir só os que importam para o jogo |

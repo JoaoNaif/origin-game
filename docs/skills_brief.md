@@ -11,7 +11,7 @@
 
 ## 1. Princípios enraizados
 
-1. **[ENRAIZADO] Risco x retorno (lógica de mercado financeiro).** Quanto mais forte a skill, maior o risco/custo. Skills básicas: risco baixo, ganho baixo. Skills roubadas e muito fortes: risco alto. Não existe skill forte e barata.
+1. **[ENRAIZADO] Risco x retorno (lógica de mercado financeiro).** Quanto mais forte a skill, maior o risco/custo. Skills básicas: risco baixo, ganho baixo. Skills muito fortes: risco alto. Não existe skill forte e barata.
 2. **[ENRAIZADO] O custo é o Desgaste.** É a tradução da regra de ouro do mundo ("poder tem custo, nunca some, só é redistribuído"). Custos preferidos do mundo: degeneração de articulações, perda de tato, esgotamento neural, envelhecimento, sobrecarga metabólica.
 3. **[ENRAIZADO] Diversidade por design.** O custo escalonado existe para que nem todo personagem tenha os mesmos ataques. O valor de um personagem depende da **squad que o acompanha**, não só dele.
 4. **[ENRAIZADO] Formação e skill são pensadas juntas.** A posição na grade muda o que a skill faz e quem ela alcança.
@@ -29,11 +29,11 @@
 - **Ordem de turno:** fila por velocidade; cada personagem age no seu turno.
 - **Vitória:** derrotar todos os inimigos.
 - **Bloqueio:** um personagem vivo bloqueia quem está atrás dele. Derrotado, deixa de bloquear.
-- **Corpo a corpo** (D22): atinge só a **célula-alvo selecionada**, e apenas se ela estiver **exposta** (primeira célula ocupada da coluna). Não passa por cima de ninguém. Exceções só por skills específicas.
+- **Corpo a corpo** (D22): atinge só a **célula-alvo selecionada**, e apenas se ela estiver **exposta** (primeira célula ocupada da **linha**; a linha vai da frente para o fundo, ver 9.3). Não passa por cima de ninguém. Exceções só por skills específicas.
 - **Troca de posição** (D19): permitida em combate e **custa a ação do turno**.
 
 ```
-a - a - a      (a = célula; 3 colunas x 3 linhas por jogador)
+a - a - a      (a = célula; 3 linhas x 3 colunas por jogador; linha = frente → fundo, 1ª coluna = frente)
 a - a - a
 a - a - a
 ```
@@ -70,7 +70,7 @@ Os campos abaixo são **o mínimo que já sabemos que existe**. O formato final 
   - **Biológica** → custo em **velocidade**.
   - As demais (Elemental, Material, Vetorial, Psíquica) ainda sem padrão: **[ABERTO]** (A3c).
 - Como o risco se manifesta é **[ABERTO]** (A3b). Hipóteses a discutir: custo imediato (HP/velocidade/etc.), chance de falha, desgaste acumulado dentro do combate, desgaste que persiste entre combates, efeito colateral aleatório (via seed).
-- Skills **roubadas** e muito fortes: custo alto (princípio 1).
+- Skills muito fortes: custo alto (princípio 1).
 
 ### 3.4 Efeitos [ABERTO]
 
@@ -140,20 +140,21 @@ Perguntas: duração dos efeitos (em turnos), se acumulam, se há limite, quem v
 4. Lista de tipos de **alcance e área**; regras de bloqueio e exceções.
 5. Catálogo de **status, buffs e debuffs** (duração, empilhamento).
 6. **Reposicionamento** e troca de posição.
-7. Skills **roubadas**/raras e sua ligação com o lore.
+7. Skills raras e sua ligação com o lore.
 8. Um conjunto mínimo de skills de teste (para o protótipo, poucos personagens).
 
 ---
 
 ## 8. Decisões da conversa de skills (sessão 1)
 
-> Termo: **variante** = o que o brief chamava de "linhagem de manifestação". Daqui em diante usar **variante**.
+> Termos (corrigido na sessão 2, ver 9.1): **linhagem** = categoria do poder (Elemental, Fundamental...).
+> **Variante** = o poder em si (fogo, tempo...); quem tem poder também é chamado de variante no mundo.
 
-### 8.1 Variantes [ENRAIZADO]
+### 8.1 Linhagens [ENRAIZADO]
 
 São **6** (a Elemental foi adicionada). Cada uma define o tema e o padrão de custo dos poderes do personagem.
 
-| Variante | Tema | Exemplos |
+| Linhagem | Tema | Exemplos de variante |
 |---|---|---|
 | Elemental | Fenômenos elementais | fogo, gelo |
 | Psíquica | Mente, própria ou alheia | telecinese, ilusão |
@@ -162,25 +163,26 @@ São **6** (a Elemental foi adicionada). Cada uma define o tema e o padrão de c
 | Vetorial | Direção e força | redirecionamento vetorial, vetor de aceleração |
 | Fundamental | Base da realidade | antimatéria, tempo |
 
-- **A variante é do personagem.** Ele usa as skills da sua variante.
-- **Sem variante (none):** raro. Lore: no mundo Origin a variante está ligada ao cérebro; só pensar já é um custo de variante. Por isso **só personagem sem variante usa skill none**.
-- **Skill none:** mais fraca, custo menor, praticamente sem cooldown. O teto de ganho precisa ser baixo.
-- Tabela de padrões de custo por variante: ainda **[ABERTO]** (A3c), agora com 6 linhas.
-- **[ABERTO]** Pode um personagem usar skill de outra variante (ex.: skill roubada)? Hipótese: sim, com custo alto.
+- **A linhagem é do personagem.** Ele usa as skills da sua linhagem.
+- **Sem linhagem (none):** raro. Lore: no mundo Origin o poder está ligado ao cérebro; só pensar já é um custo. Por isso **só personagem sem linhagem usa skill none**.
+- **Skill none:** mais fraca, custo menor. A maioria sem cooldown; as mais fortes têm cooldown, bem mais curto que o das skills de linhagem. O teto de ganho precisa ser baixo.
+- Tabela de padrões de custo por linhagem: proposta em 9.4 (A3c).
+- ~~Pode usar skill de outra linhagem?~~ Não: só das próprias variantes (10.3).
 
 ### 8.2 Estrutura da skill [PROPOSTA]
 
-`variante · custo · cooldown · alcance (tipo) · área · alvo · efeitos[]`
+`linhagem · custo · cooldown · alcance · área · alvo · efeitos[]`
 
 - **Custo** escala com a força (risco x retorno). Nada é de graça.
 - **Cooldown** existe para impedir spam. Conta em **turnos do próprio personagem**, não em rodadas globais. Skill forte: custo alto e cooldown longo.
-- **Área:** individual, área, linha, coluna.
+- **Alcance** e **área** são eixos separados (ver 9.3).
 - **Tipo de skill** (alcance): corpo a corpo, projétil/à distância etc. Os traços olham para isto (ver 8.4).
 
 ### 8.3 Efeitos [ENRAIZADO]
 
 - **Buff e debuff** seguem o mesmo padrão (modificador temporário de atributo, com duração).
-- **Cura é um tipo de efeito à parte** (instantânea, não é buff). **[ABERTO]** Pode passar do HP máximo? Hipótese: não.
+- **Cura é um tipo de efeito à parte** (instantânea, não é buff). **Não passa do HP máximo** (9.2).
+- **Escudo (shield)** é outro efeito à parte: absorve dano. É a única forma de "passar" do HP.
 
 ### 8.4 Traços [ENRAIZADO]
 
@@ -189,7 +191,7 @@ São **6** (a Elemental foi adicionada). Cada uma define o tema e o padrão de c
 - Também definem quem recebe o bônus do **campo de batalha**.
 - **Imutáveis:** uma vez no personagem, não saem. Evita a corrida para coletar traços.
 - **Limite por personagem:** por volta de 5 (número ainda não definido). **[ABERTO]**
-- **Como adquirir:** não explicado ainda. Registrado que traços são **adquiridos** ao longo do tempo. **[ABERTO]**
+- **Como adquirir:** ver 9.6 (ideia inicial: histórico do personagem e eventos especiais). Detalhes **[ABERTO]**.
 
 ### 8.5 Campo de batalha [ENRAIZADO]
 
@@ -204,15 +206,176 @@ São **6** (a Elemental foi adicionada). Cada uma define o tema e o padrão de c
 
 ### 8.6 Pontos de atenção com o lore
 
-- **Termo "variante":** no `world_build.md` (3.1), "variante" é o humano que hospeda um Éon, e "linhagem" é o tipo de manifestação. Na conversa de skills, "variante" passou a nomear o **tipo** (Elemental, Psíquica etc.). Decidir se mantemos esse uso no jogo ou se voltamos a "linhagem" nos dados. **[ABERTO]**
+- ~~**Termo "variante"**~~: resolvido em 9.1 (linhagem = categoria, variante = o poder / quem tem poder). Bate com o `world_build.md`.
 - **Várias variantes por personagem:** o lore diz que 94,5% têm 1 variante, 5% têm 2 e 0,1% têm 3; 0,4% não têm nenhuma (batem com a skill none ser rara). Falta decidir se um personagem do jogo pode ter mais de uma variante e, se puder, como isso interage com o custo. **[ABERTO]**
 - **Elemental x linhagens ancestrais:** o `world_build.md` cita Gelo (ex.: "Gelo+Gelo", seção de herança) como elemento de família. Falta mapear em qual família cai cada tipo de manifestação (conflito 9 do `world_build.md`).
 
 ### 8.7 Pendências desta conversa
 
-1. Tabela de padrões de custo para as 6 variantes (A3c). Já fechado: Fundamental = HP, Biológica = velocidade.
-2. Mecânica do Desgaste (A3b): custo imediato ou acumulado durante a batalha.
+> Lista atualizada na 9.9.
+
+1. ~~Tabela de padrões de custo~~ → proposta em 9.4.
+2. Mecânica do Desgaste (A3b): custo imediato ou acumulado durante a batalha (já fechado: só dentro da batalha, 9.2).
 3. Quantidade exata de traços por personagem (~5) e como são adquiridos.
 4. Duração N do campo trocado por skill; quais traços cada campo exige; tamanho do bônus.
-5. Pode uma skill de outra variante ser usada (skills roubadas)? Cura pode passar do HP máximo?
+5. ~~Skill de outra linhagem?~~ Não (10.3). ~~Cura passa do HP máximo?~~ Não (9.2).
 6. Lista final de tipos de alcance e de área; skills que reposicionam; quantas skills por personagem.
+
+---
+
+## 9. Decisões da conversa de skills (sessão 2)
+
+### 9.1 Termos [ENRAIZADO]
+
+- **Linhagem** = categoria do poder: Elemental, Psíquica, Biológica, Material, Vetorial, Fundamental.
+- **Variante** = o poder em si (fogo, gelo, tempo, telecinese...). No mundo, quem tem poder também é chamado de **variante**.
+- Nos dados: `lineage` (categoria) e `variant` (poder).
+
+### 9.2 Regras de combate fechadas [ENRAIZADO]
+
+- **Fila de turnos em timeline:** cada personagem tem um contador que avança conforme a velocidade; age quando chega a vez. Mudança de velocidade tem efeito gradual.
+- **Empate na fila:** vai primeiro quem tem a **maior média de todos os stats**. Se ainda empatar, **sorteio** entre os empatados (via seed, continua determinístico).
+- **Duração de efeitos** (buff, debuff, status) conta em **turnos do próprio personagem afetado**, igual ao cooldown.
+- **Sem ressurreição:** personagem derrotado não volta.
+- **Desgaste e debuffs valem só dentro da batalha.** Nada passa para o próximo combate.
+- **Cura não passa do HP máximo.** O excesso é perdido. Escudo é efeito separado.
+- **A seed fica só no servidor.** O cliente nunca a recebe (senão prevê os efeitos aleatórios). Se precisar provar que foi justa, revelar no fim da partida (commit-reveal).
+- **Nenhum custo deve mexer muito na velocidade.** Velocidade já controla a fila e o cooldown; como custo, pesaria duas vezes.
+
+### 9.3 Alcance x área [ENRAIZADO]
+
+Dois eixos independentes:
+
+- **Alcance** = quem pode ser escolhido como alvo: corpo a corpo (só exposto), à distância (qualquer célula), perfurante etc.
+- **Área** = a forma do efeito em volta do alvo: **individual**, **linha**, **coluna**, **área** (= a **grade inteira**).
+
+**Orientação da grade [ENRAIZADO]:** **linha** vai da frente para o fundo; as **colunas** são as posições de profundidade
+(1ª coluna = frente). Ver D22 e D35 do `game_design.md`.
+
+**Queda de dano na linha [ENRAIZADO]:** quem está na frente toma dano cheio, o próximo personagem da linha toma dano
+médio e o terceiro, dano pequeno. A queda conta **por personagem atingido**, não por célula: se houver um na 1ª e outro
+na 3ª, sem ninguém entre eles, o da 3ª toma dano médio. Objetivo: impedir o "tank imortal" (tank na frente + curadores
+atrás) sem tornar a skill de linha forte demais.
+
+- Valores: **100% / 60% / 30%**.
+- Skills **perfurantes** (sem queda) existem, mas custam mais (risco x retorno).
+- **Área (grade inteira) não tem queda:** atinge todos com o efeito cheio. O equilíbrio vem do custo (mais alcance, mais
+  custo), ajustado ao criar cada skill.
+
+### 9.4 Tabela de custo por linhagem [PROPOSTA]
+
+Depende dos stats (9.8). A Biológica **saiu de velocidade** (ver 9.2).
+
+| Linhagem | Custo no lore | Efeito no jogo |
+|---|---|---|
+| Fundamental | envelhecimento | HP máximo |
+| Biológica | sobrecarga metabólica | **Vontade** [PROPOSTA] (ver `character_brief.md` 2) |
+| Psíquica | esgotamento neural | aumenta o cooldown das outras skills ou reduz precisão |
+| Material | degeneração de articulações | defesa |
+| Vetorial | perda de tato | ataque ou precisão |
+| Elemental | dano a si | dano contínuo no próprio usuário |
+
+### 9.5 Personagem sem ação possível [ENRAIZADO]
+
+Caso: todas as skills em cooldown ou caras demais. O personagem pode **Defender**: recebe menos dano até o próximo
+turno. **Não existe ataque básico grátis** (quebraria o risco x retorno). Quanto reduz: depende dos stats.
+
+### 9.5b Empilhamento de efeitos [ENRAIZADO]
+
+- A **mesma skill** aplicada de novo **renova a duração**, não soma.
+- **Fontes diferentes** no mesmo atributo **somam até um teto** (valor do teto depende dos stats).
+- **Buff e debuff** no mesmo atributo se **somam direto** (+2 com -1 = +1).
+
+### 9.6 Traços: como adquirir [PROPOSTA]
+
+- Pelo **histórico do personagem** (métricas acumuladas), por exemplo:
+  - finalizou 100 inimigos → pode adquirir **Assassino**;
+  - mitigou 100.000 de dano → pode adquirir **Tank**;
+  - participou de N batalhas → pode adquirir **Sobrevivente**.
+- Por **eventos especiais** que liberam traços.
+- Detalhes a discutir **[ABERTO]**.
+
+### 9.7 Outras propostas aceitas
+
+- **Turtling:** além de skills que quebram bloqueio, o **campo de batalha** pode favorecer quem está na frente com o passar dos turnos. **[PROPOSTA]**
+- **Protótipo cedo:** fechar logo um conjunto de ~8 skills de teste cobrindo as combinações de alcance e área, com 2 linhagens, para validar a estrutura de dados.
+
+### 9.8 Stats do personagem [ABERTO, conversa separada]
+
+Os stats (HP, ataque, defesa, velocidade...?) e a fórmula de dano serão definidos numa **conversa própria**, por
+serem complexos. Bloqueiam: valores da tabela 9.4, queda de dano (9.3), desempate (9.2), buffs e debuffs.
+
+### 9.9 Pendências
+
+1. **Stats do personagem** e fórmula de dano (conversa separada, 9.8).
+2. Custo da Biológica (9.4).
+3. Teto do empilhamento e redução do Defender (dependem dos stats).
+4. ~~Itens que continuam da 8.7~~ → resolvidos na sessão 3 (seção 10). Pendências atualizadas em 10.8.
+
+---
+
+## 10. Decisões da conversa de skills (sessão 3)
+
+> Substitui o que estava **[ABERTO]** em 8.1, 8.4, 8.5, 3.5, 3.6 e 3.7 onde houver conflito.
+
+### 10.1 Traços [ENRAIZADO]
+
+- **Limite: 5 por personagem.** Valor ajustável se o jogo mostrar que é muito ou pouco.
+- **Aquisição por meta:** ao bater uma meta do histórico (ex.: finalizou 1.000 inimigos), aparecem **até 3 traços**
+  para escolher. O jogador **escolhe 1 ou descarta todos**.
+  - Cada meta tem o seu conjunto de traços possíveis. Pode ter só 1 ou 2 (aparecem todos), ou mais de 3
+    (ex.: 5); nesse caso, **3 são sorteados**.
+- Também por **eventos especiais**.
+- **Vantagem por progressão é aceita:** quem joga mais ganha mais traços.
+- **Com 5 traços ocupados, não há oferta** nas novas metas.
+- **Descartou, perdeu:** a oferta daquela meta não volta. Mantém o peso da escolha.
+
+### 10.2 Campo de batalha [ENRAIZADO]
+
+- **Campos não são fixos no código:** o **admin cria os campos** (dados, não código). O sorteio pela seed escolhe
+  entre os campos cadastrados.
+- Cada campo define **os traços exigidos e o bônus**.
+- A **duração N** do campo trocado **é da skill** (ex.: skill forte troca por 2 turnos, uma fraca por 4).
+- **Bônus em porcentagem** escala com os stats de quem o recebe.
+
+### 10.3 Linhagem e variante nas skills [ENRAIZADO]
+
+- Um personagem **só usa skills das suas próprias variantes**. Quem é de fogo não usa skill de água nem skill
+  Fundamental.
+- Alguns personagens têm **2 variantes**; em **raríssimos** casos, **3**. Cada variante dá acesso às suas skills.
+- **Skills liberadas por nível do personagem.** Detalhes ficam para a conversa de personagem.
+- **Não existem "skills roubadas".** O termo saiu dos docs.
+
+### 10.4 Reposicionamento [ENRAIZADO]
+
+- Mover só para **célula adjacente**, e custa a ação do turno.
+- **Trocar com um aliado:** os **dois perdem a ação**.
+- **Skills que reposicionam** (empurrar, puxar, trocar) existem e são uma peça estratégica.
+- **Não pode** empurrar para célula ocupada nem para fora da grade: o movimento é barrado, mas **o resto da skill
+  (dano etc.) acontece normalmente**.
+
+### 10.5 Skills em batalha [ENRAIZADO]
+
+- **4 skills por personagem** em batalha.
+- **Build:** o personagem acumula as skills liberadas (por nível) e o jogador **monta as 4 fora da partida**. Durante a
+  batalha ficam **travadas**. Um mesmo personagem pode ter papéis diferentes conforme a squad.
+
+### 10.6 Aprimoramento e auxílio de skill [BASE da ideia, não aprofundar ainda]
+
+Depende da conversa de personagem. Formas que vêm do lore:
+
+- **Despertar:** evolução da própria variante (ex.: fogo → fogo azul). Raro.
+- **Armas vivas:** armas que carregam uma variante. Equipadas, dão acesso a uma habilidade da arma.
+- **Contratos com animais:** invocação de um companheiro para a batalha (estilo Naruto).
+
+### 10.7 Outros
+
+- **Lista de status** (queimadura, lentidão etc.): a criar. **[ABERTO]**
+
+### 10.8 Pendências
+
+1. **Stats do personagem** e fórmula de dano (conversa separada, 9.8).
+2. Custo da Biológica (9.4).
+3. Teto do empilhamento e redução do Defender (dependem dos stats).
+4. Lista de status (10.7).
+5. Conversa de personagem: nível, liberação de skills, despertar, armas vivas, contratos (10.6).
