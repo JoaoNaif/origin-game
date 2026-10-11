@@ -63,6 +63,18 @@ O prazer central é **quebrar a cabeça**: descobrir formações, personagens e 
 | D47 | **Traços:** bônus moderado, podem ter lado negativo, divididos em categorias (combate, postura, origem). Sem traço de nascença | DECIDIDO |
 | D48 | **Distribuição de stats:** base fixa pelo perfil + pontos livres só nas **3 aptidões** do personagem, com teto por stat. Pontos crescem com o nível; redistribuição grátis fora da batalha | DECIDIDO |
 | D49 | **Despertar:** só alguns personagens têm; exige nível alto + evento único (títulos aumentam a chance); a skill despertada é mais forte e com mais Desgaste | DECIDIDO |
+| D50 | **Kit básico:** cada variante tem skills default, que o personagem já tem no nível 0. Seguem o risco x retorno; continua sem ataque básico grátis (D38) | DECIDIDO |
+| D51 | **Crescimento:** todos os stats sobem gradualmente por nível (perfil da classe). Em alguns níveis há pontos livres, aplicáveis só nas **aptidões da classe** (esclarece D48) | DECIDIDO |
+| D52 | **Mais poder, mais custo:** 2 ou 3 variantes dão mais opções e variações, mas custam mais (ex.: 2 Desgastes). O despertar segue a mesma lógica. Detalhes abertos | DECIDIDO (princípio) |
+| D53 | **Piso do Desgaste:** cada stat tem um mínimo durante a batalha; o Desgaste não passa dele. Valores abertos | DECIDIDO |
+| D54 | **XP por métricas de batalha:** dano, mitigação, cura, abates etc., não só abates. Suporte sobe mais devagar (aceito). **Amistosa (contra amigo) não conta** para XP nem histórico; PvE e PvP contam | DECIDIDO |
+| D55 | **Títulos pertencem ao personagem**, não à conta | DECIDIDO |
+| D56 | **Despertar vale no ranqueado.** Aprimoramento é o gênero (despertar, DOM, armas vivas); só o despertar está detalhado | DECIDIDO |
+| D57 | **Vantagem por traços é aceita**, inclusive no ranqueado e nos bônus de campo (sem traço de nascença) | DECIDIDO |
+| D58 | **Acerto:** Precisão de quem ataca contra a Esquiva de quem defende, igual para skill individual e de área. Fórmula aberta | DECIDIDO (princípio) |
+| D59 | **Custo por linhagem, um stat cada:** Fundamental = HP máximo, Elemental = HP atual, Material = Defesa, Vetorial = Precisão, Psíquica = Vontade, Biológica = Esquiva. Ataque e Velocidade não são custo (fecha A3c; ajusta D16) | DECIDIDO |
+| D60 | **DOM:** 4 pilares (Mente, Coração, Corpo, Aura) x 3 níveis (básico, intermediário, avançado). Básico e intermediário = aumento de stats. Avançado = **título** (extra, fora dos 5 traços de D39) + **uma skill única**, de **uso único por batalha**, fora das 4 skills de D43. **Sem custo nem Desgaste** (exceção consciente a D52): o custo é a manutenção (D61). Pode ter até os 4 pilares, raríssimo (tão raro quanto 3 variantes) | DECIDIDO |
+| D61 | **DOM se conquista e se perde por métricas de batalha**, uma meta por pilar (formas diferentes de ganhar). Cair abaixo da meta numa janela de batalhas faz perder **um nível** por vez (representa o treino que parou). Cada pilar usa **várias métricas** com teto por métrica, para não favorecer uma só classe (fórmula aberta). Sem variante: meta menor. **Ranqueado** ganha e perde mais; casual e PvE bem menos; amistosa não conta (D54) | DECIDIDO (princípio) |
 | D18 | **Estrutura do código** segue o padrão do ZapWave (clean architecture, NestJS). Documento vivo, vai mudar (ver `CLAUDE.md`) | DECIDIDO |
 
 ## 3. Princípio da progressão por história
@@ -93,18 +105,20 @@ Tipos de vantagem off-combate a explorar:
 |---|---|---|
 | A2b | **Regras finas de alcance e bloqueio:** lista exata de tipos de alcance, skills que reposicionam (empurrar, puxar, trocar), variações da troca de posição, risco de "turtling" (formação que ninguém consegue romper) | Resolver na conversa de skills (ver `skills_brief.md`) |
 | A3b | **Mecânica do Desgaste:** como o risco se manifesta (custo em HP, velocidade, chance de falha, dano acumulado entre combates?) e como o "retorno" é medido | Conceito fechado (D13). **Conversa exclusiva sobre skills**, ponto central do jogo |
-| A3c | **Tabela de padrões de custo por linhagem** (Elemental, Material, Vetorial, Biológica, Psíquica, Fundamental) e quais exceções são permitidas | Proposta em `skills_brief.md` 9.4; falta o custo da Biológica |
+| ~~A3c~~ | ~~Tabela de padrões de custo por linhagem~~ | **Fechada (D59)**; tabela em `skills_brief.md` 9.4. Faltam só os valores (dependem de A8) |
 | A8 | **Fórmula de dano** e valores dos stats | Stats definidos (D45); falta a fórmula. Bloqueia valores de custo, dano e buffs |
 | A5 | **Estrutura do PvP:** ao vivo, relógio de turno, ranqueado, regras fixas | |
 | A6 | **Modelo de progressão:** conta, personagens, skills, equipamento | |
 | A7 | **Conflitos do `world_build.md`** (seção 13) que afetam dados do jogo | Decidir só os que importam para o jogo |
+| A9 | **Arma viva e contrato com animal** (e caminhos Pacto, Enxerto, Selo...). DOM fechado (D60, D61) | Conversa própria. Contrato/arma mexem no D11 (célula, slots). Ver [`open_topics.md`](./open_topics.md) |
+| A10 | **Família/facção com efeito mecânico** | Existe na história e o usuário quer levar para o jogo; falta ver se dá para equilibrar. Conversa própria |
 
 ## 5. Próximos tópicos de brainstorm
 
 1. ~~Loop de combate: turno, ordem de ação, grade e posição.~~ Base fechada (D10 a D12, D15); falta A2b.
 2. **Sistema de skills (conversa exclusiva, prioridade máxima):** estrutura, custo, recarga, alcance, área, efeitos, variações e a curva risco x retorno.
 3. Desgaste: como o risco se manifesta (ver A3b). Entra na conversa de skills.
-4. Linhagens: tabela de padrões de custo (A3c) e o papel do DOM. Sem vantagem entre linhagens (D16).
+4. Linhagens: ~~tabela de padrões de custo (A3c)~~ fechada (D59); DOM fechado (D60, D61, [`dom_brief.md`](./dom_brief.md)). Sem vantagem entre linhagens (D16). Índice completo do que está em aberto: [`open_topics.md`](./open_topics.md).
 5. Composição e sinergias de facção.
 6. PvP: modos, ranking e regras de equilíbrio.
 7. Progressão e história: títulos, aprimoramento de skills, missões.

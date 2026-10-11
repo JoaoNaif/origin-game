@@ -74,4 +74,5 @@ test/                         factories, in-memory repositories, fakes (incluind
 
 ## Pendências de decisão que bloqueiam código
 
-Ver seção 4 do `game_design.md` (A2b, A3b, A3c, A5, A6) e o modelo de skill.
+Ver seção 4 do `game_design.md` (A2b, A3b, A5, A6, A8) e o modelo de skill. O índice de tudo que está em aberto,
+incluindo as conversas adiadas (armas vivas, contratos, família/facção; o DOM já está fechado em [`docs/dom_brief.md`](./docs/dom_brief.md)), é [`docs/open_topics.md`](./docs/open_topics.md).

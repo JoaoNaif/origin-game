@@ -107,7 +107,8 @@ Perguntas: duração dos efeitos (em turnos), se acumulam, se há limite, quem v
 - Toda habilidade precisa de **base científica/física plausível**. Não existe magia.
 - **Poder é definido pela aplicação**, não só pela habilidade: o mesmo poder (fogo) vira lança-chamas, flecha ou propulsor conforme a tática.
 - As **6 variantes** influenciam o tipo de custo biológico: Elemental, Material, Vetorial, Biológica, Psíquica, Fundamental.
-- Há skills de DOM (Mente, Coração, Corpo, Aura) e caminhos alternativos (Pacto, Materiais, Enxerto, Rede, Selo). Podem virar fontes de skill ou de custo. **[ABERTO]**
+- **DOM** (Mente, Coração, Corpo, Aura): fechado, ver [`dom_brief.md`](./dom_brief.md). O avançado dá uma skill única de uso único (5ª skill, fora das 4), sem custo.
+- Caminhos alternativos (Pacto, Materiais, Enxerto, Rede, Selo) podem virar fontes de skill ou de custo. **[ABERTO]**
 - Os dois eixos de linhagem (manifestação x família ancestral) precisam de mapeamento (conflito 9 do `world_build.md`). Provavelmente resolvido junto com a tabela de padrões de custo.
 
 ---
@@ -190,7 +191,7 @@ São **6** (a Elemental foi adicionada). Cada uma define o tema e o padrão de c
 - Influenciam **status** (guerreiro: mais força) e **skills** (artista marcial: mais dano em skills corpo a corpo). Podem olhar o **tipo de skill** e a **variante**.
 - Também definem quem recebe o bônus do **campo de batalha**.
 - **Imutáveis:** uma vez no personagem, não saem. Evita a corrida para coletar traços.
-- **Limite por personagem:** por volta de 5 (número ainda não definido). **[ABERTO]**
+- **Limite por personagem:** 5 (fechado em 10.1; ajustável).
 - **Como adquirir:** ver 9.6 (ideia inicial: histórico do personagem e eventos especiais). Detalhes **[ABERTO]**.
 
 ### 8.5 Campo de batalha [ENRAIZADO]
@@ -207,7 +208,7 @@ São **6** (a Elemental foi adicionada). Cada uma define o tema e o padrão de c
 ### 8.6 Pontos de atenção com o lore
 
 - ~~**Termo "variante"**~~: resolvido em 9.1 (linhagem = categoria, variante = o poder / quem tem poder). Bate com o `world_build.md`.
-- **Várias variantes por personagem:** o lore diz que 94,5% têm 1 variante, 5% têm 2 e 0,1% têm 3; 0,4% não têm nenhuma (batem com a skill none ser rara). Falta decidir se um personagem do jogo pode ter mais de uma variante e, se puder, como isso interage com o custo. **[ABERTO]**
+- **Várias variantes por personagem:** o lore diz que 94,5% têm 1 variante, 5% têm 2 e 0,1% têm 3; 0,4% não têm nenhuma (batem com a skill none ser rara). Resolvido em 10.3 e D52: pode ter 2 (3 raríssimo), com **mais opções e mais custo** (ex.: 2 Desgastes). Como o custo extra se aplica: **[ABERTO]** (`character_brief.md` 8).
 - **Elemental x linhagens ancestrais:** o `world_build.md` cita Gelo (ex.: "Gelo+Gelo", seção de herança) como elemento de família. Falta mapear em qual família cai cada tipo de manifestação (conflito 9 do `world_build.md`).
 
 ### 8.7 Pendências desta conversa
@@ -262,18 +263,24 @@ atrás) sem tornar a skill de linha forte demais.
 - **Área (grade inteira) não tem queda:** atinge todos com o efeito cheio. O equilíbrio vem do custo (mais alcance, mais
   custo), ajustado ao criar cada skill.
 
-### 9.4 Tabela de custo por linhagem [PROPOSTA]
+### 9.4 Tabela de custo por linhagem [ENRAIZADO]
 
-Depende dos stats (9.8). A Biológica **saiu de velocidade** (ver 9.2).
+**Um stat por linhagem**, sem dois compartilhando o mesmo (exceto o HP, que tem "máximo" e "atual").
+A Biológica **saiu de velocidade** (ver 9.2). Ataque e Velocidade não são custo de nenhuma linhagem.
 
 | Linhagem | Custo no lore | Efeito no jogo |
 |---|---|---|
-| Fundamental | envelhecimento | HP máximo |
-| Biológica | sobrecarga metabólica | **Vontade** [PROPOSTA] (ver `character_brief.md` 2) |
-| Psíquica | esgotamento neural | aumenta o cooldown das outras skills ou reduz precisão |
-| Material | degeneração de articulações | defesa |
-| Vetorial | perda de tato | ataque ou precisão |
-| Elemental | dano a si | dano contínuo no próprio usuário |
+| Fundamental | envelhecimento | **HP máximo** (cura não recupera) |
+| Elemental | dano a si | **HP atual**, imediato (cura desfaz, então o valor é maior). Dano contínuo só em skills específicas |
+| Material | degeneração de articulações | **Defesa** |
+| Vetorial | perda de tato | **Precisão** |
+| Psíquica | esgotamento neural | **Vontade** (fica vulnerável a controle) |
+| Biológica | sobrecarga metabólica | **Esquiva** |
+
+- Todo custo respeita o **piso do Desgaste** (`character_brief.md` 2): o stat nunca cai abaixo do mínimo.
+- Exceções por skill continuam permitidas (D16). Os **valores** dependem da fórmula de dano (9.8).
+- Ponto de atenção: a Esquiva só pesa contra Precisão alta, então a Biológica pode parecer barata. Calibrar quando a
+  fórmula de acerto existir.
 
 ### 9.5 Personagem sem ação possível [ENRAIZADO]
 
@@ -300,15 +307,16 @@ turno. **Não existe ataque básico grátis** (quebraria o risco x retorno). Qua
 - **Turtling:** além de skills que quebram bloqueio, o **campo de batalha** pode favorecer quem está na frente com o passar dos turnos. **[PROPOSTA]**
 - **Protótipo cedo:** fechar logo um conjunto de ~8 skills de teste cobrindo as combinações de alcance e área, com 2 linhagens, para validar a estrutura de dados.
 
-### 9.8 Stats do personagem [ABERTO, conversa separada]
+### 9.8 Stats do personagem [ENRAIZADO a lista; fórmula ABERTA]
 
-Os stats (HP, ataque, defesa, velocidade...?) e a fórmula de dano serão definidos numa **conversa própria**, por
-serem complexos. Bloqueiam: valores da tabela 9.4, queda de dano (9.3), desempate (9.2), buffs e debuffs.
+Os **7 stats** estão definidos em [`character_brief.md`](./character_brief.md) 2 (HP, Ataque, Defesa, Velocidade,
+Precisão, Esquiva, Vontade). Falta a **fórmula de dano** e os valores. Bloqueiam: valores da tabela 9.4, queda de
+dano (9.3), buffs e debuffs.
 
 ### 9.9 Pendências
 
-1. **Stats do personagem** e fórmula de dano (conversa separada, 9.8).
-2. Custo da Biológica (9.4).
+1. **Fórmula de dano** e valores dos stats (`character_brief.md` 2).
+2. ~~Custo da Biológica, Psíquica e Elemental~~ → fechado em 9.4.
 3. Teto do empilhamento e redução do Defender (dependem dos stats).
 4. ~~Itens que continuam da 8.7~~ → resolvidos na sessão 3 (seção 10). Pendências atualizadas em 10.8.
 
@@ -374,8 +382,9 @@ Depende da conversa de personagem. Formas que vêm do lore:
 
 ### 10.8 Pendências
 
-1. **Stats do personagem** e fórmula de dano (conversa separada, 9.8).
-2. Custo da Biológica (9.4).
+1. **Fórmula de dano** e valores dos stats (stats definidos em `character_brief.md` 2).
+2. ~~Custo da Biológica, Psíquica e Elemental~~ → fechado em 9.4.
 3. Teto do empilhamento e redução do Defender (dependem dos stats).
 4. Lista de status (10.7).
-5. Conversa de personagem: nível, liberação de skills, despertar, armas vivas, contratos (10.6).
+5. Conversa de personagem **feita** (`character_brief.md`): nível, kit básico, pontos livres, XP, despertar. Sobram
+   como conversas próprias: armas vivas, contratos e facção (DOM já fechado, `dom_brief.md`) (`character_brief.md` 9).
