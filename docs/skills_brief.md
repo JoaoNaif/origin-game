@@ -108,7 +108,7 @@ Perguntas: duração dos efeitos (em turnos), se acumulam, se há limite, quem v
 - **Poder é definido pela aplicação**, não só pela habilidade: o mesmo poder (fogo) vira lança-chamas, flecha ou propulsor conforme a tática.
 - As **6 variantes** influenciam o tipo de custo biológico: Elemental, Material, Vetorial, Biológica, Psíquica, Fundamental.
 - **DOM** (Mente, Coração, Corpo, Aura): fechado, ver [`dom_brief.md`](./dom_brief.md). O avançado dá uma skill única de uso único (5ª skill, fora das 4), sem custo.
-- Caminhos alternativos (Pacto, Materiais, Enxerto, Rede, Selo) podem virar fontes de skill ou de custo. **[ABERTO]**
+- Pacto fechado (contratos com bestas, [`beast_contracts_brief.md`](./beast_contracts_brief.md)). Os caminhos alternativos restantes (Materiais, Enxerto, Rede, Selo) podem virar fontes de skill ou de custo. **[ABERTO]**
 - Os dois eixos de linhagem (manifestação x família ancestral) precisam de mapeamento (conflito 9 do `world_build.md`). Provavelmente resolvido junto com a tabela de padrões de custo.
 
 ---
@@ -387,4 +387,4 @@ Depende da conversa de personagem. Formas que vêm do lore:
 3. Teto do empilhamento e redução do Defender (dependem dos stats).
 4. Lista de status (10.7).
 5. Conversa de personagem **feita** (`character_brief.md`): nível, kit básico, pontos livres, XP, despertar. Sobram
-   como conversas próprias: armas vivas, contratos e facção (DOM já fechado, `dom_brief.md`) (`character_brief.md` 9).
+   como conversas próprias: armas vivas, contratos, DOM e facção (todas já fechadas, ver `open_topics.md`) (`character_brief.md` 9).

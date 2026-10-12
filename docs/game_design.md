@@ -59,10 +59,10 @@ O prazer central é **quebrar a cabeça**: descobrir formações, personagens e 
 | D43 | **4 skills por personagem** em batalha, montadas pelo jogador fora da partida a partir das skills liberadas; travadas durante a batalha | DECIDIDO |
 | D44 | **Traços:** com 5 ocupados não há oferta; oferta descartada não volta. **Empurrão barrado:** o movimento falha, o resto da skill acontece | DECIDIDO |
 | D45 | **Personagem:** detalhes em [`character_brief.md`](./character_brief.md). **7 stats:** HP, Ataque, Defesa, Velocidade, Precisão, Esquiva, Vontade. Sem mana | DECIDIDO |
-| D46 | **Nível 0 a 100:** stats crescem pelo perfil do personagem; skills liberadas em marcos. **Ranqueado nivela todos**; casual e PvE usam o nível real | DECIDIDO |
+| D46 | **Nível 0 a 100:** stats crescem pelo perfil do personagem; skills liberadas em marcos. **Ranqueado nivela** (por faixa de ranking, ver D63); casual e PvE usam o nível real | DECIDIDO |
 | D47 | **Traços:** bônus moderado, podem ter lado negativo, divididos em categorias (combate, postura, origem). Sem traço de nascença | DECIDIDO |
 | D48 | **Distribuição de stats:** base fixa pelo perfil + pontos livres só nas **3 aptidões** do personagem, com teto por stat. Pontos crescem com o nível; redistribuição grátis fora da batalha | DECIDIDO |
-| D49 | **Despertar:** só alguns personagens têm; exige nível alto + evento único (títulos aumentam a chance); a skill despertada é mais forte e com mais Desgaste | DECIDIDO |
+| D49 | **Despertar** (ver D67, que ajusta esta linha): exige nível alto; a skill despertada é mais forte e com mais Desgaste | DECIDIDO |
 | D50 | **Kit básico:** cada variante tem skills default, que o personagem já tem no nível 0. Seguem o risco x retorno; continua sem ataque básico grátis (D38) | DECIDIDO |
 | D51 | **Crescimento:** todos os stats sobem gradualmente por nível (perfil da classe). Em alguns níveis há pontos livres, aplicáveis só nas **aptidões da classe** (esclarece D48) | DECIDIDO |
 | D52 | **Mais poder, mais custo:** 2 ou 3 variantes dão mais opções e variações, mas custam mais (ex.: 2 Desgastes). O despertar segue a mesma lógica. Detalhes abertos | DECIDIDO (princípio) |
@@ -75,6 +75,12 @@ O prazer central é **quebrar a cabeça**: descobrir formações, personagens e 
 | D59 | **Custo por linhagem, um stat cada:** Fundamental = HP máximo, Elemental = HP atual, Material = Defesa, Vetorial = Precisão, Psíquica = Vontade, Biológica = Esquiva. Ataque e Velocidade não são custo (fecha A3c; ajusta D16) | DECIDIDO |
 | D60 | **DOM:** 4 pilares (Mente, Coração, Corpo, Aura) x 3 níveis (básico, intermediário, avançado). Básico e intermediário = aumento de stats. Avançado = **título** (extra, fora dos 5 traços de D39) + **uma skill única**, de **uso único por batalha**, fora das 4 skills de D43. **Sem custo nem Desgaste** (exceção consciente a D52): o custo é a manutenção (D61). Pode ter até os 4 pilares, raríssimo (tão raro quanto 3 variantes) | DECIDIDO |
 | D61 | **DOM se conquista e se perde por métricas de batalha**, uma meta por pilar (formas diferentes de ganhar). Cair abaixo da meta numa janela de batalhas faz perder **um nível** por vez (representa o treino que parou). Cada pilar usa **várias métricas** com teto por métrica, para não favorecer uma só classe (fórmula aberta). Sem variante: meta menor. **Ranqueado** ganha e perde mais; casual e PvE bem menos; amistosa não conta (D54) | DECIDIDO (princípio) |
+| D62 | **Armas e armaduras vivas:** **passiva** (bônus moderado + efeito leve da variante), fora dos 4 slots (D43). **Um slot de equipamento vivo por personagem** (arma ou armadura, por ora). Grau (Escudeiro a Divino) por variante x afinidade do material. **Elo** (pleno, parcial, sem elo) definido por **requisitos de perfil de stats** do equipamento (alto/baixo relativo ao personagem), fixo na batalha. Sem elo nunca compensa; custo só dentro da batalha (D32). Obtido por eventos, baús e recompensas de ranking. Ver [`living_gear_brief.md`](./living_gear_brief.md) | DECIDIDO |
+| D63 | **Ranqueado por faixa de ranking** (altera D46): o nível de nivelamento depende da faixa (ex.: platina = todos nível 100 com DOM e equipamentos no máximo; prata = nível 20 com limitações). **DOM e equipamento vivo valem e o grau influencia**; a paridade vem da faixa, não de teto. Casual e PvE usam o nível real. Faixas e limitações abertas | DECIDIDO (princípio) |
+| D64 | **Contratos com bestas:** **invocação** de uso único por batalha numa célula livre; entra na fila com Velocidade própria, bloqueia e pode ser alvo; sai após N turnos ou ao morrer, sem matar o dono (D31). **3 contratos** (Dominância, Mestre, Igualdade) mudam o comportamento da besta. **Sagradas** só por evento, uma por personagem. **1 besta por personagem, 2 com o traço Domador.** Obtenção por eventos. Vale no ranqueado (D63). **Salvaguardas:** a invocação ocupa 1 dos 4 slots (D43), teto de bestas em campo por squad (placeholder 2) e duração limitada. Ver [`beast_contracts_brief.md`](./beast_contracts_brief.md) | DECIDIDO |
+| D65 | **Família/ancestralidade = traço de Origem** (D47), só vale para a variante da família. **Sangue puro** (Primordiais) dá **acesso maior ao despertar** (D49) e redução pequena do custo da própria variante, **sem stat geral**. Fora da família: traço **Prodígio** (menos eficiência, mais flexível). Bônus do mesmo tamanho para todas (D16, D14). **Nocthar:** variante definida pelo admin na criação, sem mudar o código. **Hyperion** liga ao campo de batalha (D28). Ver [`family_faction_brief.md`](./family_faction_brief.md) | DECIDIDO |
+| D66 | **Organizações** (Banco Central, Celestes, Sombra, Crônica, Registro): associação da **conta**, **fora do combate**, com bônus de economia, eventos e visibilidade, e só efeito **indireto** na batalha. Uma ativa por vez, com reputação e custo de troca; organizações rivais viram inimigas nos eventos. Valores e eventos abertos | DECIDIDO (princípio) |
+| D67 | **Despertar (ajusta D49):** evolução da variante, **um só**, sem estágios. **Todos com 1 variante podem, nada garante:** depende de o admin ter criado um despertar para a variante. **2 ou 3 variantes e sem variante não despertam** (contrapeso do D52). No nível mínimo (placeholder 80) o sistema sorteia, com pesos pelos melhores stats, o despertar da variante e abre **missões ocultas** ligadas ao perfil dele. Dá **skills da nova variante**, mais fortes e com mais Desgaste (D52). Vale no ranqueado, sujeito às faixas (D63): faixa que nivela abaixo do nível mínimo não usa as skills despertadas (o jogo se revela por camadas). **"Éon" é descartado** como termo. Ver [`awakening_brief.md`](./awakening_brief.md) | DECIDIDO |
 | D18 | **Estrutura do código** segue o padrão do ZapWave (clean architecture, NestJS). Documento vivo, vai mudar (ver `CLAUDE.md`) | DECIDIDO |
 
 ## 3. Princípio da progressão por história
@@ -110,8 +116,8 @@ Tipos de vantagem off-combate a explorar:
 | A5 | **Estrutura do PvP:** ao vivo, relógio de turno, ranqueado, regras fixas | |
 | A6 | **Modelo de progressão:** conta, personagens, skills, equipamento | |
 | A7 | **Conflitos do `world_build.md`** (seção 13) que afetam dados do jogo | Decidir só os que importam para o jogo |
-| A9 | **Arma viva e contrato com animal** (e caminhos Pacto, Enxerto, Selo...). DOM fechado (D60, D61) | Conversa própria. Contrato/arma mexem no D11 (célula, slots). Ver [`open_topics.md`](./open_topics.md) |
-| A10 | **Família/facção com efeito mecânico** | Existe na história e o usuário quer levar para o jogo; falta ver se dá para equilibrar. Conversa própria |
+| A9 | ~~Arma viva, contrato com animal e DOM~~ fechados (D60 a D64). Restam os caminhos Enxerto, Rede, Selo, Materiais | Conversa própria futura. Ver [`open_topics.md`](./open_topics.md) |
+| A10 | ~~Família/facção com efeito mecânico~~ | Fechada (D65, D66, [`family_faction_brief.md`](./family_faction_brief.md)). Restam valores e eventos |
 
 ## 5. Próximos tópicos de brainstorm
 
@@ -119,7 +125,7 @@ Tipos de vantagem off-combate a explorar:
 2. **Sistema de skills (conversa exclusiva, prioridade máxima):** estrutura, custo, recarga, alcance, área, efeitos, variações e a curva risco x retorno.
 3. Desgaste: como o risco se manifesta (ver A3b). Entra na conversa de skills.
 4. Linhagens: ~~tabela de padrões de custo (A3c)~~ fechada (D59); DOM fechado (D60, D61, [`dom_brief.md`](./dom_brief.md)). Sem vantagem entre linhagens (D16). Índice completo do que está em aberto: [`open_topics.md`](./open_topics.md).
-5. Composição e sinergias de facção.
+5. ~~Composição e sinergias de facção~~ fechado (D65, D66).
 6. PvP: modos, ranking e regras de equilíbrio.
 7. Progressão e história: títulos, aprimoramento de skills, missões.
 8. Modo PvE: IAs de chefe (ex.: líder da Sombra).

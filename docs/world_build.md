@@ -5,6 +5,10 @@
 >
 > Convenções: **[CANON]** = está documentado no Notion. **[RASCUNHO]** = ideia em desenvolvimento, não fechada.
 > **[⚠ CONFLITO]** = contradição entre páginas, precisa de decisão (lista completa na seção 13).
+>
+> **Nota de terminologia (decidido):** "Éon" é um nome técnico da Sombra para a variante e **não é relevante**: onde
+> aparecer, leia "variante". Os 4 Primordiais continuam como famílias (seção 4). O "Despertar" do jogo é o do
+> `game_design.md` D67 (um só, sem estágios); os sentidos das seções 3.2 e 5 são só flavor.
 
 ---
 
@@ -483,8 +487,8 @@ Variantes conceitos · Variantes (história) · Linhagens ancestrais (funções)
 1. **Tempo desde o Colapso:** o título do banco de dados e várias páginas dizem **500 anos**; "História do mundo", "Armas" e "Linhagens primordiais" dizem **1.200 anos**. O LSM 115 é "o maior em 500 anos".
 2. **Nome dos continentes:** a lista inicial cita **Sigma**; o detalhamento usa **Zeta** (polar). "Gama" e "Gamma" aparecem como grafias diferentes. Delta é descrito como continente pequeno acima de Omega, mas também com selvas e arquipélagos extensos.
 3. **Localização de Carmesin:** "sul de Omega" (Geografia) vs. "oeste do continente" (página Carmesin).
-4. **Dois conceitos de "Éon":** (a) simbionte **extraterrestre** vindo de cometas, tratado como arma na guerra fria; (b) **Éons Primordiais planetários**, anteriores aos humanos, e o **Alpha**. Falta definir como se relacionam.
-5. **"Despertar" com dois sentidos:** despertar de sincronização ≥95% (universal) vs. Sistema de Despertar dos Ancestrais Primordiais (cor/pressão/camada/alcance).
+4. ~~**Dois conceitos de "Éon":**~~ **resolvido: "Éon" descartado** (ver nota de terminologia). Texto original: (a) simbionte **extraterrestre** vindo de cometas, tratado como arma na guerra fria; (b) **Éons Primordiais planetários**, anteriores aos humanos, e o **Alpha**. Falta definir como se relacionam.
+5. ~~**"Despertar" com dois sentidos:**~~ **resolvido em D67** (um só, sem estágios; os dois sentidos são flavor). Texto original: despertar de sincronização ≥95% (universal) vs. Sistema de Despertar dos Ancestrais Primordiais (cor/pressão/camada/alcance).
 6. **"Arautos" com dois sentidos:** sistema imunológico do planeta vs. pregadores itinerantes dos Celestes.
 7. **Matriz Terra** tem 4 linhagens (inclui Granek/Rocha), contra a regra de 3 por matriz.
 8. **Nome Primordial = nome da linhagem** (Gevarn, Pyranth, Nerevian, Zepharel). Intencional, mas pode confundir em código/dados (modelar como entidades separadas).

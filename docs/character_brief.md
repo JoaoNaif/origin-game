@@ -11,14 +11,14 @@
 ## 1. Anatomia do personagem [ENRAIZADO]
 
 ```
-identidade   nome, linhagem, variante(s) (1, 2 ou 3), classe (tank, suporte...), família/facção (lore)
+identidade   nome, linhagem, variante(s) (1, 2 ou 3), classe (tank, suporte...), família (traço de Origem, ver family_faction_brief.md)
 nível        0 a 100 + XP
 stats        base + crescimento gradual por nível + pontos livres só nas aptidões da classe (ver 3)
 traços       até 5 (skills_brief 10.1)
 títulos      pertencem ao personagem (ver 6)
 skills       kit básico da variante desde o nível 0 + liberadas por nível → build de 4 (skills_brief 10.5)
 histórico    métricas de batalha que liberam traços e dão XP (ver 7)
-extras       despertar (ver 6); DOM (ver dom_brief.md); arma viva, contrato (conversa própria, ver 9)
+extras       despertar (ver 6); DOM (ver dom_brief.md); arma viva (ver living_gear_brief.md), contrato (ver beast_contracts_brief.md)
 ```
 
 ---
@@ -78,8 +78,10 @@ Solução: **pontos livres limitados às aptidões da classe**.
   **[ABERTO]**.
 - Cada nível dá **crescimento de stats** (seção 3).
 - **Skills novas liberadas em marcos** de nível (ex.: 10, 25, 40, 60, 80, 100; marcos exatos **[ABERTO]**).
-- **PvP (opção C):** no **ranqueado**, todos são **nivelados** para o mesmo nível (ex.: 100); o nível real só libera
-  skills, e a vantagem de quem joga mais fica nos traços e nas opções de build. No **casual e no PvE**, vale o nível real.
+- **PvP (opção C, ajustada por D63):** no **ranqueado**, o nível é **nivelado pela faixa de ranking** (ex.: platina =
+  todos nível 100; prata = nível 20, com limitações), não por um nível único. O nível real só libera skills, e a
+  vantagem de quem joga mais fica nos traços, no DOM, no equipamento vivo e nas opções de build. No **casual e no
+  PvE**, vale o nível real.
 
 ---
 
@@ -102,15 +104,17 @@ Complementa skills_brief 8.4 e 10.1.
 ## 6. Despertar e aprimoramento [ENRAIZADO]
 
 - **Aprimoramento** é o gênero: formas de evoluir o personagem além do nível. **Despertar** é uma delas; as outras
-  (DOM, fechado em [`dom_brief.md`](./dom_brief.md); armas vivas, conversa própria na seção 9).
-- **Despertar** = evolução da variante (ex.: fogo → fogo azul). **Não pode ser algo que qualquer personagem consiga.**
-- As regras valem juntas:
-  1. **Só alguns personagens têm despertar.** Está na ficha desde a criação; a maioria nunca desperta.
-  2. **Exige nível alto + evento único** (missão de história, chefe). **Títulos** (do personagem) **aumentam a
-     chance**, não garantem.
+  são o DOM ([`dom_brief.md`](./dom_brief.md)), o equipamento vivo
+  ([`living_gear_brief.md`](./living_gear_brief.md)) e os contratos ([`beast_contracts_brief.md`](./beast_contracts_brief.md)).
+- **Despertar** = evolução da variante (ex.: fogo → fogo azul ou plasma). **Um só por personagem, sem estágios.**
+  Detalhes em [`awakening_brief.md`](./awakening_brief.md). Resumo:
+  1. **Todos com 1 variante podem, nada garante:** depende de o admin ter criado um despertar para a variante.
+     Quem tem 2 ou 3 variantes (ou nenhuma) **não desperta**.
+  2. **Nível mínimo [placeholder 80]**, depois sorteio com pesos (melhores stats) e **missões ocultas** ligadas ao
+     perfil do despertar sorteado.
   3. **Mais poder = mais custo:** a skill despertada é mais forte e o Desgaste também sobe (risco x retorno).
-  4. **Vale no ranqueado.** O equilíbrio vem do custo da regra 3.
-- **[ABERTO]** Nível mínimo, quais eventos, o que exatamente muda nas skills.
+  4. **Vale no ranqueado.** O equilíbrio vem do custo da regra 3 e das faixas (D63).
+- **[ABERTO]** Valores, catálogo de despertares e missões (`awakening_brief.md` 5).
 
 ---
 
@@ -139,12 +143,12 @@ Complementa skills_brief 8.4 e 10.1.
 Cada uma é complexa o bastante para uma conversa só dela. **Lembrar o usuário de abrir estes assuntos.** Detalhes,
 lore existente e perguntas em [`open_topics.md`](./open_topics.md).
 
-1. **Arma viva e contrato com animal** (skills_brief 10.6). Incluir: o companheiro ocupa célula, bloqueia, pode ser
-   alvo? A arma ocupa um dos 4 slots ou adiciona um? Mexe no D11.
+1. ~~**Arma viva**~~ fechada (`living_gear_brief.md`). ~~**Contrato com animal**~~ fechado
+   (`beast_contracts_brief.md`).
 2. ~~**DOM**~~ fechado (`dom_brief.md`). Caminhos alternativos (Pacto, Materiais, Enxerto, Rede, Selo) seguem
    adiados.
-3. **Família/facção com efeito mecânico.** Existe na história e o usuário quer levar para o jogo, mas ainda não sabe
-   como equilibrar. Conversa própria.
+3. ~~**Família/facção**~~ fechada (`family_faction_brief.md`): família é traço de Origem; organizações são da conta,
+   fora do combate.
 
 ---
 

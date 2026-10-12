@@ -1,7 +1,8 @@
 # ORIGIN — Tópicos em aberto
 
 > Índice do que **ainda precisa ser conversado**, para saber onde paramos. Parte 1: as **conversas próprias**
-> adiadas de propósito (armas vivas, contratos, família/facção; o DOM já foi fechado). Parte 2: os demais pendentes de design.
+> adiadas de propósito (**todas fechadas**: DOM, armas vivas, contratos e família/facção; sobram só pontos de lore, 1.5).
+> Parte 2: os demais pendentes de design.
 > Regras decididas ficam em [`game_design.md`](./game_design.md); personagem em
 > [`character_brief.md`](./character_brief.md); skills em [`skills_brief.md`](./skills_brief.md); mundo em
 > [`world_build.md`](./world_build.md).
@@ -22,88 +23,30 @@ personagens de teste funcionam sem elas. Todas pertencem ao eixo de **aprimorame
 Modelo fechado em [`dom_brief.md`](./dom_brief.md) e D60/D61 (`game_design.md`). Só restam valores numéricos, que
 entraram na Parte 2 (linha "Ajuste fino do DOM").
 
-### 1.2 Armas vivas
+### ~~1.2 Armas vivas~~ (fechado)
 
-**Estado:** só a base da ideia (`skills_brief.md` 10.6). Falta toda a conversa.
+Modelo fechado em [`living_gear_brief.md`](./living_gear_brief.md) e D62/D63 (`game_design.md`): passiva, um slot
+(arma ou armadura), grau + elo por requisitos de stats, sem teto no ranqueado. Só restam valores e catálogo, que
+entraram na Parte 2 (linha "Ajuste fino do equipamento vivo").
 
-**O que já existe no lore** (`world_build.md` 3.7, "Materiais com Variante Própria"):
+### ~~1.3 Contratos com animais~~ (fechado)
 
-- Resíduo de Éon cristalizado em material (armas e armaduras). Arma de metal saturado de fogo = espada flamejante.
-- Exige **Ressonância** com o portador; incompatível = objeto comum.
-- Material valioso vem de feras mortas de velhice/saturação. Caro, alvo de roubo e falsificação.
+Modelo fechado em [`beast_contracts_brief.md`](./beast_contracts_brief.md) e D64 (`game_design.md`): invocação de uso
+único, 3 contratos, sagradas por evento, 1 besta (2 com Domador). Só restam valores (teto em campo, duração, stats da
+besta), que entraram na Parte 2 (linha "Ajuste fino dos contratos").
 
-**O que o jogo já sabe [ENRAIZADO]:** arma viva carrega uma variante e, equipada, dá acesso a uma habilidade da arma.
-Entra no princípio "mais poder, mais custo".
+### ~~1.4 Família e facção~~ (fechado)
 
-**Perguntas abertas:**
+Modelo fechado em [`family_faction_brief.md`](./family_faction_brief.md) e D65/D66 (`game_design.md`): família é
+traço de Origem (sangue puro dá acesso ao despertar, sem stat geral; Prodígio fora da família) e organizações são da
+conta, fora do combate. Só restam valores, tabela de famílias x variante e eventos, que entraram na Parte 2 (linhas
+"Famílias e organizações").
 
-1. A habilidade da arma ocupa um dos **4 slots** (D43) ou é um 5º? Ou é uma skill própria que substitui uma?
-2. A variante da arma conta como variante do personagem (D41, só usa skills das próprias variantes; D52, mais custo)?
-3. Como se adquire e como funciona a **Ressonância** (por personagem? por nível? por traço)?
-4. Qual o custo/Desgaste da habilidade da arma? Quem paga: o portador ou a arma?
-5. Quantas armas por personagem? Entra no ranqueado nivelado? Onde mora: inventário da conta (A6)?
-6. Armadura viva existe, ou só arma?
+### ~~1.5 Pontos de lore a mapear junto~~ (fechado)
 
-### 1.3 Contratos com animais (Pacto Simbiótico Selvagem)
-
-**Estado:** só a base da ideia (`skills_brief.md` 10.6, "estilo Naruto").
-
-**O que já existe no lore** (`world_build.md` 3.7):
-
-- Éon de animal selvagem. O humano é **orquestrador**; o animal mantém variante e vontade.
-- Pacto amadurece com o tempo. Quantidade: 1 = bom, 2 = excelente, 3+ = gênio geracional.
-- Cada pacto ocupa banda neural constante: excesso causa burnout. Ruptura brusca pode ferir ou matar os dois.
-- Com líderes de coletivo (rainha, alfa) o humano vira nó de influência.
-- Não confundir com os **Contratos de Vínculo** dos Escrivães/Banco Central (`world_build.md` 9.8), que são financeiros.
-
-**O que o jogo já sabe [ENRAIZADO]:** invocação de um companheiro para a batalha. Mesmo princípio de custo.
-
-**Perguntas abertas (mexem na base do combate):**
-
-1. O companheiro **ocupa uma célula** da grade 3x3? Conta como um dos 4 personagens (D11)?
-2. Bloqueia (D21/D22)? Pode ser alvo? Tem HP, stats, skills? Quando morre, o que acontece com o dono?
-3. Age na fila (D10) com Velocidade própria, ou age junto com o dono?
-4. Quem escolhe a ação dele: o jogador a cada turno (D2) ou automático?
-5. Como sai do combate para o determinismo (D8)? Precisa de regra para entrar e sair da grade.
-6. Custo: burnout do lore vira Desgaste do dono? Limite de contratos por personagem?
-
-### 1.4 Família e facção
-
-**Estado:** o usuário quer levar algo da história para o jogo, mas **não sabe se dá para equilibrar**. Ele vai contar
-como é na história, e aí decidimos. Conversa própria.
-
-**O que já existe no lore:**
-
-- **Famílias/ancestralidade** (`world_build.md` 4): 4 Primordiais (Pyranth, Nerevian, Gevarn, Zepharel), 13 derivadas
-  em 4 matrizes, Nocthar e Hyperion.
-- **Nações e organizações** (`world_build.md` 9): Ambar, Carmesin, CORE, Elvarin, Valthuria, Sombra, Celestes, Banco
-  Central, Ônix e outros.
-
-**O que o jogo já sabe:**
-
-- A identidade do personagem tem **família/facção (lore)** (`character_brief.md` 1), sem efeito mecânico.
-- D6: a história se liga às estruturas do mundo (facções, organizações), não ao enredo.
-- Tópico "composição e sinergias de facção" (`game_design.md` seção 5, item 5).
-- **[ENRAIZADO]** Sem vantagem/desvantagem entre linhagens (D16): sinergia de facção **não pode** recriar tabela de
-  tipo por outro caminho.
-
-**Perguntas abertas:**
-
-1. Facção/família dá algum efeito mecânico (bônus, traço exigido por campo, sinergia na squad) ou fica só em
-   narrativa e progressão?
-2. Se der, como equilibrar sem virar "squad obrigatória" e sem violar a diversidade por design (D14)?
-3. Como se relaciona com os **dois eixos de linhagem** (6 manifestações x famílias ancestrais)? Conflito 9 do
-   `world_build.md`: falta mapear em qual manifestação cai cada família.
-4. Liga com **traços de Origem** (`character_brief.md` 5) ou com o campo de batalha?
-
-### 1.5 Pontos de lore a mapear junto
-
-- **Despertar** tem dois sentidos no lore (conflito 5 do `world_build.md`): sincronização ≥95% (universal) e o
-  Sistema de Despertar dos Ancestrais Primordiais (cor, pressão, camada, alcance; seção 5). No jogo (D49), o
-  despertar é evolução da variante (fogo → fogo azul). Falta escolher qual sentido vira regra e se o "estágio" do
-  lore (Base, 1º, 2º, 3º, Máximo) vira nível de despertar.
-- **Dois conceitos de Éon** (conflito 4): simbionte extraterrestre x Éons Primordiais. Afeta a explicação de armas
-  vivas e contratos.
+- **Despertar** (conflito 5): fechado em D67 e [`awakening_brief.md`](./awakening_brief.md). Um despertar só, sem
+  estágios; os dois sentidos do lore são só flavor.
+- **Éon** (conflito 4): **descartado** como termo (nome técnico da Sombra para variante, sem relevância no jogo).
 
 ---
 
@@ -124,8 +67,12 @@ Não são conversa própria; são decisões de design que faltam. Em ordem aprox
 | **XP:** fórmula, pesos das métricas, curva | `character_brief.md` 7 | Suporte sobe mais devagar (aceito) |
 | **Distribuição de stats:** níveis que dão ponto livre, teto, proporção | `character_brief.md` 3 | |
 | **Marcos de skill e tamanho do kit básico** | `character_brief.md` 4 | Kit pode ser padronizado por classe |
-| **Despertar:** nível mínimo, eventos, o que muda | `character_brief.md` 6 | Liga com 1.5 |
+| **Ajuste fino do despertar** | `awakening_brief.md` 5 | Nível mínimo, pesos, catálogo por variante, missões ocultas, sangue puro, skills x slots |
 | **Ajuste fino do DOM** | `dom_brief.md` 7 | Stats de básico/intermediário, feitos, janela e limiares, multiplicadores, durações. Depende de A8 |
+| **Ajuste fino do equipamento vivo** | `living_gear_brief.md` 8 | Valores por grau e elo, requisitos, catálogo de passivas, 2º slot, Divino. Depende de A8 |
+| **Ajuste fino dos contratos** | `beast_contracts_brief.md` 7 e 8 | Teto em campo, stats da besta, duração, lista de bestas, traço Domador. Depende de A8 |
+| **Famílias e organizações** | `family_faction_brief.md` 4 | Tabela família x variante, valores de Origem e Prodígio, reputação das organizações, Crônica x Registro, eventos |
+| **Faixas do ranqueado** (D63) | `game_design.md` D63 | Quais faixas, nível de cada uma, o que é "limitação". Liga com A5 |
 | **Custo extra de 2 ou 3 variantes** | `character_brief.md` 8 | "Mais variantes, mais custo" |
 | **Conflitos do `world_build.md`** (seção 13) que viram dado | A7 | Decidir só os que importam |
 | **Conjunto mínimo de skills de teste** (~8, 2 linhagens) | `skills_brief.md` 9.7 | Protótipo |

@@ -39,7 +39,7 @@ Níveis: **básico**, **intermediário**, **avançado**.
 - O título **não dá stat**: é só o acesso à skill única.
 - A skill única é uma **5ª skill**, fora das 4 do D43, e é de **uso único por batalha** (é por isso que é forte).
 - **O DOM não tem custo nem Desgaste.** Exceção consciente ao D52 ("mais poder, mais custo"): o custo é manter a meta.
-- Vale no ranqueado (D56).
+- Vale no ranqueado (D56), e o grau influencia: a paridade vem das **faixas** do ranqueado (D63), não de teto.
 
 ### 3.1 Skills únicas do avançado
 
