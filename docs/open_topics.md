@@ -72,7 +72,7 @@ Não são conversa própria; são decisões de design que faltam. Em ordem aprox
 | **Ajuste fino do DOM** | `dom_brief.md` 7 | Stats de básico/intermediário, feitos, janela e limiares, multiplicadores, durações. Depende de A8 |
 | **Ajuste fino do equipamento vivo** | `living_gear_brief.md` 8 | Valores por grau e elo, requisitos, catálogo de passivas, 2º slot, Divino. Depende de A8 |
 | **Ajuste fino dos contratos** | `beast_contracts_brief.md` 7 e 8 | Teto em campo, stats da besta, duração, lista de bestas, traço Domador. Depende de A8 |
-| **Famílias e organizações** | `family_faction_brief.md` 4 | Tabela família x variante, valores de Origem e Prodígio, reputação das organizações, Crônica x Registro, eventos |
+| ~~**Famílias e organizações**~~ **fechada** (D87, D88) | `family_faction_brief.md` 4 | Famílias e eventos são do admin. Empréstimo e calote fechados (D89). Resta só ajuste fino dos placeholders depois de A8 |
 | **Faixas do ranqueado** (D63) | `game_design.md` D63 | Quais faixas, nível de cada uma, o que é "limitação" (inclui o limite da skill aprimorada, D80). Liga com A5 |
 | **Custo extra de 2 ou 3 variantes** | `character_brief.md` 8 | "Mais variantes, mais custo" |
 | **Conflitos do `world_build.md`** (seção 13) que viram dado | A7 | Decidir só os que importam |
