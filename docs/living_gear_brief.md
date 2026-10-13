@@ -103,3 +103,5 @@ das **faixas** do ranqueado (D63), onde nível, DOM e equipamento escalam juntos
 5. Divino: custo e como se obtém.
 6. Mercado e modelo de progressão (A6).
 7. Companheiro/contrato **não** entra aqui (conversa 1.3).
+8. Cada equipamento tem uma **lista de títulos que ajudam o elo** (D81): cada título da lista **vale por um
+   requisito cumprido** (4.1). Falta o teto de substituições [PLACEHOLDER: 1] e as listas.

@@ -64,7 +64,7 @@ A família é um **traço de Origem** (D47), dentro do limite de 5 traços (D39)
 
 | Organização | Área | Associação dá | Tensão |
 |---|---|---|---|
-| **Banco Central** | Economia | **Empréstimo** adiantado (baús, itens). O calote **bloqueia ganhos** (a lore: bloqueio de evolução) | Opõe-se aos Celestes (evitam confronto direto) |
+| **Banco Central** | Economia | **Empréstimo** adiantado (baús, itens). O calote **bloqueia ganhos** (a lore: bloqueio de evolução). **Taxa menor no mercado** (D79) | Opõe-se aos Celestes (evitam confronto direto) |
 | **Celestes** | Religião | Bônus em eventos de **caça** (aos Extirpadores) | Oposta à **Sombra**; a Sombra os caça de volta |
 | **Sombra** | Ciência e tecnologia | Bônus em eventos de catálogo e pesquisa. Dona do **ESS**, o ranking de guerreiros | Oposta aos Celestes |
 | **Crônica** | Mídia | Visibilidade (anúncios cosméticos, histórico) | Quem se liga a ela é **marcado** pelo Registro |

@@ -95,10 +95,11 @@ Perguntas: duração dos efeitos (em turnos), se acumulam, se há limite, quem v
 
 - Trocar de lugar com um aliado (custa a ação dos dois?), mover só para adjacente, ou **skills específicas que reposicionam** (empurrar, puxar, trocar). Esta última foi a opção que parece mais promissora por não criar uma mecânica separada.
 
-### 3.7 Variações e aprimoramento [ABERTO]
+### 3.7 Variações e aprimoramento [FECHADO, D80]
 
-- Variações de uma skill (versão básica x versão aprimorada).
-- Ligação com a progressão pela história: título que aumenta a **chance** de aprimorar uma skill, nunca dá status direto (`game_design.md`, seção 3).
+- Versão básica x versão aprimorada: **um aprimoramento só**, que dá **mais potência** (sem efeito novo).
+- Cada skill indica o(s) título(s) que aumentam a **chance** de aprimorá-la; título nunca dá status direto.
+  Detalhes em `progression_brief.md` 2.8.
 
 ---
 
@@ -423,9 +424,9 @@ os **valores** dos stats. Bloqueiam: valores da tabela 9.4, queda de dano (9.3),
 - **Build:** o personagem acumula as skills liberadas (por nível) e o jogador **monta as 4 fora da partida**. Durante a
   batalha ficam **travadas**. Um mesmo personagem pode ter papéis diferentes conforme a squad.
 
-### 10.6 Aprimoramento e auxílio de skill [BASE da ideia, não aprofundar ainda]
+### 10.6 Aprimoramento do personagem e auxílio de skill [BASE da ideia, não aprofundar ainda]
 
-Depende da conversa de personagem. Formas que vêm do lore:
+Não confundir com o **aprimoramento de skill** (3.7, D80). Formas de aprimorar o personagem que vêm do lore:
 
 - **Despertar:** evolução da própria variante (ex.: fogo → fogo azul). Raro.
 - **Armas vivas:** armas que carregam uma variante. Equipadas, dão acesso a uma habilidade da arma.

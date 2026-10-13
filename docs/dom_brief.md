@@ -83,6 +83,8 @@ Regras dos feitos:
   mesmo com formas de conquista diferentes.
 - Perder o **avançado** retira o título e a skill única.
 - **Perda por derrota não existe**: só o ritmo de feitos conta (não punir tank/suporte por derrotas).
+- **Venda no mercado:** o personagem vendido **perde todo o DOM** (todos os pilares e níveis, com título e skill
+  única). O DOM é volátil e conquistado por quem jogou; não se compra (D81).
 
 ## 6. Modos
 

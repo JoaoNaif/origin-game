@@ -66,3 +66,6 @@ Receio do usuário: muitas invocações na grade. Salvaguardas confirmadas:
 4. Lista de bestas (comuns e sagradas) e suas variantes.
 5. Burnout da lore (excesso de pactos) já é coberto por: 1 besta, 2 com Domador, 1 invocação por besta.
 6. Regras de captura em PvE e mercado (A6).
+7. Cada besta tem uma **lista de títulos que ajudam o contrato** (D81): cada título da lista **vale por um
+   requisito cumprido** (contrato Mestre). Falta o teto de substituições [PLACEHOLDER: 1], as listas e se ajuda
+   também Dominância e Igualdade (que não têm requisitos).

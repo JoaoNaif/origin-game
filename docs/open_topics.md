@@ -64,7 +64,7 @@ Não são conversa própria; são decisões de design que faltam. Em ordem aprox
 | **Modelo de progressão da conta** (A6): parte 1 (XP, nível, skills) fechada (D76, D77) | A6 | Conta guarda inventário, moeda, organização, reputação, ranking. Resta a parte 2 (linha abaixo) |
 | **Campos de batalha:** duração N, traços exigidos, tamanho do bônus | `skills_brief.md` 8.5/10.2 | Dados do admin |
 | **Valores do XP e da curva** (a forma está fechada, D76) | `progression_brief.md` 1.1 e 1.2 | Pesos por métrica, XP por nível, bônus do catch-up |
-| **Parte 2 da progressão (PENDENTE):** mercado, inventário, economia, baús e pity, aprimoramento de skill, modelo de negócio, detalhe da obtenção de personagens e distribuição dos personagens na raridade (classificação de perigo, fechada) | `progression_brief.md` 2.3 | Personagens fechados (D78: sem único, raridade, passiva); o resto aguarda o usuário |
+| ~~**Parte 2 da progressão**~~ **fechada** (D79 a D86; modelo de negócio fechado no princípio, D84) | `progression_brief.md` 2.3 | Personagens fechados (D78). Mercado, inventário, economia e baús fechados (D79); aprimoramento de skill e títulos fechados (D80), venda perde o DOM e títulos ajudam elo e contrato por lista (D81), título vale por um requisito cumprido (teto placeholder 1); obtenção e exclusividade fechadas (D82); restam valores (limite do inventário, taxa, porcentagens dos baús, preços) e o funcionamento do mercado |
 | **Metas de traço** (métricas e limiares por categoria) | `progression_brief.md` 1.5 | **Adiado para a conversa com o admin**; no MVP, traços direto no `seed.ts` |
 | **Distribuição de stats:** níveis que dão ponto livre, tetos por classe, orçamento | `character_brief.md` 3; `classes_brief.md` 5 | Modelo fechado (D70); faltam valores. 8 classes (D69) com perfis propostos |
 | **Marcos de skill e tamanho do kit básico** | `character_brief.md` 4 | Kit pode ser padronizado por classe |
@@ -73,7 +73,7 @@ Não são conversa própria; são decisões de design que faltam. Em ordem aprox
 | **Ajuste fino do equipamento vivo** | `living_gear_brief.md` 8 | Valores por grau e elo, requisitos, catálogo de passivas, 2º slot, Divino. Depende de A8 |
 | **Ajuste fino dos contratos** | `beast_contracts_brief.md` 7 e 8 | Teto em campo, stats da besta, duração, lista de bestas, traço Domador. Depende de A8 |
 | **Famílias e organizações** | `family_faction_brief.md` 4 | Tabela família x variante, valores de Origem e Prodígio, reputação das organizações, Crônica x Registro, eventos |
-| **Faixas do ranqueado** (D63) | `game_design.md` D63 | Quais faixas, nível de cada uma, o que é "limitação". Liga com A5 |
+| **Faixas do ranqueado** (D63) | `game_design.md` D63 | Quais faixas, nível de cada uma, o que é "limitação" (inclui o limite da skill aprimorada, D80). Liga com A5 |
 | **Custo extra de 2 ou 3 variantes** | `character_brief.md` 8 | "Mais variantes, mais custo" |
 | **Conflitos do `world_build.md`** (seção 13) que viram dado | A7 | Decidir só os que importam |
 | **Personagens de teste do MVP:** 8 a 12 personagens cobrindo todas as classes (D69), alcances, status e linhagens, criados num `seed.ts` (dados iniciais) | `skills_brief.md` 9.7 | Não é decisão aberta, é trabalho de montagem. Substitui o "~8 skills, 2 linhagens" |
