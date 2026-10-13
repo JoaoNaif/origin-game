@@ -32,7 +32,7 @@ A família é um **traço de Origem** (D47), dentro do limite de 5 traços (D39)
 
 1. **Só vale para a variante da família.** Pyranth só dá bônus a quem tem fogo. Isso também mapeia cada família a
    variantes (conflito 9 do `world_build.md`) sem tabela entre linhagens.
-2. **Sangue puro dá acesso, não stat geral:** maior **chance de despertar** (D49) e uma **redução pequena do custo**
+2. **Sangue puro dá acesso, não stat geral:** **missões de despertar mais leves** (`awakening_brief.md` 3.2, sem mudar a chance do sorteio) e uma **redução pequena do custo**
    da própria variante. O despertar já tem custo próprio (D49/D52), então o equilíbrio vem pronto.
 3. **Fora da família:** traço **Prodígio**. Menos eficiência, mas mais flexível (ex.: sem requisito de stats em
    equipamento vivo, ver `living_gear_brief.md` 4.1). A convocação da família e o preconceito viram **eventos e

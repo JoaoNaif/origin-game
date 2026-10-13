@@ -41,12 +41,25 @@ São **7**:
 - **Sem mana.** O custo das skills é o Desgaste em stats, **um stat por linhagem** (skills_brief 9.4, D59). Ataque
   e Velocidade não são custo de nenhuma linhagem.
 - **Piso do Desgaste [ENRAIZADO]:** cada stat tem um **mínimo durante a batalha**; o Desgaste nunca leva o stat
-  abaixo dele (o usuário não se mata nem zera a própria Defesa por custo). Valores dos pisos **[ABERTO]**.
+  abaixo dele (o usuário não se mata nem zera a própria Defesa por custo). **Piso = 75%** do stat base (ver `skills_brief.md` 9.4b), no máximo 25% de perda [PLACEHOLDER].
 - **Acerto [ENRAIZADO o princípio]:** conta a **Precisão de quem ataca contra a Esquiva de quem defende**. Precisão
   baixa tem menos sucesso contra Esquiva alta; Precisão alta acerta com facilidade contra Esquiva baixa. A regra é
   **a mesma para skill individual e de área**. Fórmula **[ABERTO]**.
-- **O que a Vontade resiste** (só aplicação de status, ou também controle/empurrão): **[ABERTO]**.
-- Fórmula de dano e valores numéricos: **[ABERTO]**.
+- **O que a Vontade resiste [ENRAIZADO]:** a **aplicação de status hostil** e o **reposicionamento forçado**. Não
+  resiste a dano direto, debuff de stat nem Desgaste (`skills_brief.md` 11.9).
+- **Fórmula de dano [ENRAIZADO a forma]:**
+
+  ```
+  Dano = Poder da skill × Ataque × Ataque / (Ataque + Defesa)
+  ```
+
+  Razão, não subtração: dano nunca zera; o equilíbrio fica igual em qualquer nível (ajuda o ranqueado por faixa,
+  D63); o Desgaste em Ataque/Defesa age de forma suave. **Sem variação aleatória** de dano e **sem crítico** como stat.
+  Ordem de aplicação: dano base, queda da linha (100/60/30), buffs e debuffs (teto, D37), Defender, escudo, HP.
+- **Acerto [ENRAIZADO a forma]:** `Chance = base da skill × 2 × Precisão / (Precisão + Esquiva)`, com **piso e teto**
+  [PLACEHOLDER: 30% a 100%]. Errar é decidido pela seed (D8).
+- **Duração alvo da batalha:** **10 a 15 rodadas** (pode passar), cerca de **8 a 10 minutos** em média. Um golpe médio
+  tira em torno de **8 a 10% do HP máximo** do alvo com stats iguais [PLACEHOLDER]. Valores dos stats: **[ABERTO]**.
 
 ---
 
@@ -54,16 +67,19 @@ São **7**:
 
 Problema: distribuição livre deixa um personagem feito para defender virar tank e atacante ao mesmo tempo.
 
-Solução: **pontos livres limitados às aptidões da classe**.
+Solução (ajustada por D70, ver [`classes_brief.md`](./classes_brief.md)): **pontos livres com teto por stat, definido
+pela classe** (estilo posição de NBA 2K). A regra antiga de "3 aptidões" foi substituída.
 
 - **Todos os stats crescem gradualmente** a cada nível, seguindo o perfil da classe (tank cresce mais em HP e Defesa).
 - **Em alguns níveis** o personagem ganha **pontos livres** (quais níveis e quantos: **[ABERTO]**).
-- Cada classe tem **3 aptidões**: os únicos stats que aceitam pontos livres (ex.: tank = HP, Defesa, Vontade). Há
-  **teto por stat**. O tank **nunca** coloca ponto livre em Ataque.
-- O jogador escolhe *que tipo* de tank quer, mas o tank nunca vira atacante.
+- Cada classe tem um **teto por stat** (nos 7). Os pontos livres vão em **qualquer stat, até o teto**: o stat que
+  define a classe tem teto alto, os demais têm teto baixo. Quem é Vanguarda não vira Executor.
+- O jogador escolhe *que tipo* de Vanguarda quer (Guardião ou Bruto), mas a classe limita até onde vai.
+- **8 classes** (Vanguarda, Atirador, Executor, Controlador, Suporte, Artilharia, Guardião,
+  Tático): ver [`classes_brief.md`](./classes_brief.md).
 - **Redistribuição grátis fora da batalha**, como a build de skills.
 - No **ranqueado** todos têm a mesma quantidade de pontos (nivelamento, seção 4).
-- Aptidões e teto são definidos por classe/personagem (dados do admin).
+- O teto é definido por classe e ajustado por personagem (dados do admin).
 - Stat final = **base fixa + crescimento por nível + pontos livres**. As proporções (ex.: ~85% base / ~15% livres, que
   eram exemplo), o teto e o ritmo de ganho são **[ABERTO]**.
 
@@ -77,7 +93,8 @@ Solução: **pontos livres limitados às aptidões da classe**.
   **padronizado**: igual, com o mesmo dano, para todos os personagens da mesma classe. Quantas skills tem o kit:
   **[ABERTO]**.
 - Cada nível dá **crescimento de stats** (seção 3).
-- **Skills novas liberadas em marcos** de nível (ex.: 10, 25, 40, 60, 80, 100; marcos exatos **[ABERTO]**).
+- **Skills novas a cada 5 níveis (D77):** bloco de 3 sorteadas, o jogador escolhe 1; as escolhidas ficam guardadas
+  e o jogador monta as 4 de batalha. Cada skill tem nível mínimo. Ver [`progression_brief.md`](./progression_brief.md).
 - **PvP (opção C, ajustada por D63):** no **ranqueado**, o nível é **nivelado pela faixa de ranking** (ex.: platina =
   todos nível 100; prata = nível 20, com limitações), não por um nível único. O nível real só libera skills, e a
   vantagem de quem joga mais fica nos traços, no DOM, no equipamento vivo e nas opções de build. No **casual e no
@@ -110,11 +127,11 @@ Complementa skills_brief 8.4 e 10.1.
   Detalhes em [`awakening_brief.md`](./awakening_brief.md). Resumo:
   1. **Todos com 1 variante podem, nada garante:** depende de o admin ter criado um despertar para a variante.
      Quem tem 2 ou 3 variantes (ou nenhuma) **não desperta**.
-  2. **Nível mínimo [placeholder 80]**, depois sorteio com pesos (melhores stats) e **missões ocultas** ligadas ao
-     perfil do despertar sorteado.
+  2. **Nível 80**, depois sorteio (chance maior para o que combina com os melhores stats) e **missões ocultas**,
+     ligadas ao perfil do despertar sorteado e diferentes por personagem.
   3. **Mais poder = mais custo:** a skill despertada é mais forte e o Desgaste também sobe (risco x retorno).
   4. **Vale no ranqueado.** O equilíbrio vem do custo da regra 3 e das faixas (D63).
-- **[ABERTO]** Valores, catálogo de despertares e missões (`awakening_brief.md` 5).
+- **[ABERTO]** Só o catálogo do admin e o modelo das missões (`awakening_brief.md` 5).
 
 ---
 
@@ -125,8 +142,8 @@ Complementa skills_brief 8.4 e 10.1.
 - **Classes diferem no ritmo:** suporte sobe mais devagar que as demais. Isso é aceito como natural do gênero.
 - **O que conta:** batalhas **contra a máquina (PvE)** e **PvP** contam. **Amistosa (contra amigo) não conta** para
   XP nem para histórico (evita farm combinado).
-- **[ABERTO]** Fórmula, peso de cada métrica e curva de XP por nível; como compensar a desvantagem do suporte sem
-  virar farm.
+- **[ENRAIZADO a forma]** Fórmula, curva e regras de XP em [`progression_brief.md`](./progression_brief.md) 1.1
+  (D76): métricas por participação, suporte com retorno decrescente, catch-up. **[ABERTO]** os valores.
 
 ---
 

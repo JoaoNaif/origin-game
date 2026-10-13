@@ -56,18 +56,19 @@ Não são conversa própria; são decisões de design que faltam. Em ordem aprox
 
 | Tópico | Onde está | Observação |
 |---|---|---|
-| **Fórmula de dano**, valores dos stats, fórmula de acerto (Precisão x Esquiva), pisos do Desgaste | A8; `character_brief.md` 2 | Bloqueia custos, buffs, queda de dano, teto de empilhamento, Defender |
-| **Mecânica do Desgaste** (como o risco se manifesta e como o retorno é medido) | A3b | Conceito fechado (D13); a mecânica é o centro da conversa de skills |
-| **Regras finas de alcance e bloqueio**, tipos de alcance, turtling | A2b | Conversa de skills |
-| **Estrutura do PvP:** ao vivo ou assíncrono, relógio de turno, ranqueado, modos (ranqueado, casual, amistosa, PvE), matchmaking | A5 | Amistosa não conta XP nem histórico (D54) |
-| **Modelo de progressão:** conta, personagens, skills, equipamento | A6 | Onde mora inventário (armas) e como se obtêm personagens |
-| **Lista de status** (queimadura, lentidão...) e o que a Vontade resiste | `skills_brief.md` 10.7 | Necessária para o catálogo de skills |
-| **Teto do empilhamento e redução do Defender** | `skills_brief.md` 10.8 | Dependem dos stats |
+| **Valores dos stats** e pisos do Desgaste (a forma da fórmula de dano e de acerto está fechada, D68) | A8; `character_brief.md` 2 | Bloqueia custos, buffs, queda de dano, teto de empilhamento, Defender |
+| **Valores do Desgaste** (curva custo x poder, piso, alívio, potência no piso) | `skills_brief.md` 9.4b | Mecânica fechada (D71); só placeholders |
+| **Valores** da Exaustão, dos status (duração, % de Marcado, dano contínuo), do limite de fontes e da redução do **Defender** | `skills_brief.md` 11.12 | Regras fechadas (D72, D73); só placeholders |
+| **IA da máquina** (adversário do MVP): como escolhe ações, dificuldades, squads de NPC | `pvp_brief.md` 7 | **Conversa própria crucial, aberta de propósito**: a lógica será criada junto com o usuário (D75). É o único ponto realmente aberto do MVP |
+| **Ajuste fino do PvP:** reconexão, valores do ranking e das faixas, top 3, fila | `pvp_brief.md` 7 | Estrutura fechada (D74); PvP vem depois do MVP |
+| **Modelo de progressão da conta** (A6): parte 1 (XP, nível, skills) fechada (D76, D77) | A6 | Conta guarda inventário, moeda, organização, reputação, ranking. Resta a parte 2 (linha abaixo) |
 | **Campos de batalha:** duração N, traços exigidos, tamanho do bônus | `skills_brief.md` 8.5/10.2 | Dados do admin |
-| **XP:** fórmula, pesos das métricas, curva | `character_brief.md` 7 | Suporte sobe mais devagar (aceito) |
-| **Distribuição de stats:** níveis que dão ponto livre, teto, proporção | `character_brief.md` 3 | |
+| **Valores do XP e da curva** (a forma está fechada, D76) | `progression_brief.md` 1.1 e 1.2 | Pesos por métrica, XP por nível, bônus do catch-up |
+| **Parte 2 da progressão (PENDENTE):** mercado, inventário, economia, baús e pity, aprimoramento de skill, modelo de negócio, detalhe da obtenção de personagens e distribuição dos personagens na raridade (classificação de perigo, fechada) | `progression_brief.md` 2.3 | Personagens fechados (D78: sem único, raridade, passiva); o resto aguarda o usuário |
+| **Metas de traço** (métricas e limiares por categoria) | `progression_brief.md` 1.5 | **Adiado para a conversa com o admin**; no MVP, traços direto no `seed.ts` |
+| **Distribuição de stats:** níveis que dão ponto livre, tetos por classe, orçamento | `character_brief.md` 3; `classes_brief.md` 5 | Modelo fechado (D70); faltam valores. 8 classes (D69) com perfis propostos |
 | **Marcos de skill e tamanho do kit básico** | `character_brief.md` 4 | Kit pode ser padronizado por classe |
-| **Ajuste fino do despertar** | `awakening_brief.md` 5 | Nível mínimo, pesos, catálogo por variante, missões ocultas, sangue puro, skills x slots |
+| **Ajuste fino do despertar** | `awakening_brief.md` 5 | Catálogo por variante (admin) e modelo das missões ocultas. Fórmula do sorteio, nível 80, sangue puro e dica fechados; só ajuste de placeholders |
 | **Ajuste fino do DOM** | `dom_brief.md` 7 | Stats de básico/intermediário, feitos, janela e limiares, multiplicadores, durações. Depende de A8 |
 | **Ajuste fino do equipamento vivo** | `living_gear_brief.md` 8 | Valores por grau e elo, requisitos, catálogo de passivas, 2º slot, Divino. Depende de A8 |
 | **Ajuste fino dos contratos** | `beast_contracts_brief.md` 7 e 8 | Teto em campo, stats da besta, duração, lista de bestas, traço Domador. Depende de A8 |
@@ -75,7 +76,7 @@ Não são conversa própria; são decisões de design que faltam. Em ordem aprox
 | **Faixas do ranqueado** (D63) | `game_design.md` D63 | Quais faixas, nível de cada uma, o que é "limitação". Liga com A5 |
 | **Custo extra de 2 ou 3 variantes** | `character_brief.md` 8 | "Mais variantes, mais custo" |
 | **Conflitos do `world_build.md`** (seção 13) que viram dado | A7 | Decidir só os que importam |
-| **Conjunto mínimo de skills de teste** (~8, 2 linhagens) | `skills_brief.md` 9.7 | Protótipo |
+| **Personagens de teste do MVP:** 8 a 12 personagens cobrindo todas as classes (D69), alcances, status e linhagens, criados num `seed.ts` (dados iniciais) | `skills_brief.md` 9.7 | Não é decisão aberta, é trabalho de montagem. Substitui o "~8 skills, 2 linhagens" |
 
 ---
 

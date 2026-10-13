@@ -19,6 +19,9 @@ skills de área por linha/coluna, Desgaste como risco x retorno, vitória por el
 **Skills são o ponto central e serão desenhadas numa conversa própria**: não implementar o modelo de skill
 antes disso.
 
+**Escopo do MVP (D75):** apenas batalhas **contra a máquina (PvE)**, para validar a lógica. O PvP vem depois
+(estrutura em [`docs/pvp_brief.md`](./docs/pvp_brief.md)).
+
 Antes de qualquer trabalho em skills, ler [`docs/skills_brief.md`](./docs/skills_brief.md): lista o que já é
 **enraizado** (risco x retorno, sem vantagem entre linhagens, ranged nunca superior ao melee, troca de posição
 custa o turno, etc.) e o que está em aberto.

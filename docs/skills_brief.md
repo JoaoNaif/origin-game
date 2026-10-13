@@ -69,7 +69,7 @@ Os campos abaixo são **o mínimo que já sabemos que existe**. O formato final 
   - **Fundamental** → custo em **HP**.
   - **Biológica** → custo em **velocidade**.
   - As demais (Elemental, Material, Vetorial, Psíquica) ainda sem padrão: **[ABERTO]** (A3c).
-- Como o risco se manifesta é **[ABERTO]** (A3b). Hipóteses a discutir: custo imediato (HP/velocidade/etc.), chance de falha, desgaste acumulado dentro do combate, desgaste que persiste entre combates, efeito colateral aleatório (via seed).
+- Como o risco se manifesta: **fechado em 9.4b** (cobra no acerto, acumula na batalha, piso de 75%, alívio por buff/cura/Defender, sem sorte).
 - Skills muito fortes: custo alto (princípio 1).
 
 ### 3.4 Efeitos [ABERTO]
@@ -282,16 +282,71 @@ A Biológica **saiu de velocidade** (ver 9.2). Ataque e Velocidade não são cus
 - Ponto de atenção: a Esquiva só pesa contra Precisão alta, então a Biológica pode parecer barata. Calibrar quando a
   fórmula de acerto existir.
 
+### 9.4b Mecânica do Desgaste [ENRAIZADO]
+
+Fecha a pergunta A3b. O Desgaste **não é o centro do jogo**: parece pouco, mas quem sabe jogar em cima dele tem
+vantagem (diferencial de nível alto), sem assustar o iniciante.
+
+**Quando cobra**
+
+- Cobra se a skill **produz efeito em pelo menos 1 alvo**. **Errar não cobra** (já custou turno e recarga).
+- Skills sem teste de acerto (buff, cura, em si mesmo) cobram **sempre**.
+- Skill de área cobra **uma vez**, não por alvo.
+- Cobrou, **cobra sempre**: **sem chance de falha** nem efeito colateral aleatório (custo é lei).
+
+**Como acumula**
+
+- O Desgaste é um **modificador negativo no stat da linhagem** (9.4), **acumula** durante a batalha e some no fim (D32).
+- **Piso: 75%** do stat base [PLACEHOLDER]: o Desgaste tira no máximo 25%. O mesmo piso para todos os stats.
+- **2 variantes = 2 Desgastes** (D52); cada skill só cobra o stat **da própria linhagem**, nunca soma as duas.
+
+**Curva custo × poder (convexa)** [PLACEHOLDER]
+
+| Poder da skill | Custo (% do stat base) |
+|---|---|
+| 1,0 | ~3% |
+| 1,5 | ~7% |
+| 2,0 | ~15% |
+
+Skills básicas quase não pesam; as fortes pesam. O admin equilibra olhando **o que a skill faz** (dano, efeito,
+alcance, área), não só o número.
+
+**No piso (sem folga)**
+
+- A skill **continua utilizável**, mas com **potência reduzida drasticamente**: dano, buff, debuff e cura rendem
+  menos. Nada é gratuito, e nenhuma skill sai do personagem.
+- Regra proposta [PLACEHOLDER]: com folga ≥ custo, 100%; com folga parcial, interpola; sem folga, **50%** da magnitude.
+  Duração e acerto não mudam.
+
+**Como alivia**
+
+| Fonte | Efeito [PLACEHOLDER] |
+|---|---|
+| **Buff no mesmo stat** | Soma direto (D37), sem regra nova |
+| **Cura** | Remove uma parte **menor** do Desgaste acumulado (~20%), para o Suporte não anular o custo (D13) |
+| **Defender** | Remove um valor pequeno (~10%) |
+| **Skill de recuperação** | Remove mais (~50%); marca de skill de Suporte |
+
+**Exceções:** Fundamental reduz o **HP máximo**: cura não recupera (D59), só buff de HP máximo ou skill específica.
+Elemental reduz o **HP atual**: a cura desfaz. Se o HP máximo cai abaixo do atual, o atual é cortado para o novo
+máximo.
+
+**Psíquica:** perde Vontade e fica mais fraca, **sem** vulnerabilidade total a controle.
+
+**Outros custos fora desta tabela:** DOM não tem custo (D60); equipamento vivo no elo pleno cobra o custo da linhagem
+dele em valor fixo pequeno (`living_gear_brief.md` 5); contrato Dominância cobra Vontade enquanto a besta está em
+campo (`beast_contracts_brief.md` 3).
+
 ### 9.5 Personagem sem ação possível [ENRAIZADO]
 
 Caso: todas as skills em cooldown ou caras demais. O personagem pode **Defender**: recebe menos dano até o próximo
 turno. **Não existe ataque básico grátis** (quebraria o risco x retorno). Quanto reduz: depende dos stats.
 
-### 9.5b Empilhamento de efeitos [ENRAIZADO]
+### 9.5b Empilhamento de efeitos [ENRAIZADO, revisado em 11.10]
 
 - A **mesma skill** aplicada de novo **renova a duração**, não soma.
-- **Fontes diferentes** no mesmo atributo **somam até um teto** (valor do teto depende dos stats).
-- **Buff e debuff** no mesmo atributo se **somam direto** (+2 com -1 = +1).
+- ~~Fontes diferentes somam até um teto; buff e debuff somam direto.~~ **Revisado (D73):** multiplicativo sobre o
+  valor atual, com limite de **3 fontes** por stat (ver 11.10).
 
 ### 9.6 Traços: como adquirir [PROPOSTA]
 
@@ -305,13 +360,13 @@ turno. **Não existe ataque básico grátis** (quebraria o risco x retorno). Qua
 ### 9.7 Outras propostas aceitas
 
 - **Turtling:** além de skills que quebram bloqueio, o **campo de batalha** pode favorecer quem está na frente com o passar dos turnos. **[PROPOSTA]**
-- **Protótipo cedo:** fechar logo um conjunto de ~8 skills de teste cobrindo as combinações de alcance e área, com 2 linhagens, para validar a estrutura de dados.
+- **Protótipo cedo:** fechar logo um conjunto de skills de teste cobrindo as combinações de alcance e área. **Atualizado (D75):** 8 a 12 personagens de teste num `seed.ts`, cobrindo todas as classes, alcances, status e linhagens.
 
 ### 9.8 Stats do personagem [ENRAIZADO a lista; fórmula ABERTA]
 
 Os **7 stats** estão definidos em [`character_brief.md`](./character_brief.md) 2 (HP, Ataque, Defesa, Velocidade,
-Precisão, Esquiva, Vontade). Falta a **fórmula de dano** e os valores. Bloqueiam: valores da tabela 9.4, queda de
-dano (9.3), buffs e debuffs.
+Precisão, Esquiva, Vontade). **Forma da fórmula de dano e de acerto fechada** (`character_brief.md` 2, D68). Faltam
+os **valores** dos stats. Bloqueiam: valores da tabela 9.4, queda de dano (9.3), buffs e debuffs.
 
 ### 9.9 Pendências
 
@@ -378,7 +433,7 @@ Depende da conversa de personagem. Formas que vêm do lore:
 
 ### 10.7 Outros
 
-- **Lista de status** (queimadura, lentidão etc.): a criar. **[ABERTO]**
+- **Lista de status:** fechada em 11.9 (6 status; a Vontade resiste a status e reposicionamento forçado).
 
 ### 10.8 Pendências
 
@@ -388,3 +443,114 @@ Depende da conversa de personagem. Formas que vêm do lore:
 4. Lista de status (10.7).
 5. Conversa de personagem **feita** (`character_brief.md`): nível, kit básico, pontos livres, XP, despertar. Sobram
    como conversas próprias: armas vivas, contratos, DOM e facção (todas já fechadas, ver `open_topics.md`) (`character_brief.md` 9).
+
+---
+
+## 11. Decisões da conversa de skills (sessão 4): alcance e bloqueio
+
+> Fecha A2b (inclusive o turtling, 11.8). Substitui o que estava **[ABERTO]** em 3.1, 3.2 e 10.4 onde houver conflito.
+
+### 11.1 Tipos de alcance [ENRAIZADO]
+
+| Tipo | Quem pode ser alvo |
+|---|---|
+| **Corpo a corpo** | Só a **primeira célula ocupada** da linha (a exposta) |
+| **À distância** | **Qualquer** célula, inclusive atrás de alguém |
+| **Perfurante** | **Atravessa** os personagens da linha: sem bloqueio e **sem queda** (D36); custa mais |
+| **Flanco** | Ignora o bloqueio da frente: atinge a **última célula ocupada** da linha (por trás) |
+
+- O **flanco** é o contra-golpe do corpo a corpo: alcança o fundo da linha com
+  poder de melee, a custo maior. É a ferramenta típica do **Executor**.
+- Alcance **não é da classe, é da skill** (D69).
+
+### 11.2 Exposição e adjacência [ENRAIZADO]
+
+- **Exposto** = primeira célula ocupada da linha (da frente para o fundo). Linha vazia na frente: o próximo ocupado
+  vira exposto.
+- **Adjacente** = 4 direções (frente, trás, esquerda, direita). **Sem diagonal.**
+- Derrotado **deixa de bloquear** (D21).
+
+### 11.3 Área [ENRAIZADO]
+
+- Skills de **área** (linha, coluna, grade) **ignoram o bloqueio**. **O atacante escolhe** a célula-alvo.
+- Continuam valendo a queda 100/60/30 na linha (D36) e a regra de que a grade inteira não tem queda.
+
+### 11.4 Skills sobre aliados [ENRAIZADO]
+
+- **Cura, buff e escudo não sofrem bloqueio:** aliados não bloqueiam suporte. Alcançam qualquer aliado.
+
+### 11.5 Ranged e perfurante [ENRAIZADO]
+
+- **À distância** (D23): **menos Poder base e mais Desgaste** (D71). **Sem regra nova de posição.**
+- **Perfurante:** atravessa os personagens da linha, **sem queda**, e custa mais (D36).
+
+### 11.6 Guardião: interceptar [ENRAIZADO]
+
+- Intercepta golpes **de alvo único**, **uma vez por rodada**, de **corpo a corpo e à distância**.
+- **Não intercepta área** (linha, coluna, grade).
+
+### 11.7 Reposicionamento, bestas e resolução [ENRAIZADO]
+
+- **Reposicionamento:** cada tipo (empurrar, puxar, trocar, mover aliado, dash) tem **custo próprio**. A **Vontade**
+  cria resistência a ser forçado, **fórmula aberta**.
+- **Bestas** (D64): entram numa **célula livre escolhida** pelo jogador, **bloqueiam** e **podem ser empurradas**.
+- **Resolução:** efeitos de área resolvem em **ordem fixa** (determinismo, D8) e **recalculam a cada baixa**.
+
+### 11.8 Turtling [ENRAIZADO]
+
+Formação que ninguém consegue romper (parede de Vanguarda e Guardião com Suporte atrás). Proteções já existentes:
+queda 100/60/30, Desgaste, Defender menor que dano, perfurante e flanco. Somam-se a **pressão por rodada**:
+
+| Rodada | Regra [PLACEHOLDER] |
+|---|---|
+| Até a 20 | Normal (a meta de duração é 10 a 15, podendo passar) |
+| A partir da 21 | **Exaustão:** a cada rodada a **cura rende menos** (~-10%) e o **dano rende mais** (~+5%) |
+| 30 | **Fim forçado:** vence quem tem **mais % de HP total** |
+
+Só aparece depois do tempo normal: não pesa para o iniciante, só para quem tenta travar o jogo.
+
+### 11.9 Status e Vontade [ENRAIZADO]
+
+**Distinção:** **debuff** = número no stat (Ataque −20%); **status** = estado com regra própria.
+
+| Status | O que faz | Observação |
+|---|---|---|
+| **Atordoado** | Perde a próxima ação | Recarga longa e **imunidade de 1 turno** depois (anti-cadeia) |
+| **Travado** | Uma skill do alvo entra em recarga extra | Atinge o kit, não o turno |
+| **Preso** | Não pode se mover nem ser movido por skill | Contra empurrar/puxar |
+| **Exposto** | Vira alvo de corpo a corpo mesmo atrás de alguém | Status de formação (Executor, Controlador) |
+| **Marcado** | Recebe +X% de dano de todas as fontes | Setup para o dano |
+| **Dano contínuo** | Perde HP no início do turno dele (queimadura, sangramento) | Contado em turnos do afetado (D31) |
+
+**O que a Vontade resiste:**
+
+- **Resiste** à **aplicação** de status hostil e ao **reposicionamento forçado** (empurrar, puxar, trocar).
+- **Não resiste** a dano direto, debuff de stat já aplicado nem Desgaste.
+- **Fórmula** (mesma forma do acerto): `chance = base × 2 × Precisão / (Precisão + Vontade)`, com piso e teto
+  [PLACEHOLDER: 30% a 100%].
+- Alerta: Suporte, Controlador e Guardião têm Vontade alta; testar a resistência do Controlador.
+
+### 11.10 Empilhamento multiplicativo [ENRAIZADO]
+
+Substitui a soma direta de 9.5b (D37):
+
+- Buff e debuff são **multiplicadores sobre o valor atual** do stat: Ataque 50 com −20% fica 40; mais −20% fica 32.
+  Vale para buff e debuff.
+- A **ordem não importa** (determinismo, D8). Buff +20% com debuff −20% dá ×0,96.
+- **Limite de fontes ativas por stat:** **3 buffs e 3 debuffs** [PLACEHOLDER]. Fonte além do limite **substitui a
+  mais fraca**. A mesma skill continua só **renovando a duração**.
+- Com 3 fontes de 20%: máximo de ~+73% e ~−49%, sem teto em %.
+- O **Desgaste** é separado, com o piso de 75% (D71), e também multiplica.
+
+### 11.11 Reposicionamento [ENRAIZADO]
+
+- **Mover-se** custa a ação do turno; **trocar com aliado** faz os dois perderem a ação (D19, D42).
+- **Skill que reposiciona** é uma skill normal (Desgaste e recarga). Ser empurrado **não** custa o turno do alvo.
+- Não há custo extra novo.
+
+### 11.12 Pendências
+
+1. Valores da Exaustão (rodada 21, -10% cura, +5% dano, fim na 30): validar nos testes.
+2. Valores dos status (duração, % de Marcado, dano contínuo) e do piso/teto da chance.
+3. Redução do **Defender**.
+4. Conjunto mínimo de skills de teste.
