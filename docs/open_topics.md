@@ -59,7 +59,7 @@ Não são conversa própria; são decisões de design que faltam. Em ordem aprox
 | **Valores dos stats** e pisos do Desgaste (a forma da fórmula de dano e de acerto está fechada, D68) | A8; `character_brief.md` 2 | Bloqueia custos, buffs, queda de dano, teto de empilhamento, Defender |
 | **Valores do Desgaste** (curva custo x poder, piso, alívio, potência no piso) | `skills_brief.md` 9.4b | Mecânica fechada (D71); só placeholders |
 | **Valores** da Exaustão, dos status (duração, % de Marcado, dano contínuo), do limite de fontes e da redução do **Defender** | `skills_brief.md` 11.12 | Regras fechadas (D72, D73); só placeholders |
-| **IA da máquina** (adversário do MVP): como escolhe ações, dificuldades, squads de NPC | `pvp_brief.md` 7 | **Conversa própria crucial, aberta de propósito**: a lógica será criada junto com o usuário (D75). É o único ponto realmente aberto do MVP |
+| **IA da máquina** (adversário do MVP): como escolhe ações, dificuldades, squads de NPC | `pvp_brief.md` 7 | **Modelo fechado (D90, `pvp_brief.md` 8)**: pontuação por perfil, sorteio por nível, log do jogador. Só restam valores (placeholders em 8.1), depois do A8. Chefes com perfil próprio e previsão de turnos: depois do MVP |
 | **Ajuste fino do PvP:** reconexão, valores do ranking e das faixas, top 3, fila | `pvp_brief.md` 7 | Estrutura fechada (D74); PvP vem depois do MVP |
 | **Modelo de progressão da conta** (A6): parte 1 (XP, nível, skills) fechada (D76, D77) | A6 | Conta guarda inventário, moeda, organização, reputação, ranking. Resta a parte 2 (linha abaixo) |
 | **Campos de batalha:** duração N, traços exigidos, tamanho do bônus | `skills_brief.md` 8.5/10.2 | Dados do admin |
