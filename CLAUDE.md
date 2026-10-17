@@ -1,6 +1,7 @@
 # CLAUDE.md
 
-> **PROVISÓRIO.** O design do jogo ainda está sendo fechado e esta estrutura vai mudar. Ainda não há código.
+> O **design de jogo está fechado até o D104** (regras e valores iniciais do MVP). A estrutura de código abaixo ainda é
+> rascunho e pode mudar. **Setup feito** (Nest, Vitest, ESLint, Prisma sem modelos); o motor de combate ainda não foi escrito.
 > Contexto permanente do projeto para o Claude. Leia antes de mexer em qualquer coisa.
 
 ## O que é Origin
@@ -14,17 +15,30 @@ e **escrever a resposta no doc**. Não inventar regra de combate.
 
 ## Estado atual
 
-Só documentação. Decisões de combate fechadas: fila por velocidade, grade 3x3, 4 personagens por jogador,
-skills de área por linha/coluna, Desgaste como risco x retorno, vitória por eliminação.
-**Skills são o ponto central e serão desenhadas numa conversa própria**: não implementar o modelo de skill
-antes disso.
+Só documentação, mas **as regras e os valores iniciais estão fechados** (registro das decisões D1 a D104 em
+[`docs/game_design.md`](./docs/game_design.md)). Combate: fila em barra de ação (0 a 1000, Velocidade soma por tick),
+grade 3x3, 4 personagens com 4 skills cada, 7 stats, fórmula de dano `Poder × Ataque² / (Ataque + Defesa)`, Desgaste
+como risco x retorno (piso de 80%), vitória por eliminação ou % de HP na rodada 30. Os valores são **placeholders
+aprovados**, a calibrar por simulação (IA contra IA).
 
 **Escopo do MVP (D75):** apenas batalhas **contra a máquina (PvE)**, para validar a lógica. O PvP vem depois
-(estrutura em [`docs/pvp_brief.md`](./docs/pvp_brief.md)).
+(estrutura em [`docs/pvp_brief.md`](./docs/pvp_brief.md)). A IA da máquina está em `pvp_brief.md` 8 e 10 (D90, D103).
 
-Antes de qualquer trabalho em skills, ler [`docs/skills_brief.md`](./docs/skills_brief.md): lista o que já é
-**enraizado** (risco x retorno, sem vantagem entre linhagens, ranged nunca superior ao melee, troca de posição
-custa o turno, etc.) e o que está em aberto.
+**Onde está cada assunto** (ler antes de mexer):
+
+| Assunto | Doc |
+|---|---|
+| Skills (Poder, custo, status, alcance, Tático, Guardião, campos) | [`docs/skills_brief.md`](./docs/skills_brief.md) (seção 12 = valores) |
+| Personagem, stats, classes | [`docs/character_brief.md`](./docs/character_brief.md), [`docs/classes_brief.md`](./docs/classes_brief.md) |
+| XP, nível, economia, mercado, baús, materiais | [`docs/progression_brief.md`](./docs/progression_brief.md) |
+| DOM, despertar | [`docs/dom_brief.md`](./docs/dom_brief.md), [`docs/awakening_brief.md`](./docs/awakening_brief.md) |
+| Equipamento vivo, contratos com bestas | [`docs/living_gear_brief.md`](./docs/living_gear_brief.md), [`docs/beast_contracts_brief.md`](./docs/beast_contracts_brief.md) |
+| Família e organizações | [`docs/family_faction_brief.md`](./docs/family_faction_brief.md) |
+| PvP, ranqueado, faixas, IA | [`docs/pvp_brief.md`](./docs/pvp_brief.md) |
+
+O `skills_brief.md` lista o que já é **enraizado** (risco x retorno, sem vantagem entre linhagens, ranged nunca
+superior ao melee, troca de posição custa o turno, etc.). Dados de **conteúdo** (famílias, campos, catálogo de
+equipamentos, despertares, bestas, traços e eventos) são do **admin**; no MVP vêm de um `seed.ts`.
 
 ## Stack (planejada)
 
@@ -36,7 +50,7 @@ custa o turno, etc.) e o que está em aberto.
 
 ## Arquitetura (espelha o ZapWave, `../ZapWave`)
 
-Regra de dependência (inviolável):
+Regra de dependência (inviolável, **verificada pelo ESLint**: `npm run lint:check` falha se domain/core importarem infra, Nest ou Prisma, ou usarem `Math.random()`/`Date.now()`):
 
 ```
 core   →  não importa nada
@@ -52,11 +66,12 @@ ou `Math.random()`. Aleatoriedade entra por uma porta (`Rng`) alimentada pela se
 
 ```
 src/
-  core/                       Entity, Either, UniqueEntityID, erros base
+  core/                       Entity, Either, UniqueEntityId, Rng (porta) e SeededRng, erros base
   domain/
     combat/                   motor: batalha, grade 3x3, fila de turnos, resolução de ações
     characters/               personagens, linhagens, atributos
-    skills/                   (adiado: depende da conversa de skills)
+    skills/                   modelo de skill (ver `docs/skills_brief.md` seção 12)
+    ai/                       IA da máquina: pontuação, sorteio com Rng, log do jogador
     squads/                   formação (4 personagens na grade 3x3)
     accounts/                 conta do jogador (depois)
   infra/                      Nest, HTTP/WS, Prisma
@@ -75,7 +90,18 @@ test/                         factories, in-memory repositories, fakes (incluind
 - Cada novo port precisa de um fake/in-memory em `test/`.
 - Nomes de pasta e código em **inglês**; documentação em **português**.
 
-## Pendências de decisão que bloqueiam código
+## Pendências
 
-Ver seção 4 do `game_design.md` (A2b, A3b, A5, A6, A8) e o modelo de skill. O índice de tudo que está em aberto,
-incluindo as conversas adiadas (todas fechadas: DOM em [`docs/dom_brief.md`](./docs/dom_brief.md), armas vivas em [`docs/living_gear_brief.md`](./docs/living_gear_brief.md), contratos com bestas em [`docs/beast_contracts_brief.md`](./docs/beast_contracts_brief.md), família e organizações em [`docs/family_faction_brief.md`](./docs/family_faction_brief.md)), é [`docs/open_topics.md`](./docs/open_topics.md).
+**Nada de design bloqueia o código do MVP.** O que resta (índice em [`docs/open_topics.md`](./docs/open_topics.md)):
+
+- **Calibração por simulação** dos valores (pesos e `T` da IA, Desgaste, dano de referência, etc.), que só é possível
+  com o motor implementado. Metas em `pvp_brief.md` 10.4.
+- **Metas de traço** (conversa com o admin; no MVP, traços direto no `seed.ts`).
+- **Conflitos do `world_build.md`** (seção 13) que viram dado, só os que importam.
+- **Depois do MVP:** PvP (pontos do Elo, limites de pontos, temporada, reconexão, top 3, fila), perfil próprio para
+  chefes, previsão de turnos da IA, memória entre batalhas, e os caminhos Enxerto, Rede e Selo.
+- **Trabalho de montagem:** `seed.ts` com 8 a 12 personagens de teste (todas as classes, alcances, status e
+  linhagens) e squads de NPC (4 perfis x 5 níveis de dificuldade).
+
+**Regra de trabalho:** valores numéricos novos, o Claude **propõe** e o usuário aprova; depois registra em uma nova
+linha D do `game_design.md` e no brief de origem.

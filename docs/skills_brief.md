@@ -109,7 +109,7 @@ Perguntas: duração dos efeitos (em turnos), se acumulam, se há limite, quem v
 - **Poder é definido pela aplicação**, não só pela habilidade: o mesmo poder (fogo) vira lança-chamas, flecha ou propulsor conforme a tática.
 - As **6 variantes** influenciam o tipo de custo biológico: Elemental, Material, Vetorial, Biológica, Psíquica, Fundamental.
 - **DOM** (Mente, Coração, Corpo, Aura): fechado, ver [`dom_brief.md`](./dom_brief.md). O avançado dá uma skill única de uso único (5ª skill, fora das 4), sem custo.
-- Pacto fechado (contratos com bestas, [`beast_contracts_brief.md`](./beast_contracts_brief.md)). Os caminhos alternativos restantes (Materiais, Enxerto, Rede, Selo) podem virar fontes de skill ou de custo. **[ABERTO]**
+- Pacto fechado (contratos com bestas, [`beast_contracts_brief.md`](./beast_contracts_brief.md)). Materiais fechado em D104. Enxerto, Rede e Selo adiados para depois do MVP.
 - Os dois eixos de linhagem (manifestação x família ancestral) precisam de mapeamento (conflito 9 do `world_build.md`). Provavelmente resolvido junto com a tabela de padrões de custo.
 
 ---

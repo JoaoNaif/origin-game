@@ -1,0 +1,11 @@
+// Persistência fica para depois do motor de combate (ver CLAUDE.md).
+// Os modelos entram quando o domínio estiver estável.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
