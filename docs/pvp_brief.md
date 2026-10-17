@@ -131,7 +131,7 @@ da ação é a soma ponderada pelo perfil, dividida pela maior nota do turno.
 
 ### 8.2 O que falta (IA da máquina)
 
-**Valores (bloqueados pelo A8, valores dos stats e pisos do Desgaste):**
+**Valores: fechados em D103 (seção 10); calibração por simulação.**
 - Pesos finais dos 4 perfis e `T` por nível: os de 8.1 são placeholders, validar em teste.
 - Normalização exata de cada fator (dano, abate, ameaça, risco, defesa/cura/status, situação).
 - Peso do log na nota (bônus de proteção ao alvo previsto, escala por nível).
@@ -173,3 +173,62 @@ da ação é a soma ponderada pelo perfil, dividida pela maior nota do turno.
 - **Lenda:** os melhores da temporada na Platina, mesmas regras, só reconhecimento e recompensas.
 - **Histórico mínimo:** **10 batalhas** (casual ou PvE, nenhuma amistosa) para liberar o ranqueado.
 - **Ficam para o ajuste fino do PvP (depois do MVP):** pontos do Elo, limites de pontos de cada faixa, temporada.
+
+## 10. Valores da IA da máquina (D103)
+
+**[PLACEHOLDER aprovado]**, calibrar simulando IA contra IA. Complementa 8.1 (mantém `T` por nível e pesos dos perfis).
+
+### 10.1 Normalização: tudo em "% de HP equivalente"
+
+Cada ação vira quantos **% de HP** ela rende, dividido por **25** (≈ maior golpe único), com teto 1.
+
+| Fator | Como calcular |
+|---|---|
+| **Dano** | chance de acerto × dano em % do HP do alvo (inclui queda 100/60/30, Marcado, área somando alvos) |
+| **Abate** | (dano esperado ÷ HP atual do alvo)², soma dos alvos, teto 1 |
+| **Ameaça** | (Ataque × Velocidade do alvo) ÷ maior valor entre os inimigos; vale para o alvo atingido |
+| **Risco** (subtrai) | 50% do custo de Desgaste ÷ folga que sobra + 50% de "HP baixo e ação ofensiva" |
+| **Defesa/cura/status** | valor em % de HP equivalente (tabela abaixo) |
+| **Situação** | `s` = HP% total aliado − HP% total inimigo (de −1 a 1); soma `s × abate − s × defesa` |
+
+| Efeito | Valor (% de HP equivalente) |
+|---|---|
+| Cura / escudo | % do HP máx. efetivamente restaurado do aliado, ×(1 + o que falta de vida) |
+| Atordoado | 11 (uma ação) |
+| Travado / Preso / Exposto | 6 / 3 / 4 |
+| Marcado | 5 |
+| Dano contínuo | 12 |
+| Buff / debuff 10 / 15 / 20% | 3 / 4,5 / 6 |
+| Adiantar / atrasar a vez | X% × 11 |
+| Defender | 4 |
+| Mover / trocar aliado | 2 |
+
+- **Nota final:** `nota' = (nota − mínima) ÷ (máxima − mínima)` (min-max, porque o risco pode deixar a nota negativa;
+  substitui a divisão pela maior de 8.1).
+- **Corte:** ações com nota' abaixo de **0,2** nunca são sorteadas, em nenhum nível.
+
+### 10.2 Log do jogador
+
+- **Janela:** últimas 5 ações do jogador, pesos 1,0 / 0,8 / 0,6 / 0,4 / 0,2.
+- **Bônus de proteção** ao personagem focado: **+0,15 na nota** das ações que o protegem (cura, escudo, defender,
+  interceptar, trocar de lugar) com 2 ataques seguidos; **+0,30** com 3. Escala por nível: Avançado ×0,5, Mestre
+  ×0,75, Grão-mestre ×1,0.
+- **Mestre e Grão-mestre** lembram as **skills já usadas** pelo jogador e o cooldown delas (só sabem depois do uso,
+  como o jogador). Quando uma skill forte volta do cooldown, o risco do personagem exposto sobe **+0,10**.
+
+### 10.3 Nível dos NPCs (sem bônus de stat)
+
+| Dificuldade | Nível dos NPCs |
+|---|---|
+| Iniciante | 10 a 25 |
+| Intermediário | 25 a 45 |
+| Avançado | 45 a 70 |
+| Mestre | 70 a 90 |
+| Grão-mestre | 90 a 100 (com DOM e equipamento) |
+
+### 10.4 Metas de calibração (IA contra IA, mesmo squad)
+
+- Um nível acima vence o anterior **~65%**; dois níveis acima **~80%**; quatro acima **≥95%**.
+- Os 4 perfis, no mesmo nível, ficam entre **45% e 55%** entre si.
+- Jogador humano mediano deve vencer o Iniciante em mais de 80% e o Mestre em ~40%.
+- Fora da faixa: ajustar pesos e `T`, nunca os stats.

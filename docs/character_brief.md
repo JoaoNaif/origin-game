@@ -165,7 +165,7 @@ lore existente e perguntas em [`open_topics.md`](./open_topics.md).
 
 1. ~~**Arma viva**~~ fechada (`living_gear_brief.md`). ~~**Contrato com animal**~~ fechado
    (`beast_contracts_brief.md`).
-2. ~~**DOM**~~ fechado (`dom_brief.md`). Caminhos alternativos (Pacto, Materiais, Enxerto, Rede, Selo) seguem
+2. ~~**DOM**~~ fechado (`dom_brief.md`). Materiais fechado (D104). Enxerto, Rede e Selo seguem
    adiados.
 3. ~~**Família/facção**~~ fechada (`family_faction_brief.md`): família é traço de Origem; organizações são da conta,
    fora do combate.

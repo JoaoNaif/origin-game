@@ -188,7 +188,7 @@ Nada. **Parte 2 fechada** (D79 a D86); restam só valores (placeholders) e o fun
 
 - O aprimoramento dá **mais potência** à skill. Nada de efeito novo, área ou mecânica extra (isso viraria outra skill).
 - **Um aprimoramento só** por skill, por ora (básica → aprimorada).
-- **Custo da tentativa:** **materiais** (genéricos por ora; o caminho "Materiais" ainda é aberto, A9) **+ moeda**.
+- **Custo da tentativa:** **materiais** (Fragmentos de Éon por linhagem, D104, 3.9) **+ moeda**.
 - É uma **tentativa com chance**. **Na falha, perde só o custo**: a skill não regride nem quebra.
 - **Chance fixa**: não cresce com as falhas (sem pity). A ideia é ser **difícil**.
 - **Títulos** aumentam a chance, mas **cada skill indica qual(is) título(s) a ajudam**; os outros títulos não contam.
@@ -361,4 +361,23 @@ por missão (admin). Limiares de cada nível: **500 / 1.500 / 4.000 / 10.000**. 
 
 ### 3.8 Fora de escopo agora
 
-Compra de moeda com dinheiro real (futuro) e o caminho "Materiais" (A9), que continua aberto.
+Compra de moeda com dinheiro real (futuro). O caminho "Materiais" foi fechado em D104 (3.9).
+
+### 3.9 Materiais: Fragmentos de Éon (D104)
+
+**[PLACEHOLDER aprovado]**. Recurso do aprimoramento de skill (3.6); não é segunda moeda (D84).
+
+- **Tipos:** 6 **Fragmentos de Éon**, um por linhagem (Elemental, Material, Vetorial, Psíquica, Biológica,
+  Fundamental), mais o **Fragmento Neutro** para skills none. Aprimorar uma skill gasta fragmentos **da linhagem dela**
+  (quantidades de 3.6).
+- **Guarda:** contadores na conta, **limite de 500 por tipo**, **sem ocupar espaço** do inventário (3.2).
+- **Origem:** no fim da batalha, vitória **2** fragmentos, derrota **1**, multiplicado pelo modificador do modo (o
+  mesmo da moeda, 3.1; amistosa 0). A fração é resolvida pela seed (ex.: 1,2 vira 1 e 20% de chance de um 2º).
+  **Tipo:** sorteado entre os personagens da squad que entrou; com 2 variantes, entre as duas; sem variante, Neutro.
+  Também vêm de baús, eventos e caças (bônus dos Celestes, D101). Média ~15 por dia (10 batalhas).
+- **Compra do sistema:** **200 M** por fragmento, sem limite. **Venda ao sistema:** **40 M**. **Mercado entre
+  jogadores:** negociável em lotes, com a mesma taxa (3.4).
+- **Referência:** aprimorar uma Final (20 fragmentos + 4.000 M por tentativa, chance 25%, até 45% com 2 títulos)
+  leva ~11 dias de farm com squad de uma linhagem; comprar tudo custa ~28 dias de ganho no pior caso. Farmar rende
+  mais que comprar.
+- **Adiados (depois do MVP):** os caminhos Enxerto, Rede e Selo da lore.

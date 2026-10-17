@@ -59,7 +59,7 @@ Não são conversa própria; são decisões de design que faltam. Em ordem aprox
 | **Valores dos stats** e pisos do Desgaste (a forma da fórmula de dano e de acerto está fechada, D68) | A8; `character_brief.md` 2 | **Fechado em D91** (`classes_brief.md`). Poder das skills, empilhamento e Defender fechados em D92 |
 | ~~**Valores do Desgaste**~~ **fechado** (D91) | `skills_brief.md` 9.4b | Piso 80%, custo 1,5% / 4% / 8%. Ajuste com simulação |
 | ~~**Valores** da Exaustão, dos status e do Defender~~ **fechado** (D92) | `skills_brief.md` 12 | Ajuste com simulação |
-| **IA da máquina** (adversário do MVP): como escolhe ações, dificuldades, squads de NPC | `pvp_brief.md` 7 | **Modelo fechado (D90, `pvp_brief.md` 8)**: pontuação por perfil, sorteio por nível, log do jogador. Só restam valores (placeholders em 8.1), depois do A8. Chefes com perfil próprio e previsão de turnos: depois do MVP |
+| **IA da máquina** (adversário do MVP): como escolhe ações, dificuldades, squads de NPC | `pvp_brief.md` 7 | **Modelo fechado (D90, `pvp_brief.md` 8)**: pontuação por perfil, sorteio por nível, log do jogador. Valores fechados em D103 (`pvp_brief.md` 10); calibrar simulando. Chefes com perfil próprio e previsão de turnos: depois do MVP |
 | **Ajuste fino do PvP:** reconexão, valores do ranking e das faixas, top 3, fila | `pvp_brief.md` 7 | Estrutura fechada (D74); PvP vem depois do MVP |
 | **Modelo de progressão da conta** (A6): parte 1 (XP, nível, skills) fechada (D76, D77) | A6 | Conta guarda inventário, moeda, organização, reputação, ranking. Resta a parte 2 (linha abaixo) |
 | ~~**Campos de batalha**~~ **valores fechados** (D98) | `skills_brief.md` 12.7 | Os campos em si e os traços de cada um são do admin |

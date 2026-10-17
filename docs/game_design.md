@@ -116,6 +116,8 @@ O prazer central é **quebrar a cabeça**: descobrir formações, personagens e 
 | D100 | **Valores da economia** (âncora: 10 batalhas ≈ 1.000 M): vitória 130 M, derrota 70 M, com os mesmos modificadores do XP; inventário de 30 espaços (+5 por compra, até 100); venda ao sistema de 40 a 9.000 M por raridade; mercado com taxa de 10% (6% no Banco Central), preço fixo, listagem de 48 h, 10 listagens e 24 h para revender; baús E, D e C compráveis (300 / 1.000 / 3.500 M) com tabela de porcentagem por raridade e drop de 20% / 5% / 1% no fim da batalha; aprimoramento de skill (+15% de Poder, chance 25% com até +20 por títulos, custo por tipo); periculosidade por pontos (limiares 500 / 1.500 / 4.000 / 10.000). Ver `progression_brief.md` Parte 3 | DECIDIDO (placeholders aprovados) |
 | D101 | **Valores de organizações:** reputação com 5 níveis (0 / 150 / 500 / 1.300 / 3.000) e ganhos por evento, missão e batalha; troca custa 3.000 M com 14 dias de carência, a organização deixada perde 30% da reputação (60% se a nova for rival); benefícios por nível para cada uma das 5 organizações, com os **Celestes** acima das outras (+10% a +45% em eventos de caça) por terem dois rivais. **Hyperion, Nocthar, tabela de famílias e eventos ficam com o admin.** Ver `family_faction_brief.md` 5 | DECIDIDO (placeholders aprovados) |
 | D102 | **Fila, Tático e Guardião:** barra de ação de 0 a 1000 (Velocidade soma por tick, age ao chegar a 1000, nunca passa de 1000). **Tático:** adiantar a vez (+50 / +70 / +90 / +100%) e atrasar a vez (−25 / −40 / −55 / −70%, com acerto e imunidade até agir), mover ou trocar aliados sem custar a ação deles, buff de squad com magnitude ×0,7 e custo ×1,3. **Guardião: Interceptar** como passiva de classe automática (aliados adjacentes, uma vez por rodada, só alvo único corpo a corpo ou à distância, sem Desgaste). Artilharia conferida sem mudança. Ver `skills_brief.md` 12.8 | DECIDIDO (placeholders aprovados) |
+| D103 | **Valores da IA da máquina:** todos os fatores em "% de HP equivalente" ÷ 25 (dano, abate, ameaça, risco, defesa/cura/status, situação), nota por min-max e corte de 0,2; `T` por nível e pesos dos perfis mantidos. Log com janela de 5 ações, bônus de proteção de +0,15 (indício) e +0,30 (padrão) escalado por nível, e memória das skills já usadas pelo jogador no Mestre e no Grão-mestre. NPCs por faixa de nível conforme a dificuldade, sem bônus de stat. Metas de calibração por vitórias IA contra IA. Ver `pvp_brief.md` 10 | DECIDIDO (placeholders aprovados) |
+| D104 | **Materiais (Fragmentos de Éon):** 6 tipos, um por linhagem, mais o Neutro (skills none), usados no aprimoramento de skill pela linhagem dela. Contadores na conta (limite 500 por tipo, sem ocupar inventário). Vêm do fim da batalha (vitória 2, derrota 1, com os modificadores do modo, tipo sorteado entre os personagens da squad), baús e eventos. Compra do sistema a 200 M, venda a 40 M e mercado entre jogadores com a mesma taxa. Não é segunda moeda. Enxerto, Rede e Selo adiados para depois do MVP. Ver `progression_brief.md` 3.9 | DECIDIDO (placeholders aprovados) |
 | D18 | **Estrutura do código** segue o padrão do ZapWave (clean architecture, NestJS). Documento vivo, vai mudar (ver `CLAUDE.md`) | DECIDIDO |
 
 ## 3. Princípio da progressão por história
@@ -145,14 +147,14 @@ Tipos de vantagem off-combate a explorar:
 | # | Pergunta | Observação |
 |---|---|---|
 | A2b | **Regras finas de alcance e bloqueio** | **Fechada (D72)**, inclusive o turtling (`skills_brief.md` 11.8) |
-| ~~A3b~~ | ~~Mecânica do Desgaste~~ | **Fechada (D71)**; ver `skills_brief.md` 9.4b. Faltam valores (curva, piso, alívio) |
-| ~~A3c~~ | ~~Tabela de padrões de custo por linhagem~~ | **Fechada (D59)**; tabela em `skills_brief.md` 9.4. Faltam só os valores (dependem de A8) |
+| ~~A3b~~ | ~~Mecânica do Desgaste~~ | **Fechada (D71)**; valores em D91 (`skills_brief.md` 9.4b) |
+| ~~A3c~~ | ~~Tabela de padrões de custo por linhagem~~ | **Fechada (D59)**; tabela em `skills_brief.md` 9.4. Valores fechados em D91 e D92 |
 | ~~A8~~ | ~~Fórmula de dano e valores dos stats~~ | **Fechada (D68, D91)**; valores em `classes_brief.md` 2 |
-| ~~A5~~ | ~~Estrutura do PvP~~ | **Fechada (D74)**; escopo do MVP em D75. Faltam valores do ranking e a IA da máquina |
-| A6 | **Modelo de progressão:** conta, personagens, skills, equipamento | |
+| ~~A5~~ | ~~Estrutura do PvP~~ | **Fechada (D74)**; escopo do MVP em D75; IA em D90 e D103; faixas em D99. Resta o ajuste fino do PvP (pós-MVP) |
+| ~~A6~~ | ~~Modelo de progressão: conta, personagens, skills, equipamento~~ | **Fechada** (D76 a D86, D100, D104) |
 | A7 | **Conflitos do `world_build.md`** (seção 13) que afetam dados do jogo | Decidir só os que importam para o jogo |
-| A9 | ~~Arma viva, contrato com animal e DOM~~ fechados (D60 a D64). Restam os caminhos Enxerto, Rede, Selo, Materiais | Conversa própria futura. Ver [`open_topics.md`](./open_topics.md) |
-| A10 | ~~Família/facção com efeito mecânico~~ | Fechada (D65, D66, [`family_faction_brief.md`](./family_faction_brief.md)). Restam valores e eventos |
+| A9 | ~~Arma viva, contrato com animal, DOM e Materiais~~ fechados (D60 a D64, D104). Restam só Enxerto, Rede e Selo (depois do MVP) | Conversa própria futura. Ver [`open_topics.md`](./open_topics.md) |
+| A10 | ~~Família/facção com efeito mecânico~~ | Fechada (D65, D66, D101, [`family_faction_brief.md`](./family_faction_brief.md)). Restam só famílias e eventos do admin |
 
 ## 5. Próximos tópicos de brainstorm
 
