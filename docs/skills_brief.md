@@ -641,3 +641,41 @@ conhecer o que cada número pesa). **[PLACEHOLDER aprovado]**.
   Há **uma troca ativa por vez** (a nova substitui a anterior). Ao fim, volta ao campo inicial.
 - **Sorteio inicial justo:** só entram os campos em que a diferença de personagens qualificados entre os lados é de
   **no máximo 2** (de 4). Se nenhum cumprir, a batalha começa **sem campo**. Vale para todos os modos, inclusive PvE.
+
+### 12.8 Fila, Tático e Guardião (D102)
+
+**[PLACEHOLDER aprovado]**.
+
+**Barra de ação (timeline, D30):** cada personagem tem uma barra de **0 a 1000**. Todo tick soma a Velocidade; ao
+chegar a 1000 ele age e subtrai 1000. Começam em 0 e o empate segue o D30. A barra **nunca passa de 1000** (impede
+empilhar ações extras).
+
+**Tático:**
+
+| Skill | Padrão | Reforçada | Forte | Final |
+|---|---|---|---|---|
+| **Adiantar a vez de um aliado** | +50% | +70% | +90% | age agora (+100%) |
+| **Atrasar a vez de um inimigo** | −25% | −40% | −55% | −70% |
+| Cooldown | 2 | 3 | 4 | 5 |
+| Desgaste | 1,5% | 3% | 5% | 8% |
+
+- Adiantar rende ~50% de uma ação por unidade de +50% (equivale a ~5 a 11% do HP do alvo), cerca de metade de uma
+  skill de dano do mesmo tipo.
+- **Atrasar** não é status (a Vontade não resiste). Tem teste de acerto normal (base 80%). O alvo fica **imune a novo
+  atraso até agir**. A barra nunca fica abaixo de 0.
+- **Mover aliados:** mover 1 aliado (adjacente) ou trocar 2 aliados **sem custar a ação deles**: Padrão (1,5%,
+  cooldown 1). Reforçada move até 2 aliados (3%, cooldown 2).
+- **Buff de squad:** magnitude **×0,7** da do buff individual (10 / 15 / 20% vira 7 / 10,5 / 14%) em todos os
+  aliados, com custo **×1,3**.
+
+**Guardião: Interceptar** (passiva de classe, não ocupa slot, automática):
+
+- Protege os aliados **adjacentes** (4 direções).
+- **Uma vez por rodada**, o primeiro golpe de alvo único (corpo a corpo ou à distância) contra um aliado adjacente é
+  redirecionado para ele. O dano é calculado contra a Defesa do Guardião e qualquer status do golpe cai nele.
+- **Não intercepta:** área, perfurante e flanco.
+- Só funciona se o Guardião estiver vivo e não **Atordoado nem Preso**. Com mais de um Guardião, ordem fixa pela seed.
+- **Sem Desgaste.** Ex.: um golpe do Executor no Atirador cai de 23% para 9% do HP do Guardião.
+
+**Artilharia:** conferida, sem mudança. Linha Forte com 2 alvos rende Poder total ~2,2 por ação contra 1,6 do
+Executor, mas o Executor age 1,77x mais; por tempo ficam ~2,8 contra ~2,2.

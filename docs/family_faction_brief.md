@@ -122,9 +122,35 @@ a Sombra à estrutura do PvP (D63, D74). É só o **nome**: estar no topo do ESS
 
 ## 4. Pendências
 
-1. ~~Tabela de famílias~~: **dado do admin** (D87), que cria as famílias da história e a variante de cada uma.
-2. ~~Valores de Origem, sangue puro e Prodígio~~: iniciais aprovados (D88, seção 2.4). Ajuste fino depois de A8.
-3. ~~Mecânica de reputação~~ fechada (D87). Valores, quedas na troca e lista de eventos: admin.
-4. ~~Distinção Crônica x Registro~~ fechada (D88): fama x segredo.
-5. ~~ESS~~: é o nome do ranking do ranqueado (D88).
-6. ~~Mercado e empréstimo~~ fechados (D79, D87, D89; ver 3.4).
+Fechadas em D101 (seção 5). Resta só o que é do admin: **tabela de famílias**, **Hyperion** (quanto o campo iluminado
+reduz o bônus e quais campos são iluminados), **Nocthar** (peso do sorteio de variante) e a **lista de eventos** com
+recompensas.
+
+## 5. Valores de organizações (D101)
+
+**[PLACEHOLDER aprovado]**, ajustar com simulação.
+
+### 5.1 Reputação
+
+- **5 níveis**, com limiares de pontos: **0 / 150 / 500 / 1.300 / 3.000**.
+- **Ganho:** evento +60 (faixa 40 a 100) · missão +25 · batalha ranqueada +2 · outras batalhas +1. Os eventos pesam
+  mais; o nível 5 leva uns 2 a 3 meses de jogo.
+
+### 5.2 Troca de organização
+
+- **Custo:** **3.000 M** (3 dias de ganho médio) e **14 dias de carência** entre trocas.
+- **Reputação:** a organização que se deixa perde **30%** dos pontos; se a nova for **rival**, perde **60%**. Ao voltar,
+  recupera o que ficou. A nova começa do que o jogador já tinha nela.
+
+### 5.3 Benefícios por nível de reputação
+
+| Organização | Níveis 1 a 5 |
+|---|---|
+| **Banco Central** | Empréstimo de 3 / 3 / 5 / 7 / 10 dias de ganho; taxa de mercado 6% / 6% / 6% / 5% / 4% |
+| **Celestes** | Recompensa de eventos de caça **+10% / +15% / +25% / +35% / +45%** |
+| **Sombra** | Recompensa de eventos de catálogo e pesquisa **+5% / +10% / +15% / +20% / +30%**, mais **+10% por nível** nos pontos de periculosidade (até +50%) |
+| **Crônica** | Títulos de fama: 1 liberado nos níveis 3 e 5 (2 no total), mais visibilidade no ESS |
+| **Registro** | Informação secreta: nível 1 melhora a dica do despertar; nível 3 revela o **tipo** de 1 missão oculta; nível 5 revela o tipo de 2 (nunca o limiar) |
+
+Os **Celestes** têm benefício maior (~1,5×) porque são a única organização com **dois rivais** (Banco Central e
+Sombra): quem entra vindo de uma delas perde 60% da reputação, então a vantagem precisa compensar.

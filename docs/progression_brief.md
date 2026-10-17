@@ -154,7 +154,7 @@ Nada. **Parte 2 fechada** (D79 a D86); restam só valores (placeholders) e o fun
 ### 2.5 Inventário e Elenco [ENRAIZADO]
 
 - **Inventário** é da **conta**: armas, armaduras e bestas que **ainda não estão vinculadas** a um personagem.
-- **Limite fixo** [PLACEHOLDER: valor a definir].
+- **Limite fixo:** 30 espaços, expansível até 100 (D100, Parte 3).
 - Item pode ser **descartado** ou **vendido ao sistema** (vira moeda), para o inventário nunca travar.
 - **Contrato desfeito = besta perdida**: ela **não volta** ao inventário. A interface pede confirmação clara.
 - **Personagens não ficam no inventário**: moram no **Elenco**, lugar separado, **sem limite** por ora.
@@ -182,7 +182,7 @@ Nada. **Parte 2 fechada** (D79 a D86); restam só valores (placeholders) e o fun
 - **Personagens em baú:** **qualquer personagem pode vir de qualquer baú**, exceto os marcados como **exclusivos**
   (2.10). O raro num baú comum tem chance **baixíssima**. Um exclusivo **pode** entrar nos baús depois, se o admin
   quiser (ver 2.10).
-- **Valores** [PLACEHOLDER]: tabela de porcentagem por nível de baú, preço, chance de drop pós-batalha, missões.
+- Valores fechados em D100 (Parte 3, 3.5).
 
 ### 2.8 Aprimoramento de skill [ENRAIZADO]
 
@@ -195,7 +195,7 @@ Nada. **Parte 2 fechada** (D79 a D86); restam só valores (placeholders) e o fun
   Assim, acumular títulos não facilita aprimorar tudo.
 - **Ranqueado:** skill aprimorada vale, **limitada pela faixa** (D63).
 - O aprimoramento **vai junto** com o personagem vendido (2.4).
-- **Valores** [PLACEHOLDER]: chance base, bônus de cada título, quantidade de materiais e moeda, ganho de potência.
+- Valores fechados em D100 (Parte 3, 3.6).
 
 ### 2.9 Títulos [ENRAIZADO a direção]
 
@@ -282,3 +282,83 @@ Nada. **Parte 2 fechada** (D79 a D86); restam só valores (placeholders) e o fun
 - **Venda:** a periculosidade **volta ao nível inicial do modelo** (é conquista, como título e DOM).
 - **Traços na venda:** os traços **conquistados se perdem**; o traço de **Origem** (família)
   fica, pois é do modelo. Isso evita vender personagem com traço que exige periculosidade alta.
+
+---
+
+## Parte 3. Valores da economia (D100)
+
+**[PLACEHOLDER aprovado]**, ajustar com simulação. **Âncora:** 1 dia de jogo ≈ 10 batalhas ≈ **1.000 moedas (M)**.
+
+### 3.1 Moeda por batalha
+
+- **Base:** vitória **130 M**, derrota **70 M** (média ~100 M).
+- **Modificadores** (iguais aos do XP): ranqueado ×1,5 · casual ×0,8 · PvE Iniciante / Intermediário / Avançado /
+  Mestre / Grão-mestre ×0,6 / 0,8 / 1,0 / 1,2 / 1,4 · amistosa 0.
+- **Mesmo NPC:** −10% por repetição nas últimas 10 batalhas, piso ×0,4.
+- Ancora o empréstimo do Banco Central (3 dias de ganho médio = ~3.000 M; até 10.000 M com reputação).
+
+### 3.2 Inventário
+
+**30 espaços** no início. Compra de **+5 espaços** por vez com preço crescente (300, 600, 1.000, 1.500, 2.000 M,
+e assim por diante), até **100**. Equipamento e besta ocupam 1 espaço cada.
+
+### 3.3 Venda ao sistema e repetido que vira moeda
+
+| Raridade | E | D | C | B | A | S | SS |
+|---|---|---|---|---|---|---|---|
+| Valor (M) | 40 | 100 | 250 | 600 | 1.500 | 3.500 | 9.000 |
+
+Equipamento e bestas seguem o mesmo valor pelo grau: Escudeiro ≈ E, Cavaleiro ≈ C, Mestre ≈ A, Rei ≈ SS.
+
+### 3.4 Mercado
+
+- **Taxa:** **10%** sobre cada venda; associado ao Banco Central **6%**. O calote dobra (20% e 12%, D89).
+- **Preço fixo apenas** no início (leilão depois). Listagem de **48 h**, no máximo **10 listagens ativas** por conta.
+- **Preço mínimo** de listagem = valor de venda ao sistema (evita lavagem de moeda).
+- **Item comprado só pode ser revendido após 24 h** (anti-especulação).
+
+### 3.5 Baús
+
+Porcentagem por raridade do item (peso proporcional a `q^r`, com `q` crescendo por nível do baú):
+
+| Baú (q) | Item E | D | C | B | A | S | SS |
+|---|---|---|---|---|---|---|---|
+| E (0,30) | 70,0 | 21,0 | 6,3 | 1,9 | 0,6 | 0,2 | 0,05 |
+| D (0,40) | 60,0 | 24,0 | 9,6 | 3,8 | 1,5 | 0,6 | 0,25 |
+| C (0,50) | 50,4 | 25,2 | 12,6 | 6,3 | 3,1 | 1,6 | 0,8 |
+| B (0,65) | 36,8 | 23,9 | 15,5 | 10,1 | 6,6 | 4,3 | 2,8 |
+| A (0,80) | 25,3 | 20,2 | 16,2 | 13,0 | 10,4 | 8,3 | 6,6 |
+| S (1,00) | 14,3 | 14,3 | 14,3 | 14,3 | 14,3 | 14,3 | 14,3 |
+| SS (1,30) | 5,7 | 7,4 | 9,6 | 12,5 | 16,2 | 21,1 | 27,5 |
+
+- **Compráveis:** E por **300 M**, D por **1.000 M**, C por **3.500 M**. De B a SS: eventos, ranqueado e missões.
+- **Retorno** se tudo fosse vendido ao sistema: ~32%, 16% e 8% do preço (sempre saída de moeda).
+- **Drop no fim da batalha** (vitória; derrota metade): baú E **20%**, D **5%**, C **1%**.
+- **Recompensa do ranqueado** (fim de temporada): Bronze baú D · Prata C · Ouro B · Platina A · Lenda S.
+- **Missões de baú** (exemplos; as definitivas são do admin): abrir 100 baús dá 1 baú A; vencer 50 ranqueadas dá 1
+  baú C.
+
+### 3.6 Aprimoramento de skill
+
+- **Ganho:** **+15% de Poder** (ou de efeito, em buff, cura e escudo). Sem efeito novo.
+- **Chance:** base **25%**; cada título certo **+10 pontos**, no máximo 2 títulos (até **45%**).
+- **Custo da tentativa** (falha perde só o custo):
+
+| Tipo da skill | Moeda | Materiais (genéricos) |
+|---|---|---|
+| Básica | 300 | 3 |
+| Padrão | 500 | 5 |
+| Reforçada | 1.000 | 8 |
+| Forte | 2.000 | 12 |
+| Final | 4.000 | 20 |
+
+Aprimorar uma Final sem título custa ~16 dias de jogo (difícil de propósito).
+
+### 3.7 Periculosidade
+
+Pontos: **+1 por vitória ranqueada**, **+50** por fim de temporada no top 100, **+200** no top 10, **+100 a +300**
+por missão (admin). Limiares de cada nível: **500 / 1.500 / 4.000 / 10.000**. Nunca cai; volta ao inicial na venda.
+
+### 3.8 Fora de escopo agora
+
+Compra de moeda com dinheiro real (futuro) e o caminho "Materiais" (A9), que continua aberto.

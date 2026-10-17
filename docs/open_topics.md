@@ -64,7 +64,7 @@ Não são conversa própria; são decisões de design que faltam. Em ordem aprox
 | **Modelo de progressão da conta** (A6): parte 1 (XP, nível, skills) fechada (D76, D77) | A6 | Conta guarda inventário, moeda, organização, reputação, ranking. Resta a parte 2 (linha abaixo) |
 | ~~**Campos de batalha**~~ **valores fechados** (D98) | `skills_brief.md` 12.7 | Os campos em si e os traços de cada um são do admin |
 | ~~**Valores do XP e da curva**~~ **fechado** (D92) | `progression_brief.md` 1.1 e 1.2 | Ajuste com simulação |
-| ~~**Parte 2 da progressão**~~ **fechada** (D79 a D86; modelo de negócio fechado no princípio, D84) | `progression_brief.md` 2.3 | Personagens fechados (D78). Mercado, inventário, economia e baús fechados (D79); aprimoramento de skill e títulos fechados (D80), venda perde o DOM e títulos ajudam elo e contrato por lista (D81), título vale por um requisito cumprido (teto placeholder 1); obtenção e exclusividade fechadas (D82); restam valores (limite do inventário, taxa, porcentagens dos baús, preços) e o funcionamento do mercado |
+| ~~**Parte 2 da progressão**~~ **fechada** (D79 a D86; modelo de negócio fechado no princípio, D84) | `progression_brief.md` 2.3 | Personagens fechados (D78). Mercado, inventário, economia e baús fechados (D79); aprimoramento de skill e títulos fechados (D80), venda perde o DOM e títulos ajudam elo e contrato por lista (D81), título vale por um requisito cumprido (teto placeholder 1); obtenção e exclusividade fechadas (D82); valores e mercado fechados em D100 |
 | **Metas de traço** (métricas e limiares por categoria) | `progression_brief.md` 1.5 | **Adiado para a conversa com o admin**; no MVP, traços direto no `seed.ts` |
 | **Distribuição de stats:** níveis que dão ponto livre, tetos por classe, orçamento | `character_brief.md` 3; `classes_brief.md` 5 | Modelo fechado (D70); valores fechados em D91 (níveis dos pontos, tetos, orçamento). 8 classes (D69) |
 | ~~**Marcos de skill e tamanho do kit básico**~~ **fechado** (D92) | `skills_brief.md` 12.6 | Kit de 4 skills da variante; none aprovado |
@@ -72,8 +72,8 @@ Não são conversa própria; são decisões de design que faltam. Em ordem aprox
 | ~~**Ajuste fino do DOM**~~ **fechado** (D93) | `dom_brief.md` 8 | Só ajuste por simulação |
 | ~~**Ajuste fino do equipamento vivo**~~ **fechado** (D94) | `living_gear_brief.md` 9 | Catálogo e listas de títulos são do admin; resto por simulação |
 | ~~**Ajuste fino dos contratos**~~ **fechado** (D95) | `beast_contracts_brief.md` 9 | Lista de bestas é do admin; resto por simulação |
-| ~~**Famílias e organizações**~~ **fechada** (D87, D88) | `family_faction_brief.md` 4 | Famílias e eventos são do admin. Empréstimo e calote fechados (D89). Resta só ajuste fino dos placeholders depois de A8 |
-| **Faixas do ranqueado** (D63) | `game_design.md` D63 | Quais faixas, nível de cada uma, o que é "limitação" (inclui o limite da skill aprimorada, D80). Liga com A5 |
+| ~~**Famílias e organizações**~~ **fechada** (D87, D88) | `family_faction_brief.md` 4 | Famílias e eventos são do admin. Empréstimo e calote fechados (D89). Valores fechados em D101; Hyperion, Nocthar, famílias e eventos são do admin |
+| ~~**Faixas do ranqueado** (D63)~~ **fechado** (D99) | `pvp_brief.md` 9 | Pontos do Elo, limites de pontos e temporada ficam no ajuste fino do PvP |
 | ~~**Custo extra de 2 ou 3 variantes**~~ **fechado** (D97) | `character_brief.md` 8 | Ressonância 60% / 40%; ajuste por simulação |
 | **Conflitos do `world_build.md`** (seção 13) que viram dado | A7 | Decidir só os que importam |
 | **Personagens de teste do MVP:** 8 a 12 personagens cobrindo todas as classes (D69), alcances, status e linhagens, criados num `seed.ts` (dados iniciais) | `skills_brief.md` 9.7 | Não é decisão aberta, é trabalho de montagem. Substitui o "~8 skills, 2 linhagens" |

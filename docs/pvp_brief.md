@@ -71,7 +71,7 @@ skills" fica como vantagem de quem conhece o personagem.
 
 1. ~~**IA da máquina** (MVP)~~ **modelo fechado** (D90, seção 8). Só restam valores, ver 8.2.
 2. Janela de reconexão e tratamento de falha de rede.
-3. Valores do ranking (pontos, faixas, temporada) e histórico mínimo do ranqueado.
+3. Faixas e histórico mínimo fechados em D99 (seção 9). Restam pontos do Elo, limites de pontos e temporada.
 4. Detalhes do top 3 (janela de tempo, o que conta como "mais usado").
 5. Fila de espera, tempo máximo e bots de reposição.
 
@@ -149,3 +149,27 @@ da ação é a soma ponderada pelo perfil, dividida pela maior nota do turno.
   em `test/`.
 
 **Próximo passo sugerido:** A8 fechado (D91). Seguir com curva de XP, Poder das skills e Exaustão/status, depois calibrar a IA simulando batalhas.
+
+## 9. Faixas do ranqueado (D99)
+
+**[PLACEHOLDER aprovado]**. As faixas baixas ensinam o jogo por camadas e as altas liberam o resto.
+
+| | Bronze | Prata | Ouro | Platina |
+|---|---|---|---|---|
+| **Nível nivelado** | 10 | 20 | 50 | 100 |
+| **Stats (% do nível 100)** | 41% | 47% | 67% | 100% |
+| **Pontos livres** | 1 concessão | 2 | 5 | 10 |
+| **DOM (nível máximo)** | desligado | básico | intermediário | avançado |
+| **Equipamento vivo (grau máx.)** | desligado | Escudeiro | Cavaleiro | sem teto |
+| **Contratos com bestas** | desligado | desligado | até Cavaleiro | todos (inclui sagradas) |
+| **Despertar** | não | não | não | sim |
+| **Skill aprimorada** | não vale | não vale | 50% do ganho | 100% |
+| **Traços ativos** | 2 | 3 | 4 | 5 |
+
+- **Acima do limite, rebaixa em vez de desligar:** DOM intermediário em Prata age como básico; arma Rei em Ouro age
+  como Cavaleiro. O jogador não perde o item, só o excesso.
+- **Skills:** só entram na build as de **nível mínimo ≤ nível da faixa** (bloqueia Forte na Prata, Final no Ouro e a
+  despertada fora da Platina).
+- **Lenda:** os melhores da temporada na Platina, mesmas regras, só reconhecimento e recompensas.
+- **Histórico mínimo:** **10 batalhas** (casual ou PvE, nenhuma amistosa) para liberar o ranqueado.
+- **Ficam para o ajuste fino do PvP (depois do MVP):** pontos do Elo, limites de pontos de cada faixa, temporada.
