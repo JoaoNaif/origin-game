@@ -21,11 +21,25 @@
 | **Catch-up** | Personagem **abaixo do nível médio da conta** ganha bônus de XP |
 | **Amistosa** | Não conta (D54) |
 
+**Valores (D92, placeholder aprovado):**
+
+| Item | Valor |
+|---|---|
+| Pool por batalha | Vitória 400 XP, derrota 160 XP (40%) |
+| Divisão entre os 4 | 40% igual, 60% proporcional às métricas |
+| Peso das métricas | Dano 1,0 · cura 1,0 · escudo 1,0 · mitigação 0,8 · buff/debuff 0,4 do ganho · abate 10% do HP do abatido; retorno decrescente (expoente 0,85) |
+| Amistosa | 0 (D54) |
+| PvE Iniciante / Intermediário / Avançado / Mestre / Grão-mestre | ×0,6 / ×0,8 / ×1,0 / ×1,2 / ×1,4 |
+| Ranqueado | ×1,5 |
+| Mesmo NPC | −10% por repetição nas últimas 10 batalhas, piso ×0,4 |
+| Catch-up | +2% por nível abaixo da média da conta, máx. +50% |
+
 ### 1.2 Curva de nível [ENRAIZADO]
 
 - Níveis de **0 a 100**. Início rápido (ensina o jogo), **últimos níveis muito difíceis**, para o personagem não
   estagnar nem a progressão ficar sem graça depois de um tempo.
-- Valores da curva [PLACEHOLDER].
+- **Curva (D92):** custo de n para n+1 = `70 × (1 + n/25)²` XP (~71.500 acumulado no nível 100; referência PvE Avançado ×1,0). **Meta (D91):** nível 100 em ~1.000 batalhas por personagem (~150 h); XP por nível convexo.
+- **Ganho de stat (D91):** linear, 34% dos stats do nível 100 no nível 0, mais os pontos livres. A dificuldade fica no XP, não no stat.
 
 ### 1.3 Skills a cada 5 níveis [ENRAIZADO]
 
@@ -57,7 +71,7 @@ vários níveis mínimos, para que as ofertas sejam variadas.
 
 ### 1.4 Pontos livres [ENRAIZADO]
 
-- **A cada 10 níveis** (10, 20, ..., 100): 10 concessões, todas do mesmo tamanho [PLACEHOLDER ~1,5% do stat base].
+- **A cada 10 níveis** (10, 20, ..., 100): 10 concessões, todas do mesmo tamanho (**1,5% do orçamento total, ~10 pontos cada, 100 no total**, D91).
 - Vão em qualquer stat **até o teto da classe** (D70). Redistribuição grátis fora da batalha.
 - Motivo: na faixa **prata** (nível 20, D63) já há 2 concessões e o jogador pode montar uma build.
 

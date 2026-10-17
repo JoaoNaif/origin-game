@@ -33,11 +33,11 @@ Níveis: **básico**, **intermediário**, **avançado**.
 
 | Nível | Efeito |
 |---|---|
-| **Básico** e **intermediário** | aumento de stats (valores abertos [PLACEHOLDER]) |
+| **Básico** e **intermediário** | aumento de stats (valores em 8.1) |
 | **Avançado** | **título** (traço extra, fora dos 5 de D39) + **uma skill única**, de uso único |
 
 - O título **não dá stat**: é só o acesso à skill única.
-- A skill única é uma **5ª skill**, fora das 4 do D43, e é de **uso único por batalha** (é por isso que é forte).
+- A skill única é uma **skill extra**, fora das 4 do D43, de **uso único por batalha** (é por isso que é forte). Cada pilar avançado dá a sua (ver 8.5).
 - **O DOM não tem custo nem Desgaste.** Exceção consciente ao D52 ("mais poder, mais custo"): o custo é manter a meta.
 - Vale no ranqueado (D56), e o grau influencia: a paridade vem das **faixas** do ranqueado (D63), não de teto.
 
@@ -50,7 +50,7 @@ Níveis: **básico**, **intermediário**, **avançado**.
 | **Corpo** | Indestrutível | **Anula todo o dano recebido por 1 turno** |
 | **Coração** | Resiliente | **Cura 50% do HP máximo** do usuário. Cura ativa, não ressurreição (D31), sem lado negativo depois |
 
-Pendência: definir "1 turno" do Corpo (turno do próprio personagem, como em D31) e "N turnos" da Aura.
+Valores e durações fechados em 8.4.
 
 ## 4. Como se conquista [ENRAIZADO o princípio]
 
@@ -64,7 +64,7 @@ Regras dos feitos:
 - Medidos como **participação na batalha**, não valor absoluto (batalha longa não pontua mais).
 - Cada pilar tem feitos para **cada papel** (dano, tank, suporte, controle), para nenhuma classe dominar.
 - **Nível de alvo maior** só vale no casual/PvE; no ranqueado (nivelado, D46) vale **ranking maior**.
-- **Pontos por nível [PLACEHOLDER]:** 5 / 15 / 40 na janela. O **avançado** exige feitos de **pelo menos 3 papéis**.
+- **Pontos por nível:** 8 / 20 / 45 na janela de 150 de peso (D93, seção 8.2). O **avançado** exige feitos de **pelo menos 3 papéis**.
 
 ### 4.1 Feitos (rascunho, a refinar)
 
@@ -94,13 +94,84 @@ Regras dos feitos:
 | **Casual** e **PvE** | bem menos | bem menos |
 | **Amistosa** | nada | nada (D54) |
 
-Multiplicadores [PLACEHOLDER], a definir.
+Pesos por modo fechados em 8.2.
 
 ## 7. Pendências
 
-1. Valores dos stats de básico e intermediário.
-2. Refinar os feitos (4.1) e a **janela** de batalhas, limiares de ganho e perda.
-3. Multiplicadores do ranqueado x casual/PvE.
-4. Duração em turnos: Aura (N) e Corpo ("1 turno").
-5. Se existe teto de pilares avançados por personagem (hoje só a raridade limita).
-6. Como o título aparece no `character_brief.md` (campo extra fora dos 5 traços).
+Fechadas em D93 (seção 8). Resta só o **ajuste fino por simulação** (stats, janela, pontos, durações).
+
+## 8. Valores (D93)
+
+**[PLACEHOLDER aprovado]**, ajustar com simulação.
+
+### 8.1 Stats do básico e do intermediário
+
+| Pilar | Stat principal | Stat secundário |
+|---|---|---|
+| Mente | Precisão | Esquiva |
+| Coração | HP | Defesa |
+| Corpo | Velocidade | Ataque |
+| Aura | Vontade | Ataque |
+
+| Nível | Principal | Secundário |
+|---|---|---|
+| Básico | +3% | +2% |
+| Intermediário | +6% | +4% (substitui o básico, não soma) |
+| Avançado | mantém os do intermediário, mais título e skill única | |
+
+O bônus vem **depois dos tetos da classe**. Um intermediário vale cerca de uma concessão de pontos livres.
+
+### 8.2 Janela, pontos e limiares
+
+- **Janela móvel:** últimos **150 de peso de batalha**. Cada batalha ocupa a janela com o peso do modo, e cada feito
+  rende pontos com o mesmo peso (o modo muda só a **velocidade**, não o ritmo exigido).
+
+| Modo | Peso |
+|---|---|
+| Ranqueado | 1,0 |
+| Casual (PvP) | 0,6 |
+| PvE Grão-mestre / Mestre / Avançado / Intermediário / Iniciante | 0,6 / 0,5 / 0,4 / 0,3 / 0,15 |
+| Amistosa | 0 (D54) |
+
+| Nível | Pontos | Sem variante (×0,8) |
+|---|---|---|
+| Básico | 8 | 6 |
+| Intermediário | 20 | 16 |
+| Avançado | 45 (e ao menos 8 em cada um de 3 papéis) | 36 (idem) |
+
+- **Perda:** avaliada a cada 25 de peso. Perde **um nível** se os pontos ficarem abaixo de **70% do limiar do nível
+  atual**. Pode recuperar. Perder o avançado retira título e skill única (seção 5).
+
+### 8.3 Feitos ajustados (4.1)
+
+| Pilar / papel | Feito |
+|---|---|
+| Mente / dano | Causar dano com 3 skills em alvos com **Marcado ou Exposto** e vencer |
+| Mente / tank | **Esquivar 3 ataques** na mesma batalha (não precisam ser seguidos) e vencer |
+| Coração / controle | Vencer tendo estado em **desvantagem de 2 ou mais personagens vivos** (ex.: 1x3, 2x4) |
+| Corpo / dano | **Abater 2 inimigos na mesma rodada** com skills de alvo único e vencer |
+| Corpo / controle | Manter o mesmo inimigo sob **Atordoado, Preso ou Travado por 2 turnos dele seguidos** e vencer |
+| Aura (nível maior) | No ranqueado vale **ranking maior** (nivelado, D46) |
+
+Os demais feitos de 4.1 ficam como estão.
+
+### 8.4 Skills únicas do avançado
+
+| Skill | Valor |
+|---|---|
+| **Rei (Aura)** | Área: grade inteira. −15% em todos os stats por **3 turnos** do afetado. Chance pela fórmula de status (Precisão do Rei contra Vontade, base 80%). Conta como 1 fonte de debuff por stat |
+| **Vidente (Mente)** | Alvo **perde 2 turnos seguidos**. Chance pelo DOM da Mente do alvo: sem DOM/básico 100% · intermediário 70% · avançado 30% |
+| **Indestrutível (Corpo)** | Anula todo dano recebido **até o próximo turno do personagem** (inclui dano contínuo) |
+| **Resiliente (Coração)** | Cura **50% do HP máximo** do usuário, sem lado negativo |
+
+Todas de uso único por batalha.
+
+### 8.5 Mais de um pilar avançado
+
+**Sem teto:** cada pilar avançado dá **a sua skill única**, todas de uso único por batalha. Um personagem com 2
+avançados leva **6 skills** (4 + 2). Justificativa: avançado é muito difícil de obter, e é um motivo para escolherem
+quem conseguiu (inclusive quem não tem variante, que tem meta menor). O que limita é a raridade.
+
+### 8.6 Título
+
+Campo extra no personagem, fora dos 5 traços (D39).

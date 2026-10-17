@@ -55,17 +55,66 @@ Receio do usuário: muitas invocações na grade. Salvaguardas confirmadas:
 
 1. A skill de invocação **ocupa um dos 4 slots** (D43), então o contrato tem custo de build.
 2. **Uso único por batalha** por besta.
-3. **Teto de bestas em campo ao mesmo tempo** por squad **[PLACEHOLDER: 2]**, além da limitação das células livres.
+3. **Teto de bestas em campo ao mesmo tempo** por squad: **2** (D95), além da limitação das células livres.
 4. A besta tem **duração** (N turnos) **[PLACEHOLDER]**.
 
 ## 8. Pendências
 
-1. Valores do teto em campo (seção 7) e da duração.
-2. Valores: stats da besta, % de dano compartilhado, duração, custo de Vontade.
-3. Requisitos de stats do contrato Mestre.
-4. Lista de bestas (comuns e sagradas) e suas variantes.
-5. Burnout da lore (excesso de pactos) já é coberto por: 1 besta, 2 com Domador, 1 invocação por besta.
-6. Regras de captura em PvE e mercado (A6).
-7. Cada besta tem uma **lista de títulos que ajudam o contrato** (D81): cada título da lista **vale por um
-   requisito cumprido** (contrato Mestre). Falta o teto de substituições [PLACEHOLDER: 1], as listas e se ajuda
-   também Dominância e Igualdade (que não têm requisitos).
+Fechadas em D95 (seção 9). Resta só o **ajuste fino por simulação**, a **lista de bestas** (admin) e a captura em PvE
+e o mercado (A6).
+
+## 9. Valores (D95)
+
+**[PLACEHOLDER aprovado]**, ajustar com simulação. A besta comum tem os mesmos 4 graus do equipamento (Escudeiro a
+Rei); a sagrada fica acima. Referência de força: a skill Final (Poder 2,0) tira ~22% do HP de um alvo uma vez.
+
+### 9.1 Stats da besta (% dos stats do dono)
+
+| Grau | Dominância | Mestre |
+|---|---|---|
+| Escudeiro | 25% | 40% |
+| Cavaleiro | 35% | 50% |
+| Mestre | 45% | 60% |
+| Rei | 55% | 70% |
+| Sagrada | ×1,25 do Rei | ×1,25 do Rei |
+
+- Velocidade da besta: **90%** da do dono. Vontade: **50%** da do dono.
+- Rendimento em 4 ações: Dominância Rei ~17% do HP do alvo, Mestre Rei ~25%.
+
+### 9.2 Duração
+
+**4 turnos da besta** (sagrada: **5**). Igualdade: 4 turnos do dono.
+
+### 9.3 Dominância: custo de Vontade
+
+O dono perde Vontade enquanto a besta está em campo, **dentro do piso de 80%** do Desgaste.
+
+| Grau | Escudeiro | Cavaleiro | Mestre | Rei |
+|---|---|---|---|---|
+| Vontade perdida | 5% | 8% | 11% | 15% |
+
+### 9.4 Igualdade (não ocupa célula)
+
+A besta guarda um buffer que **absorve 50%** de cada golpe recebido pelo dono, até esvaziar.
+
+| Grau | Buffer (% do HP máx. do dono) | Bônus de Precisão e Esquiva |
+|---|---|---|
+| Escudeiro | 12% | +4% |
+| Cavaleiro | 16% | +6% |
+| Mestre | 20% | +9% |
+| Rei | 25% | +12% |
+
+Se o buffer esvazia, o dono sofre **10% do HP máximo** (ignora Defesa) e **perde os bônus**.
+
+### 9.5 Requisitos do contrato Mestre
+
+Escudeiro 2 · Cavaleiro 2 · Mestre 3 · Rei 4 · Sagrada 4, com pelo menos 1 "baixo" do Mestre para cima (formato do
+equipamento, `living_gear_brief.md` 9.4). **Sem parcial:** não cumprindo todos, a build é bloqueada. Dominância e
+Igualdade não têm requisitos.
+
+### 9.6 Teto em campo e títulos
+
+- **2 bestas em campo por squad.** A Igualdade **não conta** (não é unidade). Com Domador o personagem tem 2
+  invocações (2 slots), mas o teto da squad continua 2.
+- **Títulos (D81):** teto de **1 substituição**, só para o contrato **Mestre**. Não ajudam Dominância nem Igualdade.
+- **Lista de bestas:** conteúdo do admin; no `seed.ts` do MVP, uma besta por contrato.

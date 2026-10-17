@@ -204,12 +204,12 @@ São **6** (a Elemental foi adicionada). Cada uma define o tema e o padrão de c
 - **Skill pode mudar o campo.** O novo campo vale para todos os que cumprirem o requisito (nada de bônus exclusivo para quem acionou). Dura **N turnos** e depois volta ao campo inicial. O adversário pode trocar de novo.
 - A skill de mudar campo vale pela **escolha**: quem aciona escolhe o campo que favorece a sua squad.
 - Por ora é **só bônus de status**. Futuro: regras mais ricas (alcance, bloqueio etc.).
-- **[ABERTO]** Duração exata (N), quais traços cada campo pede, tamanho do bônus.
+- Duração, traços e bônus: fechados em D98 (`skills_brief.md` 12.7).
 
 ### 8.6 Pontos de atenção com o lore
 
 - ~~**Termo "variante"**~~: resolvido em 9.1 (linhagem = categoria, variante = o poder / quem tem poder). Bate com o `world_build.md`.
-- **Várias variantes por personagem:** o lore diz que 94,5% têm 1 variante, 5% têm 2 e 0,1% têm 3; 0,4% não têm nenhuma (batem com a skill none ser rara). Resolvido em 10.3 e D52: pode ter 2 (3 raríssimo), com **mais opções e mais custo** (ex.: 2 Desgastes). Como o custo extra se aplica: **[ABERTO]** (`character_brief.md` 8).
+- **Várias variantes por personagem:** o lore diz que 94,5% têm 1 variante, 5% têm 2 e 0,1% têm 3; 0,4% não têm nenhuma (batem com a skill none ser rara). Resolvido em 10.3 e D52: pode ter 2 (3 raríssimo), com **mais opções e mais custo** (ex.: 2 Desgastes). Custo extra fechado em D97 (`character_brief.md` 8).
 - **Elemental x linhagens ancestrais:** o `world_build.md` cita Gelo (ex.: "Gelo+Gelo", seção de herança) como elemento de família. Falta mapear em qual família cai cada tipo de manifestação (conflito 9 do `world_build.md`).
 
 ### 8.7 Pendências desta conversa
@@ -298,16 +298,16 @@ vantagem (diferencial de nível alto), sem assustar o iniciante.
 **Como acumula**
 
 - O Desgaste é um **modificador negativo no stat da linhagem** (9.4), **acumula** durante a batalha e some no fim (D32).
-- **Piso: 75%** do stat base [PLACEHOLDER]: o Desgaste tira no máximo 25%. O mesmo piso para todos os stats.
-- **2 variantes = 2 Desgastes** (D52); cada skill só cobra o stat **da própria linhagem**, nunca soma as duas.
+- **Piso: 80%** do stat base (D91): o Desgaste tira no máximo 20%. O mesmo piso para todos os stats.
+- **2 variantes = 2 Desgastes** (D52, D97): cada skill cobra 100% no stat **da própria linhagem** e uma fração (**ressonância**) nas outras: 60% com 2 variantes, 40% em cada uma com 3. Ver `character_brief.md` 8.
 
-**Curva custo × poder (convexa)** [PLACEHOLDER]
+**Curva custo × poder (convexa)** (D91)
 
 | Poder da skill | Custo (% do stat base) |
 |---|---|
-| 1,0 | ~3% |
-| 1,5 | ~7% |
-| 2,0 | ~15% |
+| 1,0 | ~1,5% |
+| 1,5 | ~4% |
+| 2,0 | ~8% |
 
 Skills básicas quase não pesam; as fortes pesam. O admin equilibra olhando **o que a skill faz** (dano, efeito,
 alcance, área), não só o número.
@@ -528,7 +528,7 @@ Só aparece depois do tempo normal: não pesa para o iniciante, só para quem te
 - **Resiste** à **aplicação** de status hostil e ao **reposicionamento forçado** (empurrar, puxar, trocar).
 - **Não resiste** a dano direto, debuff de stat já aplicado nem Desgaste.
 - **Fórmula** (mesma forma do acerto): `chance = base × 2 × Precisão / (Precisão + Vontade)`, com piso e teto
-  [PLACEHOLDER: 30% a 100%].
+  (30% a 90%, D92).
 - Alerta: Suporte, Controlador e Guardião têm Vontade alta; testar a resistência do Controlador.
 
 ### 11.10 Empilhamento multiplicativo [ENRAIZADO]
@@ -538,9 +538,9 @@ Substitui a soma direta de 9.5b (D37):
 - Buff e debuff são **multiplicadores sobre o valor atual** do stat: Ataque 50 com −20% fica 40; mais −20% fica 32.
   Vale para buff e debuff.
 - A **ordem não importa** (determinismo, D8). Buff +20% com debuff −20% dá ×0,96.
-- **Limite de fontes ativas por stat:** **3 buffs e 3 debuffs** [PLACEHOLDER]. Fonte além do limite **substitui a
+- **Limite de fontes ativas por stat:** **2 buffs e 2 debuffs** (D92; era 3). Fonte além do limite **substitui a
   mais fraca**. A mesma skill continua só **renovando a duração**.
-- Com 3 fontes de 20%: máximo de ~+73% e ~−49%, sem teto em %.
+- Com 2 fontes de 20%: máximo de ~+44% e ~−36%, sem teto em %. Magnitudes 10% / 15% / 20% (D92).
 - O **Desgaste** é separado, com o piso de 75% (D71), e também multiplica.
 
 ### 11.11 Reposicionamento [ENRAIZADO]
@@ -551,7 +551,93 @@ Substitui a soma direta de 9.5b (D37):
 
 ### 11.12 Pendências
 
-1. Valores da Exaustão (rodada 21, -10% cura, +5% dano, fim na 30): validar nos testes.
-2. Valores dos status (duração, % de Marcado, dano contínuo) e do piso/teto da chance.
-3. Redução do **Defender**.
+1. ~~Valores da Exaustão~~: mantidos (D92, seção 12.5).
+2. ~~Valores dos status~~: fechados (D92, seção 12.4).
+3. ~~Redução do Defender~~: +50% de Defesa (D92, seção 12.5).
 4. Conjunto mínimo de skills de teste.
+
+---
+
+## 12. Valores de combate (D92)
+
+Decididos na conversa de balanceamento. Todos **[PLACEHOLDER aprovado]**, ajustar com simulação.
+
+### 12.1 Poder, cooldown e custo (alvo único, corpo a corpo)
+
+| Tipo | Poder | Cooldown | Desgaste | Nível mínimo |
+|---|---|---|---|---|
+| Básica | 0,8 | 0 | ~1% | 0 |
+| Padrão | 1,0 | 1 | 1,5% | 0 |
+| Reforçada | 1,3 | 2 | ~3% | 20 |
+| Forte | 1,6 | 3 | ~5% | 40 |
+| Final | 2,0 | 4 | 8% | 60 |
+
+Cooldown conta em turnos do próprio personagem (8.2). Uma rotação sempre no máximo bate no piso do Desgaste em ~6
+ações: é o efeito pretendido para o nível avançado.
+
+### 12.2 Modificadores por forma
+
+| Forma | Poder | Custo |
+|---|---|---|
+| À distância | ×0,9 | ×1,25 |
+| Flanco | ×1,0 | ×1,4 |
+| Linha ou coluna (queda 100/60/30) | ×0,85 | ×1,3 |
+| Perfurante (sem queda) | ×0,65 | ×1,5 |
+| Grade inteira (sem queda) | ×0,5 | ×1,5 |
+
+### 12.3 Cura e escudo
+
+Poder 1,0 = **10% do HP máximo do alvo**, escalado pelo Poder da skill (não por stat do usuário).
+
+### 12.4 Status (duração em turnos do afetado)
+
+Chance = `base × 2 × Precisão / (Precisão + Vontade)`, piso 30%, **teto 90%**.
+
+| Status | Efeito | Duração | Base |
+|---|---|---|---|
+| Atordoado | Perde a próxima ação (imunidade de 1 turno depois) | 1 | 70% |
+| Travado | +2 de recarga em uma skill | n/a | 80% |
+| Preso | Não move nem é movido | 2 | 80% |
+| Exposto | Alvo de corpo a corpo | 2 | 85% |
+| Marcado | +20% de dano recebido | 3 | 80% |
+| Dano contínuo | 4% do HP máx. por turno (ignora Defesa) | 3 | 80% |
+
+### 12.5 Empilhamento, Defender e Exaustão
+
+- **Fontes por stat: 2 buffs e 2 debuffs** (era 3). Magnitudes **10% / 15% / 20%**. Máximo ~+44% e ~−36%.
+- **Defender:** +50% de Defesa efetiva até o próximo turno do personagem, fora do limite de fontes, mais ~10% de alívio
+  de Desgaste. Reduz 13% (Executor) a 19% (Vanguarda) do dano recebido.
+- **Exaustão:** mantida (rodada 21, cura −10% e dano +5% por rodada, fim forçado na 30).
+
+### 12.6 Kit básico e marcos
+
+- **4 skills, todas da variante** do personagem; o **papel** vem da classe (um Suporte de fogo tem uma skill de
+  suporte de fogo). Padronizado por classe e variante: mesmo Poder para todos da mesma combinação.
+- Composição por papel: **básica** (0,8, cooldown 0), **padrão** (1,0, cooldown 1), **uma de função da classe**
+  (escudo, buff, controle etc.) e **uma de assinatura da variante** (~1,0 com efeito lateral pequeno).
+- **Sem variante (none, D25):** kit de 4 skills none, mais fracas e de custo menor, cooldown mais curto.
+  **Aprovado:** Poder ×0,85, custo ×0,5, cooldown −1 (mín. 0).
+- **Marcos:** nos níveis **50 e 100** o bloco de 3 garante ao menos uma skill **Forte ou Final** (nível mínimo
+  respeitado). Pool por variante: **~30 skills ou mais**, distribuídas pelos tipos acima.
+
+### 12.7 Campos de batalha (D98)
+
+Os campos são dados do admin; os valores abaixo são **referência de equilíbrio** (o admin pode ajustar, mas deve
+conhecer o que cada número pesa). **[PLACEHOLDER aprovado]**.
+
+- **Bônus:** **+6% em um stat e +4% em outro** (10 pontos, igual ao DOM intermediário). Vale depois dos tetos e **não
+  conta** nas 2 fontes de buff por stat (é ambiental). Multiplicativo: +6% de Ataque dá ~+9% de dano.
+- **Traços exigidos:** cada campo lista **2 a 4 traços** de categorias diferentes (Combate, Postura, Origem); quem tem
+  **qualquer um** recebe o bônus. Meta do admin: ~35 a 45% dos personagens qualificam. MVP (`seed.ts`): 6 campos, 3
+  traços cada.
+- **Troca por skill** (contada em **rodadas**, o campo é global; a skill não tem Poder, só custo e cooldown):
+
+| Tipo da skill | Duração | Bônus na troca | Cooldown | Desgaste |
+|---|---|---|---|---|
+| Padrão | 4 rodadas | ×1,0 | 2 | 1,5% |
+| Reforçada | 3 rodadas | ×1,25 | 3 | 3% |
+| Forte | 2 rodadas | ×1,5 | 4 | 5% |
+
+  Há **uma troca ativa por vez** (a nova substitui a anterior). Ao fim, volta ao campo inicial.
+- **Sorteio inicial justo:** só entram os campos em que a diferença de personagens qualificados entre os lados é de
+  **no máximo 2** (de 4). Se nenhum cumprir, a batalha começa **sem campo**. Vale para todos os modos, inclusive PvE.

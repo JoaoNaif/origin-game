@@ -148,4 +148,4 @@ da ação é a soma ponderada pelo perfil, dividida pela maior nota do turno.
 - Implementar a estrutura (gerar ações, pontuar, sortear com `Rng`, log) com placeholders; porta `Rng` com fake fixo
   em `test/`.
 
-**Próximo passo sugerido:** fechar o A8 (valores dos stats), que destrava a IA, o DOM, o equipamento vivo e os contratos.
+**Próximo passo sugerido:** A8 fechado (D91). Seguir com curva de XP, Poder das skills e Exaustão/status, depois calibrar a IA simulando batalhas.

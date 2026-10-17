@@ -12,7 +12,7 @@
 - **Um único despertar** por personagem. **Não há estágios** no jogo.
 - O efeito aparece nas **skills**: o personagem passa a ter skills da nova variante, **mais fortes que as base**.
   São skills raras, que a maioria dos personagens não tem.
-- Segue o D52: skill despertada é mais forte e tem **mais Desgaste**.
+- Segue o D52: skill despertada é mais forte e tem **mais Desgaste** (valores em 6.1).
 - Vale no ranqueado (D56).
 
 ## 2. Quem pode [ENRAIZADO]
@@ -98,6 +98,46 @@ A dica **não revela** qual despertar nem quais missões faltam.
 
 ## 5. Pendências
 
-1. **Catálogo** (admin): quais despertares cada variante tem e o perfil de cada um.
-2. **Modelo das missões** (admin): quais tipos existem por perfil, como variam por personagem, limiares e anti-farm.
-3. Ajuste do fator `0,5` da fórmula, do -30% do sangue puro e dos limites da dica (placeholders).
+Fechadas em D96 (seção 6). Resta o **catálogo** (admin: despertares por variante e perfil de cada um), os **modelos de
+missão** (pool de ~8 por despertar, admin) e o ajuste fino por simulação.
+
+## 6. Valores (D96)
+
+**[PLACEHOLDER aprovado]**, ajustar com simulação.
+
+### 6.1 Skills do despertar
+
+- **Poder ×1,25** sobre o mesmo tipo base e **Desgaste ×1,5** (D52). Ex.: Forte 1,6 / 5% vira 2,0 / 7,5%; Final
+  2,0 / 8% vira 2,5 / 12%. Teto de Poder 2,5.
+- **5 skills por despertar**, com nível mínimo **80, 85, 90, 95, 100**.
+- Nos blocos de 3 ofertas desses níveis, **pelo menos 1 é do despertar** enquanto restarem skills dele.
+- Ranqueado: a skill despertada só vale em faixa com nível **igual ou maior que o mínimo dela**.
+- **Desconto na variante base (aprovado: só com 1 despertada equipada; ajustar por simulação):** o despertado paga **×0,75** de Desgaste nas
+  skills não despertadas ("o corpo suporta melhor a variante normal"). Vale **só se houver pelo menos uma skill
+  despertada equipada** (e liberada na faixa), para não ser vantagem gratuita. Teste: build equivalente gasta 18,4%
+  contra 16,5% por 5 ações, com ~8% a mais de Poder médio (proporcional).
+
+### 6.2 Missões ocultas
+
+**3 missões por personagem** (1 cumprida = Sinais, 2 = Iminente, 3 = desperta). Contam a partir do nível 80.
+
+| Tipo | Exemplo | Limiar |
+|---|---|---|
+| Acumulativa | Abater inimigos, ou acertar um tipo de skill | ~100 eventos (≈200 batalhas) |
+| Condição repetida | Em 15 batalhas, fazer ≥40% do dano da squad (ou ≥35% da cura, ou ser o último vivo numa vitória) | 15 batalhas |
+| Marco único | Numa batalha: vencer com 1 vivo, ou causar ≥60% do HP total inimigo | 1 vez |
+
+- **Variação:** cada despertar tem um pool de ~8 modelos de missão (admin); o sistema sorteia 3 por personagem (um de
+  cada tipo), pela seed do personagem.
+- **Sangue puro:** −30% nos limiares (100 vira 70, 15 vira 10).
+- **Duração esperada:** ~150 a 250 batalhas depois do nível 80.
+- **Anti-farm:** amistosa não conta (D54); PvE só a partir da dificuldade **Intermediário**, contra NPC diferente das
+  últimas 5 batalhas; PvP conta no máximo **3 batalhas por dia contra o mesmo oponente**.
+
+### 6.3 Sorteio, dica e despertar novo
+
+- **Fator da afinidade: 0,75** (era 0,5). Peso = `1 + 0,75 × a`; o mais compatível tem até 1,75x a chance (2
+  despertares: ~64% / 36%). Nenhum fica com chance zero.
+- **Dica:** mantida (Sinais com 1 missão, Iminente com 2).
+- **Despertar novo:** se o admin criar um despertar para uma variante, personagens elegíveis acima do nível 80
+  entram no sorteio.

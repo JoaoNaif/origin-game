@@ -15,8 +15,8 @@ não só a força dele. Serve para **potencializar** (variante afim) ou **compen
 ## 2. Como funciona no jogo [ENRAIZADO]
 
 - É uma **passiva**, não uma skill. **Não ocupa** os 4 slots de skill (D43).
-- **Um único slot de equipamento vivo por personagem, por ora:** ou arma **ou** armadura. Um segundo slot fica
-  para depois **[ABERTO]**.
+- **Um único slot de equipamento vivo por personagem, por ora:** ou arma **ou** armadura. Sem 2º slot (D94).
+  Ver 9.1.
 - Arma e armadura usam o **mesmo sistema** (grau, elo, custo).
 - O efeito é um **bônus moderado** de stats mais um **efeito leve** da variante do equipamento (ex.: fogo =
   chance de queimar). O tamanho depende do **grau**.
@@ -56,7 +56,7 @@ Cada equipamento tem **2 a 4 requisitos** de perfil de stats, no formato "stat a
 
 - **Alto e baixo são relativos ao próprio personagem:** alto = entre os 2 maiores dos 7 stats; baixo = entre os 2
   menores. Independe do nível e dos números da fórmula (A8).
-- **Todos os requisitos cumpridos = pleno.** **Maioria = parcial.** Menos que isso = sem elo.
+- **Todos os requisitos cumpridos = pleno.** **Metade ou mais (não todos) = parcial** (D94). Menos que isso = sem elo.
 - **Grau mais alto exige mais requisitos** (compatível é mais raro, como na lore).
 - O elo é avaliado **ao montar a build** e fica **fixo na batalha** (Desgaste não muda o elo).
 - Como os pontos livres se redistribuem fora da batalha (D48), buscar o elo é **decisão de build**; o requisito
@@ -96,12 +96,76 @@ das **faixas** do ranqueado (D63), onde nível, DOM e equipamento escalam juntos
 
 ## 8. Pendências
 
-1. Valores: poder por grau, elo parcial e sem elo, custo do elo pleno (dependem de A8).
-2. Lista de requisitos possíveis e quantos por grau.
-3. Efeitos leves por variante (catálogo de passivas).
-4. Segundo slot (arma **e** armadura)?
-5. Divino: custo e como se obtém.
-6. Mercado e modelo de progressão (A6).
-7. Companheiro/contrato **não** entra aqui (conversa 1.3).
-8. Cada equipamento tem uma **lista de títulos que ajudam o elo** (D81): cada título da lista **vale por um
-   requisito cumprido** (4.1). Falta o teto de substituições [PLACEHOLDER: 1] e as listas.
+Fechadas em D94 (seção 9). Resta só o **ajuste fino por simulação** e o conteúdo do admin (catálogo de equipamentos,
+requisitos e listas de títulos de cada um).
+
+## 9. Valores (D94)
+
+**[PLACEHOLDER aprovado]**, ajustar com simulação.
+
+### 9.1 Slot e títulos
+
+- **Um slot só: arma ou armadura**, sem 2º slot.
+- Os **títulos são individuais de cada equipamento** (lista de 2 a 5 por equipamento, conteúdo do admin). O título é o
+  que adapta o equipamento ao personagem (ex.: um tank com "Escudeiro dos Céus" usa a armadura que o pede).
+- Cada título da lista vale **por um requisito cumprido**, com **teto de 1 substituição** (D81). No Rei (4
+  requisitos), um título sozinho leva ao parcial; para o pleno precisa de 3 requisitos reais mais o título.
+
+### 9.2 Bônus de stats e custo (elo pleno)
+
+Dois stats por equipamento (principal e secundário, escolhidos pelo admin). O admin ajusta ±15% dentro do grau.
+
+| Grau | Principal | Secundário | Em pontos | Custo do elo pleno (Desgaste no stat da linhagem) |
+|---|---|---|---|---|
+| Escudeiro | +3% | +2% | 5 | 1,5% |
+| Cavaleiro | +5% | +3% | 8 | 2,5% |
+| Mestre | +8% | +5% | 13 | 3,5% |
+| Rei | +12% | +8% | 20 | 5% |
+| Divino | +16% | +11% | 27 | 7% |
+
+O custo entra no piso de Desgaste (80%, D91).
+
+### 9.3 Elo parcial e sem elo
+
+Efeito do equipamento (bônus e passiva): **pleno 100%, parcial 60%, sem elo 30%**. Penalidades só dentro da batalha.
+
+| Grau | Sem elo: queda de stats | Sem elo: perder a ação (início, +por turno, máx.) | Parcial |
+|---|---|---|---|
+| Escudeiro | Velocidade e Esquiva −3% | nenhuma | −0,75%, sem perda de ação |
+| Cavaleiro | Precisão e Esquiva −8% | nenhuma | −2%, sem perda de ação |
+| Mestre | todos −6% | 3%, +3%, 25% | todos −1%; 1%, +1%, 8% |
+| Rei | todos −9% | 6%, +5%, 45% | todos −1,5%; 2%, +2%, 15% |
+| Divino | todos −12% | 10%, +8%, 60% | todos −2%; 3%, +3%, 20% |
+
+- **Regra de balanço:** Rei sem elo rende menos que Cavaleiro com elo, e com penalidades pesadas.
+- **Parcial vale a pena nos graus baixos.** Do Mestre para cima fica neutro a negativo (só o pleno compensa).
+  Intencional; validar em simulação.
+
+### 9.4 Requisitos
+
+- **Quantos por grau:** Escudeiro 2 · Cavaleiro 2 · Mestre 3 · Rei 4 · Divino 4.
+- **Tipos:** "stat alto" (entre os 2 maiores) ou "stat baixo" (entre os 2 menores), em qualquer dos 7 stats; nunca o
+  mesmo stat nos dois sentidos. Do Mestre para cima, **pelo menos 1 requisito "baixo"**.
+- **Parcial = cumprir metade ou mais, mas não todos** (1 de 2, 2 de 3, 2 de 4). Substitui o "maioria" de 4.1.
+
+### 9.5 Passivas por linhagem (valor no grau Rei)
+
+Multiplicador por grau: Escudeiro ×0,4 · Cavaleiro ×0,6 · Mestre ×0,8 · Rei ×1,0 · Divino ×1,25.
+
+| Linhagem | Efeito leve (Rei) |
+|---|---|
+| Elemental | 15% de chance de aplicar Dano contínuo ao causar dano |
+| Material | −10% do dano recebido de golpes de alvo único |
+| Vetorial | Ignora 10% da Defesa do alvo |
+| Psíquica | +15% de Vontade contra aplicação de status |
+| Biológica | Regenera 2% do HP máximo por turno |
+| Fundamental | Escudo inicial de 5% do HP máximo |
+
+### 9.6 Divino
+
+Valores nas tabelas acima. Só por **evento único** (chefes guardados pela IA de nível alto), fora dos baús.
+**Vinculado à conta e não vendável** (senão a venda quebra a economia).
+
+### 9.7 Sem variante
+
+Personagem sem variante recebe o **bônus de stats do equipamento ×1,25**. A regra de elo não muda.

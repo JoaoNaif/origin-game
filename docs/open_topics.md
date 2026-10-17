@@ -56,25 +56,25 @@ Não são conversa própria; são decisões de design que faltam. Em ordem aprox
 
 | Tópico | Onde está | Observação |
 |---|---|---|
-| **Valores dos stats** e pisos do Desgaste (a forma da fórmula de dano e de acerto está fechada, D68) | A8; `character_brief.md` 2 | Bloqueia custos, buffs, queda de dano, teto de empilhamento, Defender |
-| **Valores do Desgaste** (curva custo x poder, piso, alívio, potência no piso) | `skills_brief.md` 9.4b | Mecânica fechada (D71); só placeholders |
-| **Valores** da Exaustão, dos status (duração, % de Marcado, dano contínuo), do limite de fontes e da redução do **Defender** | `skills_brief.md` 11.12 | Regras fechadas (D72, D73); só placeholders |
+| **Valores dos stats** e pisos do Desgaste (a forma da fórmula de dano e de acerto está fechada, D68) | A8; `character_brief.md` 2 | **Fechado em D91** (`classes_brief.md`). Poder das skills, empilhamento e Defender fechados em D92 |
+| ~~**Valores do Desgaste**~~ **fechado** (D91) | `skills_brief.md` 9.4b | Piso 80%, custo 1,5% / 4% / 8%. Ajuste com simulação |
+| ~~**Valores** da Exaustão, dos status e do Defender~~ **fechado** (D92) | `skills_brief.md` 12 | Ajuste com simulação |
 | **IA da máquina** (adversário do MVP): como escolhe ações, dificuldades, squads de NPC | `pvp_brief.md` 7 | **Modelo fechado (D90, `pvp_brief.md` 8)**: pontuação por perfil, sorteio por nível, log do jogador. Só restam valores (placeholders em 8.1), depois do A8. Chefes com perfil próprio e previsão de turnos: depois do MVP |
 | **Ajuste fino do PvP:** reconexão, valores do ranking e das faixas, top 3, fila | `pvp_brief.md` 7 | Estrutura fechada (D74); PvP vem depois do MVP |
 | **Modelo de progressão da conta** (A6): parte 1 (XP, nível, skills) fechada (D76, D77) | A6 | Conta guarda inventário, moeda, organização, reputação, ranking. Resta a parte 2 (linha abaixo) |
-| **Campos de batalha:** duração N, traços exigidos, tamanho do bônus | `skills_brief.md` 8.5/10.2 | Dados do admin |
-| **Valores do XP e da curva** (a forma está fechada, D76) | `progression_brief.md` 1.1 e 1.2 | Pesos por métrica, XP por nível, bônus do catch-up |
+| ~~**Campos de batalha**~~ **valores fechados** (D98) | `skills_brief.md` 12.7 | Os campos em si e os traços de cada um são do admin |
+| ~~**Valores do XP e da curva**~~ **fechado** (D92) | `progression_brief.md` 1.1 e 1.2 | Ajuste com simulação |
 | ~~**Parte 2 da progressão**~~ **fechada** (D79 a D86; modelo de negócio fechado no princípio, D84) | `progression_brief.md` 2.3 | Personagens fechados (D78). Mercado, inventário, economia e baús fechados (D79); aprimoramento de skill e títulos fechados (D80), venda perde o DOM e títulos ajudam elo e contrato por lista (D81), título vale por um requisito cumprido (teto placeholder 1); obtenção e exclusividade fechadas (D82); restam valores (limite do inventário, taxa, porcentagens dos baús, preços) e o funcionamento do mercado |
 | **Metas de traço** (métricas e limiares por categoria) | `progression_brief.md` 1.5 | **Adiado para a conversa com o admin**; no MVP, traços direto no `seed.ts` |
-| **Distribuição de stats:** níveis que dão ponto livre, tetos por classe, orçamento | `character_brief.md` 3; `classes_brief.md` 5 | Modelo fechado (D70); faltam valores. 8 classes (D69) com perfis propostos |
-| **Marcos de skill e tamanho do kit básico** | `character_brief.md` 4 | Kit pode ser padronizado por classe |
-| **Ajuste fino do despertar** | `awakening_brief.md` 5 | Catálogo por variante (admin) e modelo das missões ocultas. Fórmula do sorteio, nível 80, sangue puro e dica fechados; só ajuste de placeholders |
-| **Ajuste fino do DOM** | `dom_brief.md` 7 | Stats de básico/intermediário, feitos, janela e limiares, multiplicadores, durações. Depende de A8 |
-| **Ajuste fino do equipamento vivo** | `living_gear_brief.md` 8 | Valores por grau e elo, requisitos, catálogo de passivas, 2º slot, Divino. Depende de A8 |
-| **Ajuste fino dos contratos** | `beast_contracts_brief.md` 7 e 8 | Teto em campo, stats da besta, duração, lista de bestas, traço Domador. Depende de A8 |
+| **Distribuição de stats:** níveis que dão ponto livre, tetos por classe, orçamento | `character_brief.md` 3; `classes_brief.md` 5 | Modelo fechado (D70); valores fechados em D91 (níveis dos pontos, tetos, orçamento). 8 classes (D69) |
+| ~~**Marcos de skill e tamanho do kit básico**~~ **fechado** (D92) | `skills_brief.md` 12.6 | Kit de 4 skills da variante; none aprovado |
+| ~~**Ajuste fino do despertar**~~ **fechado** (D96) | `awakening_brief.md` 6 | Catálogo e modelos de missão são do admin |
+| ~~**Ajuste fino do DOM**~~ **fechado** (D93) | `dom_brief.md` 8 | Só ajuste por simulação |
+| ~~**Ajuste fino do equipamento vivo**~~ **fechado** (D94) | `living_gear_brief.md` 9 | Catálogo e listas de títulos são do admin; resto por simulação |
+| ~~**Ajuste fino dos contratos**~~ **fechado** (D95) | `beast_contracts_brief.md` 9 | Lista de bestas é do admin; resto por simulação |
 | ~~**Famílias e organizações**~~ **fechada** (D87, D88) | `family_faction_brief.md` 4 | Famílias e eventos são do admin. Empréstimo e calote fechados (D89). Resta só ajuste fino dos placeholders depois de A8 |
 | **Faixas do ranqueado** (D63) | `game_design.md` D63 | Quais faixas, nível de cada uma, o que é "limitação" (inclui o limite da skill aprimorada, D80). Liga com A5 |
-| **Custo extra de 2 ou 3 variantes** | `character_brief.md` 8 | "Mais variantes, mais custo" |
+| ~~**Custo extra de 2 ou 3 variantes**~~ **fechado** (D97) | `character_brief.md` 8 | Ressonância 60% / 40%; ajuste por simulação |
 | **Conflitos do `world_build.md`** (seção 13) que viram dado | A7 | Decidir só os que importam |
 | **Personagens de teste do MVP:** 8 a 12 personagens cobrindo todas as classes (D69), alcances, status e linhagens, criados num `seed.ts` (dados iniciais) | `skills_brief.md` 9.7 | Não é decisão aberta, é trabalho de montagem. Substitui o "~8 skills, 2 linhagens" |
 
