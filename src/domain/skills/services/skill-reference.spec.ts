@@ -34,6 +34,25 @@ describe('Skill Reference', () => {
     expect(sut.desgastePercent).toBe(8.13)
   })
 
+  it('should be able to give the column the same modifier as piercing (D109)', () => {
+    const column = skillReference({
+      tier: SkillTier.STANDARD,
+      target: SkillTarget.ENEMY,
+      range: SkillRange.MELEE,
+      area: SkillArea.COLUMN,
+    })
+    const piercing = skillReference({
+      tier: SkillTier.STANDARD,
+      target: SkillTarget.ENEMY,
+      range: SkillRange.PIERCING,
+      area: SkillArea.SINGLE,
+    })
+
+    expect(column.power).toBe(0.65)
+    expect(column.desgastePercent).toBe(2.25)
+    expect(column).toEqual(piercing)
+  })
+
   it('should be able to apply the none modifier', () => {
     const sut = skillReference({
       tier: SkillTier.BASIC,

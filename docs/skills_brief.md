@@ -582,7 +582,8 @@ ações: é o efeito pretendido para o nível avançado.
 |---|---|---|
 | À distância | ×0,9 | ×1,25 |
 | Flanco | ×1,0 | ×1,4 |
-| Linha ou coluna (queda 100/60/30) | ×0,85 | ×1,3 |
+| Linha (queda 100/60/30 pela profundidade) | ×0,85 | ×1,3 |
+| Coluna (sem queda, D108) | ×0,65 | ×1,5 (D109; mesmo formato do perfurante) |
 | Perfurante (sem queda) | ×0,65 | ×1,5 |
 | Grade inteira (sem queda) | ×0,5 | ×1,5 |
 

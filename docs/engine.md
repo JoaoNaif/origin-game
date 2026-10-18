@@ -24,7 +24,7 @@
 | 3 | Barra de ação e fila de turnos | **feito** |
 | 4 | Acerto e dano | **feito** |
 | 5 | Desgaste | **feito** |
-| 6 | Alcance, bloqueio, área e queda | a fazer |
+| 6 | Alcance, bloqueio, área e queda | **feito** |
 | 7 | Status e empilhamento | a fazer |
 | 8 | Defender, Interceptar e reposicionamento | a fazer |
 | 9 | Exaustão e fim da batalha | a fazer |
@@ -349,3 +349,93 @@ const defense = desgaste.stat(Stat.DEFENSE) // entra no dano já com o Desgaste
 
 **Fica para depois:** o custo do equipamento vivo no elo pleno (D94) e a Vontade da Dominância (D95), quando essas
 camadas entrarem.
+
+### 3.6 Alcance, bloqueio, área e queda
+
+Quem a skill atinge e com quanto da força (D21, D22, D34 a D36, `skills_brief.md` 11.1 a 11.4). Função
+`resolveTargets` em `src/domain/combat/services/targeting.ts`: recebe a skill, quem usa, as unidades **vivas** do lado
+alvo e a célula escolhida, e devolve a lista de atingidos com o multiplicador da queda.
+
+**A grade (D35):** a **linha** vai da frente (coluna 0) para o fundo (coluna 2). O **exposto** é a primeira célula
+ocupada da linha. **Derrotado não bloqueia** (D21): só unidades vivas entram.
+
+Os dois lados frente a frente (desenho do usuário; os números são as colunas, 1 = frente, `x` = o meio do campo):
+
+```
+3 2 1 x 1 2 3
+3 2 1 x 1 2 3
+3 2 1 x 1 2 3
+```
+
+No código, a coluna 1 do desenho é a `column: 0`, a 2 é a `1` e a 3 é a `2`.
+
+**Alvo único contra inimigo**, pelo alcance:
+
+| Alcance | Quem pode ser alvo | Queda |
+|---|---|---|
+| Corpo a corpo | **só o exposto** da linha escolhida, ou quem tem o status **Exposto** (11.9) | |
+| À distância | **qualquer** célula ocupada | |
+| Flanco | o **fundo** da linha (última célula ocupada), ignorando o bloqueio | |
+| Perfurante | **a linha inteira** da célula escolhida, atravessando | **sem queda** (D36) |
+
+**Área contra inimigo** (ignora o bloqueio; o atacante escolhe a célula, 11.3):
+
+| Área | Atinge | Queda |
+|---|---|---|
+| Linha | todos da linha da célula, **da frente para o fundo** | **100% / 60% / 30%** pela ordem dos personagens na profundidade |
+| Coluna | todos da mesma profundidade nas 3 linhas | **sem queda** (D108) |
+| Grade | todos | sem queda |
+
+- **A queda é pela profundidade de cada personagem na linha** (D36): o primeiro que aparece leva 100%, o seguinte 60% e
+  o terceiro 30%. **Coluna vazia não conta.** Linha com perfurante não tem queda (a linha inteira leva 100%).
+- **Coluna sem queda (D108):** todos estão na mesma profundidade, então todos levam 100%.
+
+Exemplo da queda (lado inimigo, colunas 1 a 3 da frente para o fundo):
+
+```
+          1   2   3
+linha 1   A   B   C     ataque na linha 1 → A 100%, B 60%, C 30%
+linha 2   D   .   E     ataque na linha 2 → D 100%, E 60%  (a coluna 2 está vazia)
+linha 3   .   .   F     ataque na linha 3 → F 100%
+```
+
+Perfurante na linha 1: A, B e C levam 100%. Coluna 1: A e D levam 100%.
+
+**Skill em aliado** (11.4): **sem bloqueio** e **sem queda**. Alvo único na célula escolhida; linha, coluna ou grade em
+todos os aliados da área (buff de squad, D102). **Si mesmo:** só quem usa.
+
+**Erros (`InvalidTargetError`):** célula fora da grade; célula vazia (alvo único); corpo a corpo atrás de alguém; área
+sem ninguém.
+
+**Exemplo** (grade inimiga):
+
+```
+            coluna 0   coluna 1   coluna 2
+  linha 0      A          .          B
+  linha 1      .          C          .
+  linha 2      D          .          .
+```
+
+| Skill | Célula | Atinge |
+|---|---|---|
+| Corpo a corpo | 0:0 | A |
+| Corpo a corpo | 0:2 | **inválido** (B está atrás de A); com B **Exposto**, atinge B |
+| À distância | 0:2 | B |
+| Flanco | linha 0 | B |
+| Perfurante | linha 0 | A 100%, B 100% |
+| Linha | linha 0 | A 100%, B 60% |
+| Coluna | coluna 0 | A 100%, D 100% |
+| Grade | | A, B, C, D (100%) |
+
+```ts
+const hits = resolveTargets({
+  skill: { target: SkillTarget.ENEMY, range: SkillRange.RANGED, area: SkillArea.LINE },
+  actor,
+  units: aliveEnemies,
+  cell: { row: 0, column: 1 },
+})
+// right([{ ref: 'OPPONENT:0', falloff: 1 }, { ref: 'OPPONENT:1', falloff: 0.6 }])
+```
+
+**Fica para outras peças:** o Interceptar do Guardião (peça 8) desvia golpes de alvo único depois daqui; a
+dificuldade de cada alvo (acerto) é por alvo atingido (peça 4).

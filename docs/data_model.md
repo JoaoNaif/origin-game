@@ -393,7 +393,8 @@ partir de tipo + forma, para o seed gerar e o admin comparar:
 | `RANGED` | ×0,9 | ×1,25 |
 | `FLANK` | ×1,0 | ×1,4 |
 | `PIERCING` | ×0,65 | ×1,5 |
-| `LINE` / `COLUMN` (inimigo) | ×0,85 | ×1,3 |
+| `LINE` (inimigo) | ×0,85 | ×1,3 |
+| `COLUMN` (inimigo, sem queda, D108/D109) | ×0,65 | ×1,5 |
 | `GRID` (inimigo) | ×0,5 | ×1,5 |
 | Área em aliados (buff de squad, D102) | ×0,7 | ×1,3 |
 | Skill none (sem variante) | ×0,85 | ×0,5 (cooldown −1, mín. 0) |

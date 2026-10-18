@@ -26,7 +26,8 @@ const RANGE_MODIFIER: Record<SkillRange, Modifier> = {
 const ENEMY_AREA_MODIFIER: Record<SkillArea, Modifier> = {
   SINGLE: NEUTRAL,
   LINE: { power: 0.85, cost: 1.3 },
-  COLUMN: { power: 0.85, cost: 1.3 },
+  // coluna sem queda (D108): mesmo formato do perfurante, mesmo modificador (D109)
+  COLUMN: { power: 0.65, cost: 1.5 },
   GRID: { power: 0.5, cost: 1.5 },
 }
 
