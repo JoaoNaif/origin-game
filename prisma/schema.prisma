@@ -48,7 +48,8 @@ model Variant {
   templates CharacterTemplateVariant[]
   skills    Skill[]
 
-  awakenedCharacters Character[] @relation("CharacterAwakening")
+  awakenedCharacters Character[]      @relation("CharacterAwakening")
+  awakenedNpcs       NpcSquadMember[] @relation("NpcAwakening")
 
   @@index([awakensFromId])
   @@map("variants")
@@ -87,6 +88,7 @@ model Trait {
 
   familyTemplates CharacterTemplate[]
   characters      CharacterTrait[]
+  npcMembers      NpcSquadMemberTrait[]
 
   @@index([variantId])
   @@map("traits")
@@ -157,6 +159,7 @@ model CharacterTemplate {
   familyTrait Trait?                     @relation(fields: [familyTraitId], references: [id], onDelete: Restrict)
   variants    CharacterTemplateVariant[]
   characters  Character[]
+  npcMembers  NpcSquadMember[]
 
   @@index([familyTraitId])
   @@index([characterClass])
@@ -244,6 +247,7 @@ model Skill {
   variant Variant? @relation(fields: [variantId], references: [id], onDelete: Restrict)
 
   characters CharacterSkill[]
+  npcMembers NpcSquadMemberSkill[]
 
   // pool por variante (ofertas de skill) e kit por classe + variante
   @@index([variantId, minLevel])
@@ -374,4 +378,94 @@ model SquadMember {
   @@unique([squadId, row, column])
   @@index([characterId])
   @@map("squad_members")
+}
+
+// ---------------------------------------------------------------------------
+// Batalha
+// ---------------------------------------------------------------------------
+
+// Perfil da IA (D90): muda só os pesos da pontuação.
+enum AiProfile {
+  AGGRESSIVE
+  CAUTIOUS
+  FINISHER
+  BALANCED
+}
+
+// Dificuldade da IA (D90): muda a qualidade da decisão, nunca dá bônus de stat.
+enum AiDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  MASTER
+  GRANDMASTER
+}
+
+// Squad da máquina (catálogo; no MVP vem do seed.ts). Mesmas regras do jogador: 4 personagens,
+// grade 3x3, 4 skills cada; nível dentro da faixa da dificuldade (D103). Regras no domínio.
+model NpcSquad {
+  id          String       @id @default(uuid())
+  key         String       @unique
+  name        String
+  description String?
+  profile     AiProfile
+  difficulty  AiDifficulty
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  members NpcSquadMember[]
+
+  @@index([difficulty, profile])
+  @@map("npc_squads")
+}
+
+// Personagem da máquina: modelo + nível + célula (+ despertar). Sem conta e sem pontos livres
+// guardados (o motor usa a distribuição padrão do perfil do modelo).
+model NpcSquadMember {
+  id                String  @id @default(uuid())
+  npcSquadId        String  @map("npc_squad_id")
+  templateId        String  @map("template_id")
+  level             Int
+  row               Int
+  column            Int
+  awakenedVariantId String? @map("awakened_variant_id")
+
+  npcSquad        NpcSquad              @relation(fields: [npcSquadId], references: [id], onDelete: Cascade)
+  template        CharacterTemplate     @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  awakenedVariant Variant?              @relation("NpcAwakening", fields: [awakenedVariantId], references: [id], onDelete: Restrict)
+  skills          NpcSquadMemberSkill[]
+  traits          NpcSquadMemberTrait[]
+
+  @@unique([npcSquadId, templateId])
+  @@unique([npcSquadId, row, column])
+  @@index([templateId])
+  @@map("npc_squad_members")
+}
+
+// As 4 skills de batalha do NPC, com o slot (1 a 4).
+model NpcSquadMemberSkill {
+  memberId  String @map("member_id")
+  skillId   String @map("skill_id")
+  buildSlot Int    @map("build_slot")
+
+  member NpcSquadMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  skill  Skill          @relation(fields: [skillId], references: [id], onDelete: Restrict)
+
+  @@id([memberId, skillId])
+  @@unique([memberId, buildSlot])
+  @@index([skillId])
+  @@map("npc_squad_member_skills")
+}
+
+// Traços do NPC (até 5, incluindo o de família do modelo).
+model NpcSquadMemberTrait {
+  memberId String @map("member_id")
+  traitId  String @map("trait_id")
+
+  member NpcSquadMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  trait  Trait          @relation(fields: [traitId], references: [id], onDelete: Restrict)
+
+  @@id([memberId, traitId])
+  @@index([traitId])
+  @@map("npc_squad_member_traits")
 }

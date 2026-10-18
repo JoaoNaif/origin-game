@@ -48,7 +48,7 @@
 | 6 | `Character` (+ `CharacterTrait`) | Jogador | Account, CharacterTemplate, Trait, Variant | **feito** |
 | 7 | `CharacterSkill` (+ enum `CharacterSkillSource`) | Jogador | Character, Skill | **feito** |
 | 8 | `Squad` (+ `SquadMember`) | Jogador | Account, Character | **feito** |
-| 9 | `NpcSquad` (+ `NpcSquadMember`, `NpcSquadMemberSkill`, `NpcSquadMemberTrait`, enums `AiProfile`, `AiDifficulty`) | Batalha | CharacterTemplate, Skill, Trait, Variant | a fazer |
+| 9 | `NpcSquad` (+ `NpcSquadMember`, `NpcSquadMemberSkill`, `NpcSquadMemberTrait`, enums `AiProfile`, `AiDifficulty`) | Batalha | CharacterTemplate, Skill, Trait, Variant | **feito** |
 | 10 | `Battle` (+ enums `BattleMode`, `BattleStatus`, `BattleSide`, `BattleEndReason`) | Batalha | Account, Squad, NpcSquad | a fazer |
 | 11 | `BattleAction` (+ enum `BattleActionType`) | Batalha | Battle | a fazer |
 
@@ -737,3 +737,87 @@ Squad.create({ account: tester, name: 'Empilhado', members: [/* dois em 0:0 */] 
 
 **Domínio:** `src/domain/squads/entities/squad.ts`; célula em `src/domain/squads/value-objects/grid-position.ts`.
 Fábrica de teste em `test/factories/make-squad.ts`.
+
+### 3.9 NpcSquad (batalha)
+
+O **squad da máquina**, adversário do PvE (D75, D90, D103). É **catálogo**: no MVP vem do `seed.ts`, depois do admin.
+Joga com as **mesmas regras do jogador** (4 personagens, grade 3x3, 4 skills cada) e **nunca ganha bônus de stat**: a
+dificuldade muda só a qualidade da decisão da IA.
+
+**Enums:**
+- `AiProfile` (muda os pesos da pontuação, `pvp_brief.md` 8.1): `AGGRESSIVE`, `CAUTIOUS`, `FINISHER` (focado em abater),
+  `BALANCED`.
+- `AiDifficulty`: `BEGINNER`, `INTERMEDIATE`, `ADVANCED`, `MASTER`, `GRANDMASTER`.
+
+**Faixa de nível por dificuldade** (D103, inclusiva; `NPC_LEVEL_RANGE`):
+
+| Dificuldade | Nível dos NPCs |
+|---|---|
+| `BEGINNER` | 10 a 25 |
+| `INTERMEDIATE` | 25 a 45 |
+| `ADVANCED` | 45 a 70 |
+| `MASTER` | 70 a 90 |
+| `GRANDMASTER` | 90 a 100 |
+
+| Campo (`NpcSquad`) | Tipo | Regra |
+|---|---|---|
+| `id`, `key` (único), `name`, `description` | | `key` ex.: `beginner-wall` |
+| `profile` | `AiProfile` | |
+| `difficulty` | `AiDifficulty` | |
+| `createdAt`, `updatedAt` | data | |
+
+| Campo (`NpcSquadMember`) | Tipo | Regra |
+|---|---|---|
+| `id` | uuid | |
+| `npcSquadId` | FK → `NpcSquad` | apagar o squad apaga os membros |
+| `templateId` | FK → `CharacterTemplate` | **um modelo por squad** (mesma regra da conta: repetido vira moeda) |
+| `level` | inteiro | dentro da faixa da dificuldade |
+| `row`, `column` | inteiros | 0 a 2; uma célula por membro (como no `Squad`, 3.8) |
+| `awakenedVariantId` | FK opcional → `Variant` | NPC despertado (regras do despertar, D67) |
+
+Ligações: `NpcSquadMemberSkill` (as **4 skills**, com `buildSlot` 1 a 4, único) e `NpcSquadMemberTrait` (até 5 traços).
+
+**Sem conta e sem pontos livres guardados:** o NPC não é um `Character`. O motor usa a **distribuição padrão** do perfil
+do modelo (o perfil já a inclui, 3.3), limitada aos pontos do nível dele. Assim o admin não precisa montar pontos à mão.
+
+**Regras (domínio, `InvalidNpcSquadError`):** 4 membros; modelos sem repetir; dentro da grade e sem dois na mesma
+célula; nível dentro da faixa; build com **4 skills** sem repetir e **elegíveis** para o membro (próprias variantes,
+nível mínimo, despertada só se despertado); despertar válido; até 5 traços, sem repetir, com o **traço de família do
+modelo obrigatório** (e o único `TEMPLATE`) e o teto de +15% por stat.
+
+**Regras compartilhadas com o jogador:** a elegibilidade de skill, o despertar e o teto de traços são **os mesmos
+serviços** usados pelo `Character` (`src/domain/characters/services/skill-eligibility.ts`, `awakening-rules.ts`,
+`trait-rules.ts`). Uma mudança de regra vale para os dois.
+
+**Exemplo** (fictício):
+
+| `key` | `profile` | `difficulty` | Membros |
+|---|---|---|---|
+| `beginner-wall` | `CAUTIOUS` | `BEGINNER` | 4 recrutas no nível 15 (Guardião e Vanguarda na frente, Suporte e Atirador atrás) |
+| `grandmaster-blue` | `FINISHER` | `GRANDMASTER` | Kael **despertada** (`blue-fire`) no nível 95 com `blue-inferno`, mais 3 no nível 92 a 100 |
+
+No `seed.ts`:
+
+```ts
+NpcSquad.create({
+  key: 'beginner-wall',
+  name: 'Muralha de recrutas',
+  profile: AiProfile.CAUTIOUS,
+  difficulty: AiDifficulty.BEGINNER,
+  members: [
+    { template: recruitGuardian, level: 15, row: 0, column: 0, skills: guardianBuild },
+    { template: recruitVanguard, level: 15, row: 2, column: 0, skills: vanguardBuild },
+    { template: recruitSupport, level: 15, row: 1, column: 1, skills: supportBuild },
+    { template: recruitMarksman, level: 15, row: 1, column: 2, skills: marksmanBuild },
+  ],
+})
+// right(NpcSquad)
+
+NpcSquad.create({ ...beginnerWall, members: membersAtLevel(30) })
+// left(InvalidNpcSquadError): nível 30 fora de 10 a 25 (BEGINNER)
+```
+
+**Domínio:** `src/domain/squads/entities/npc-squad.ts`; enums em `src/domain/ai/enums/`.
+
+**Fica para depois:** o DOM e o equipamento do Grão-mestre (D103 diz "com DOM e equipamento") entram com essas
+camadas; perfil próprio para chefes de evento (pós-MVP).
