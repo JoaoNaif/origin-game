@@ -21,7 +21,7 @@
 |---|---|---|
 | 1 | Cálculo de stats | **feito** |
 | 2 | Montar o snapshot (jogador e máquina) | **feito** |
-| 3 | Barra de ação e fila de turnos | a fazer |
+| 3 | Barra de ação e fila de turnos | **feito** |
 | 4 | Acerto e dano | a fazer |
 | 5 | Desgaste | a fazer |
 | 6 | Alcance, bloqueio, área e queda | a fazer |
@@ -143,4 +143,66 @@ const snapshot = buildPveSnapshot(
 
 buildPlayerSide({ account: tester, squad: muralhaSemUmPersonagem, characters, catalog })
 // left(BuildSnapshotError): squad incompleto (3 de 4): complete a formação
+```
+
+### 3.3 Barra de ação e fila de turnos
+
+Decide **quem age e quando** (D10, D30, D102). Não há "turno da equipe": a fila passa de unidade em unidade, de quem
+for, pela Velocidade.
+
+**Barra de ação** (`TurnQueue`, `src/domain/combat/services/turn-queue.ts`):
+
+- Cada unidade tem uma barra de **0 a 1000**, começando em 0.
+- **A cada tick**, a barra de todas soma a **Velocidade** atual.
+- Ao chegar a **1000**, a unidade age e **subtrai 1000**. A **sobra fica** (Velocidade 115 age no tick 9 com 1035 e
+  fica com 35), para a proporção entre Velocidades ser exata ao longo da luta.
+
+**Quem age primeiro quando várias chegam no mesmo tick** (D30):
+
+1. Quem **cruzou 1000 antes dentro do tick**: fração `(1000 − barra antes do tick) / Velocidade`, a menor primeiro.
+   A comparação é feita por multiplicação cruzada, sem divisão (sem erro de arredondamento).
+2. Empate exato: maior **média de stats** (`statAverage`: orçamento ÷ 7, com HP valendo 1/5).
+3. Empate total: **sorteio pela seed** (`Rng`).
+
+**Outras operações:**
+
+| Operação | Regra |
+|---|---|
+| `setSpeed` | buff ou debuff de Velocidade: vale a partir do próximo tick, sem mexer na barra (efeito gradual, `skills_brief.md` 9.2) |
+| `shift(percent)` | adiantar (+) ou atrasar (−) a vez do Tático (D102): `barra + 1000 × %`, **presa entre 0 e 1000**. Adiantar nunca dá mais de uma ação extra; atrasar nunca deixa negativo |
+| `remove` | tira a unidade derrotada (ou a besta que saiu) da fila |
+
+**Sobra da barra (D106):** depois de agir, a unidade fica com a sobra (Velocidade 115 age no tick 9 com 1035 e fica
+com 35). Sem isso, personagens de Velocidade diferente passariam a agir quase na mesma frequência. O "a barra nunca
+passa de 1000" do D102 vale para o **adiantar** do Tático, que é onde ele impede ganhar várias ações extras.
+
+**Rodada (D106):** **termina quando todas as unidades vivas agiram pelo menos uma vez**, ou seja, quando o mais lento faz
+a sua ação. Aí começa a próxima. Quem é mais rápido pode agir **mais de uma vez** na mesma rodada.
+
+- Se a última unidade que faltava agir é derrotada, a rodada fecha ali (o próximo mais lento passa a fechar a rodada).
+- Uma unidade que entra no meio (besta invocada) precisa agir antes de a rodada fechar.
+- A duração de uma rodada depende do mais lento em campo (um squad com Artilharia tem rodadas mais longas), mas vale
+  igual para os dois lados, porque conta todas as unidades da batalha.
+- A rodada conta para a **Exaustão** (a partir da 21), o **fim forçado** (30) e o **Interceptar** (1 vez por rodada).
+
+**Exemplo** (Executor 115 contra Artilharia 65):
+
+| Tick | Barra do Executor | Barra da Artilharia | Age | Rodada |
+|---|---|---|---|---|
+| 9 | 1035 → **35** | 585 | Executor | 1 |
+| 16 | 840 | 1040 → **40** | Artilharia | 1 (fecha: todos agiram) |
+| 18 | 1070 → **70** | 170 | Executor | 2 |
+| 27 | 1105 → **105** | 755 | Executor | 2 (age 2 vezes) |
+| 31 | 565 | 1015 → **15** | Artilharia | 2 (fecha) |
+
+Em 60 turnos, o Executor age ~1,77 vez para cada vez da Artilharia (115 ÷ 65).
+
+```ts
+const queue = new TurnQueue(
+  units.map((u) => ({ ref: u.ref, speed: stats[u.ref].SPEED, statAverage: statAverage(stats[u.ref]) })),
+  new SeededRng(battle.seed)
+)
+
+const turn = queue.next() // { ref: 'PLAYER:2', tick: 9, round: 1 }
+queue.shift('PLAYER:0', 50) // Tático adianta um aliado em 50%
 ```

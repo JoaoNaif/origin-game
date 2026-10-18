@@ -647,8 +647,8 @@ conhecer o que cada número pesa). **[PLACEHOLDER aprovado]**.
 **[PLACEHOLDER aprovado]**.
 
 **Barra de ação (timeline, D30):** cada personagem tem uma barra de **0 a 1000**. Todo tick soma a Velocidade; ao
-chegar a 1000 ele age e subtrai 1000. Começam em 0 e o empate segue o D30. A barra **nunca passa de 1000** (impede
-empilhar ações extras).
+chegar a 1000 ele age e subtrai 1000. Começam em 0 e o empate segue o D30. O **adiantar** do Tático nunca leva a barra
+além de 1000 (impede empilhar ações extras); a sobra do tick depois de agir fica (D106).
 
 **Tático:**
 
