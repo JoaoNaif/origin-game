@@ -47,7 +47,7 @@
 | 5 | `Account` | Jogador | nada | **feito** |
 | 6 | `Character` (+ `CharacterTrait`) | Jogador | Account, CharacterTemplate, Trait, Variant | **feito** |
 | 7 | `CharacterSkill` (+ enum `CharacterSkillSource`) | Jogador | Character, Skill | **feito** |
-| 8 | `Squad` (+ `SquadMember`) | Jogador | Account, Character | a fazer |
+| 8 | `Squad` (+ `SquadMember`) | Jogador | Account, Character | **feito** |
 | 9 | `NpcSquad` (+ `NpcSquadMember`, `NpcSquadMemberSkill`, `NpcSquadMemberTrait`, enums `AiProfile`, `AiDifficulty`) | Batalha | CharacterTemplate, Skill, Trait, Variant | a fazer |
 | 10 | `Battle` (+ enums `BattleMode`, `BattleStatus`, `BattleSide`, `BattleEndReason`) | Batalha | Account, Squad, NpcSquad | a fazer |
 | 11 | `BattleAction` (+ enum `BattleActionType`) | Batalha | Battle | a fazer |
@@ -661,3 +661,79 @@ kael.learnSkill(steelStrike, kaelTemplate)
 
 **Em aberto (pergunta ao usuário):** o D97 diz **quantas** skills do kit vêm de cada variante, mas não **quais papéis**
 (ex.: com 2 variantes, a principal dá `BASIC` e `ROLE`?). Hoje o domínio só valida a quantidade e exige um de cada papel.
+
+### 3.8 Squad (jogador)
+
+Uma **formação salva** da conta: 4 personagens dela em células da grade 3x3 (D11). A conta pode ter vários squads (um
+para cada estilo) e escolhe um ao entrar na batalha.
+
+**A grade (D35):** `row` é a **linha** (0 a 2), que vai da frente para o fundo; `column` é a **profundidade** (0 a 2), com
+a **coluna 0 na frente**. Cada lado tem a sua grade, de frente para a outra (D20).
+
+```
+            coluna 0 (frente)   coluna 1   coluna 2 (fundo)
+  linha 0        [0:0]           [0:1]        [0:2]
+  linha 1        [1:0]           [1:1]        [1:2]
+  linha 2        [2:0]           [2:1]        [2:2]
+                   ↑ de frente para a grade do adversário
+```
+
+| Campo (`Squad`) | Tipo | Regra |
+|---|---|---|
+| `id` | uuid | |
+| `accountId` | FK → `Account` | dona; apagar a conta apaga os squads |
+| `name` | texto | 1 a 30 caracteres (sem espaços nas pontas) |
+| `createdAt`, `updatedAt` | data | |
+
+| Campo (`SquadMember`) | Tipo | Regra |
+|---|---|---|
+| `squadId` + `characterId` | chave composta | personagem não se repete no squad |
+| `row`, `column` | inteiros | 0 a 2; **uma célula por personagem** (`@@unique` de squad + célula) |
+
+**Regras (domínio, `InvalidSquadError`):** exatamente **4** personagens; todos **da própria conta**; sem repetir; dentro
+da grade; sem dois na mesma célula; nome de 1 a 30 caracteres.
+
+**Operações:** `Squad.create`, `setFormation` (troca personagens e células de uma vez, fora da batalha; se der erro, a
+formação anterior continua) e `Squad.restore`.
+
+**Personagem vendido ou apagado:** a linha dele em `SquadMember` some junto (cascata) e o squad fica com 3. Ao carregar,
+a batalha deve recusar um squad incompleto até o jogador completar a formação (regra para quando a batalha for
+implementada; o `restore` não valida).
+
+**Exemplo** (fictício): o squad "Muralha" de `tester_01`.
+
+| Personagem | `row` | `column` | Posição |
+|---|---|---|---|
+| Kael (Vanguarda) | 0 | 0 | frente, linha 0 |
+| Recruta (Guardião) | 2 | 0 | frente, linha 2 |
+| Mira (Atiradora) | 1 | 1 | meio, linha 1 |
+| Suporte | 1 | 2 | fundo, linha 1 |
+
+```
+            coluna 0     coluna 1     coluna 2
+  linha 0    Kael          .            .
+  linha 1     .           Mira        Suporte
+  linha 2   Recruta        .            .
+```
+
+No `seed.ts`:
+
+```ts
+Squad.create({
+  account: tester,
+  name: 'Muralha',
+  members: [
+    { character: kael, row: 0, column: 0 },
+    { character: recruit, row: 2, column: 0 },
+    { character: mira, row: 1, column: 1 },
+    { character: support, row: 1, column: 2 },
+  ],
+})
+// right(Squad)
+
+Squad.create({ account: tester, name: 'Empilhado', members: [/* dois em 0:0 */] })
+// left(InvalidSquadError): dois personagens na mesma célula
+```
+
+**Domínio:** `src/domain/squads/entities/squad.ts`; célula em `src/domain/squads/value-objects/grid-position.ts`.
+Fábrica de teste em `test/factories/make-squad.ts`.

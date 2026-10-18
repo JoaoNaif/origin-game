@@ -266,6 +266,7 @@ model Account {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   characters Character[]
+  squads     Squad[]
 
   @@map("accounts")
 }
@@ -297,6 +298,7 @@ model Character {
   awakenedVariant Variant?          @relation("CharacterAwakening", fields: [awakenedVariantId], references: [id], onDelete: Restrict)
   traits          CharacterTrait[]
   skills          CharacterSkill[]
+  squadMembers    SquadMember[]
 
   @@index([accountId])
   @@index([templateId])
@@ -340,4 +342,36 @@ model CharacterSkill {
   @@unique([characterId, buildSlot])
   @@index([skillId])
   @@map("character_skills")
+}
+
+// Formação salva da conta: 4 personagens dela na grade 3x3 (D11). Regras no domínio.
+model Squad {
+  id        String   @id @default(uuid())
+  accountId String   @map("account_id")
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  account Account       @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  members SquadMember[]
+
+  @@index([accountId])
+  @@map("squads")
+}
+
+// Personagem numa célula do squad (D35): `row` 0 a 2 (frente para o fundo da linha),
+// `column` 0 a 2 (0 = frente). Uma célula por personagem e um personagem por célula.
+model SquadMember {
+  squadId     String @map("squad_id")
+  characterId String @map("character_id")
+  row         Int
+  column      Int
+
+  squad     Squad     @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@id([squadId, characterId])
+  @@unique([squadId, row, column])
+  @@index([characterId])
+  @@map("squad_members")
 }
