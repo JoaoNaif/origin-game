@@ -26,7 +26,7 @@
 | 5 | Desgaste | **feito** |
 | 6 | Alcance, bloqueio, área e queda | **feito** |
 | 7 | Status e empilhamento | **feito** |
-| 8 | Defender, Interceptar e reposicionamento | a fazer |
+| 8 | Defender, Interceptar e reposicionamento | **feito** |
 | 9 | Exaustão e fim da batalha | a fazer |
 | 10 | IA da máquina | a fazer |
 | 11 | Simulador IA contra IA (calibração) | a fazer |
@@ -509,3 +509,64 @@ const attack = conditions.effectiveStat(Stat.ATTACK, desgaste.stat(Stat.ATTACK))
 | 3 | Básica | 0 → pronta no 4 | 2 |
 | 4 | Padrão | entra em 1 | 1 |
 | 5 | Básica | pronta no 6 | 0 → pronta no 6 |
+
+### 3.8 Defender, Interceptar e reposicionamento
+
+**Defender** (`defend`, `src/domain/combat/services/defend.ts`, D38, 9.5, D102):
+
+- A ação quando não há skill possível (ou de propósito). **Não existe ataque básico grátis.**
+- **+50% de Defesa** até o início do próximo turno dele, **fora do limite de 2 fontes**, e **alívio de 10%** do Desgaste.
+- Reduz de ~13% (Executor) a ~19% (Vanguarda) do dano recebido: é "menor que dano" (11.8), não trava o jogo.
+
+**Interceptar do Guardião** (`InterceptState`, `src/domain/combat/services/intercept.ts`, D102, 11.6, 12.8):
+
+- **Passiva de classe**, automática, sem Desgaste, não ocupa slot.
+- **Uma vez por rodada** (a rodada do D106), o primeiro golpe **de alvo único, corpo a corpo ou à distância**, contra um
+  aliado **adjacente** (4 direções) é desviado para o Guardião. O dano é calculado contra a Defesa dele, e o status do
+  golpe cai nele.
+- **Não intercepta:** área, perfurante e flanco (são os contras da formação).
+- Não intercepta se estiver **Atordoado ou Preso**.
+- Com mais de um Guardião, a **ordem é fixa pela seed** no início da batalha; o primeiro da ordem que puder intercepta.
+
+**Reposicionamento** (`BattleGrid`, `src/domain/combat/services/battle-grid.ts`, D19, D42, D44, 10.4, 11.11):
+
+| Movimento | Regra |
+|---|---|
+| Mover (ação) | só para célula **adjacente e vazia**; custa o turno |
+| Trocar com aliado (ação) | os dois perdem a ação (D42); pelo Tático, nenhum perde (D102) |
+| Empurrar (skill) | o alvo vai para o **fundo** (coluna +1), na mesma linha |
+| Puxar (skill) | o alvo vem para a **frente** (coluna −1), na mesma linha |
+| Avançar/recuar (DASH, skill) | quem usa vai para uma célula adjacente e vazia |
+| Mover aliado (MOVE_ALLY, skill) | move ou troca aliados sem custar a ação deles (Tático, D102) |
+| Trocar inimigos (SWAP, skill) | o alvo troca de lugar com **outro inimigo adjacente a ele**, escolhido por quem usa (D111) |
+
+- **Preso** não se move nem é movido (11.9).
+- **Empurrar ou puxar para célula ocupada ou fora da grade:** o movimento é **barrado**, mas o resto da skill acontece
+  (D44). Por isso o resultado é `BLOCKED`, não erro.
+- **Resistência da Vontade** (11.9): o empurrar e o puxar passam pela mesma forma da chance de status,
+  `base × 2 × Precisão / (Precisão + Vontade)`, entre 30% e 90%.
+- **Base do reposicionamento forçado: 80%** (D111, `FORCED_MOVE_BASE_CHANCE`), a mesma dos status de controle Preso e
+  Travado (12.4). Vale para empurrar, puxar e trocar inimigos.
+- **Trocar inimigos (D111):** bagunça a formação inimiga (ex.: traz um frágil para a frente). A ação de skill guarda a
+  segunda célula em `swapWith`. Os dois precisam ser adjacentes e nenhum pode estar Preso; senão é barrado e o resto da
+  skill acontece (D44).
+
+**Exemplo** (grade de um lado):
+
+```
+            coluna 0   coluna 1   coluna 2
+  linha 0      A          B          .
+  linha 1      .          C          .
+  linha 2      D          .          .
+```
+
+| Ação | Resultado |
+|---|---|
+| A move para 1:0 | ok (adjacente e vazia) |
+| A move para 0:1 | inválido (B está lá) |
+| Empurrar B | B vai para 0:2 |
+| Empurrar A | **barrado** (B atrás); o dano da skill acontece igual |
+| Puxar C | C vem para 1:0 |
+| Trocar B com C | B vai para 1:1 e C para 0:1 (C passa a ser o exposto da linha 0) |
+| Guardião em 0:0, golpe à distância em B (0:1) | o Guardião recebe (1ª vez na rodada) |
+| Guardião em 0:0, golpe em linha na linha 0 | não intercepta (área) |

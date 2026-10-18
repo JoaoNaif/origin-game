@@ -898,7 +898,7 @@ replay.
 
 | `type` | Campos | Regra |
 |---|---|---|
-| `SKILL` | `skillKey`, `targetSide`, `target` (célula) | célula dentro da grade |
+| `SKILL` | `skillKey`, `targetSide`, `target` (célula), `swapWith` (opcional) | célula dentro da grade; `swapWith` = o inimigo com quem o alvo troca (D111) |
 | `MOVE` | `to` (célula) | dentro da grade (adjacência é regra do motor, D42) |
 | `SWAP` | `withRef` | só com aliado |
 | `DEFEND` | | sem skill possível ou tempo esgotado (D38) |
