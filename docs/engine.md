@@ -25,11 +25,12 @@
 | 4 | Acerto e dano | **feito** |
 | 5 | Desgaste | **feito** |
 | 6 | Alcance, bloqueio, área e queda | **feito** |
-| 7 | Status e empilhamento | **feito** |
+| 7 | Status, empilhamento e recarga | **feito** |
 | 8 | Defender, Interceptar e reposicionamento | **feito** |
-| 9 | Exaustão e fim da batalha | a fazer |
-| 10 | IA da máquina | a fazer |
-| 11 | Simulador IA contra IA (calibração) | a fazer |
+| 9 | Exaustão e fim da batalha | **feito** |
+| 10 | Resolução do turno (juntar as peças num motor que executa a batalha) | a fazer |
+| 11 | IA da máquina | a fazer |
+| 12 | Simulador IA contra IA (calibração) | a fazer |
 
 ---
 
@@ -570,3 +571,45 @@ const attack = conditions.effectiveStat(Stat.ATTACK, desgaste.stat(Stat.ATTACK))
 | Trocar B com C | B vai para 1:1 e C para 0:1 (C passa a ser o exposto da linha 0) |
 | Guardião em 0:0, golpe à distância em B (0:1) | o Guardião recebe (1ª vez na rodada) |
 | Guardião em 0:0, golpe em linha na linha 0 | não intercepta (área) |
+
+### 3.9 Exaustão e fim da batalha
+
+Funções em `src/domain/combat/services/battle-end.ts` (11.8, 12.5, D31, D72, `pvp_brief.md` 6).
+
+**Exaustão** (pressão contra o turtling, só depois do tempo normal; não pesa para o iniciante):
+
+```
+passo = rodada − 20   (0 até a rodada 20)
+cura × (1 − 0,10 × passo)      dano × (1 + 0,05 × passo)
+```
+
+| Rodada | Cura (e escudo concedido) | Dano |
+|---|---|---|
+| até 20 | 100% | 100% |
+| 21 | 90% | 105% |
+| 25 | 50% | 125% |
+| 30 | **0%** | **150%** |
+
+O multiplicador de dano entra nos "modificadores de dano" da ordem do D68 (3.4); o de cura multiplica o `healAmount`.
+
+**Fim da batalha:**
+
+- **Eliminação** (`checkElimination`): o lado sem ninguém vivo perde. Se os dois zerarem no mesmo evento (raro), desempata
+  como o fim forçado.
+- **Fim forçado** (`isForcedEnd` e `forcedEnd`): quando a **rodada 30 fecha** (D106), vence quem tem **mais % de HP
+  total**; empate, o de **menor Desgaste** acumulado; empate ainda, a **seed**. Sempre há vencedor.
+
+**Como cada critério é medido** (leitura do D72):
+- **% de HP total** = HP atual somado ÷ **HP máximo do início da batalha** somado (derrotado conta 0). Usar o máximo do
+  início evita que quem perdeu HP máximo pela Fundamental ganhe vantagem na conta.
+- **Desgaste acumulado** = soma das frações perdidas de cada stat de cada unidade (`DesgasteState.totalFraction`; ex.: 10%
+  de Defesa + 5% de Precisão = 0,15). O dano em si do Elemental já entra no HP.
+
+**Exemplo** (fim forçado, 4 contra 4, HP máximo de 500 cada):
+
+| Lado | HP no fim | % de HP total | Desgaste | Resultado |
+|---|---|---|---|---|
+| Jogador | 250, 0, 0, 0 | 12,5% | 0,40 | **vence** (mais HP) |
+| Máquina | 100, 100, 0, 0 | 10% | 0,10 | |
+
+Se os dois tivessem 10%, venceria a máquina, que tem menos Desgaste.
