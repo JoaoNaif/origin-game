@@ -1,0 +1,91 @@
+# ORIGIN — Motor de combate
+
+> Como o motor calcula e resolve a batalha. Cada peça entra **uma por vez**, documentada aqui com a fórmula, o
+> porquê e um exemplo. Regras do jogo em [`game_design.md`](./game_design.md); dados guardados em
+> [`data_model.md`](./data_model.md).
+
+---
+
+## 1. Princípios
+
+- **Puro e determinístico:** o motor vive em `src/domain` e não lê relógio, rede ou `Math.random()` (o ESLint
+  barra). A aleatoriedade vem da porta `Rng`, alimentada pela seed (D8). Mesma seed + mesmas ações = mesmo resultado.
+- **Calcula a partir do snapshot:** a batalha começa de uma foto dos dois lados (`data_model.md` 3.10). O motor não
+  busca nada no banco no meio da partida.
+- **Funções pequenas e testadas:** cada fórmula é uma função pura com teste próprio, citando a decisão (D) de onde
+  vem o número.
+
+## 2. Plano
+
+| # | Peça | Estado |
+|---|---|---|
+| 1 | Cálculo de stats | **feito** |
+| 2 | Montar o snapshot (jogador e máquina) | a fazer |
+| 3 | Barra de ação e fila de turnos | a fazer |
+| 4 | Acerto e dano | a fazer |
+| 5 | Desgaste | a fazer |
+| 6 | Alcance, bloqueio, área e queda | a fazer |
+| 7 | Status e empilhamento | a fazer |
+| 8 | Defender, Interceptar e reposicionamento | a fazer |
+| 9 | Exaustão e fim da batalha | a fazer |
+| 10 | IA da máquina | a fazer |
+| 11 | Simulador IA contra IA (calibração) | a fazer |
+
+---
+
+## 3. Peças
+
+### 3.1 Cálculo de stats
+
+Os stats do personagem **fora de batalha** (antes de buff, debuff e Desgaste), a partir do snapshot da unidade.
+
+**Fórmula** (D91), para cada um dos 7 stats:
+
+```
+stat = round( (perfil × 85% × crescimento(nível) + pontos livres) × (1 + % dos traços / 100) )
+
+crescimento(nível) = 0,40 + 0,60 × nível / 100        (0,40 no nível 0, 1,0 no nível 100)
+```
+
+| Parte | De onde vem | Observação |
+|---|---|---|
+| `perfil` | `CharacterTemplate` (nível 100, já com a distribuição padrão) | 3.3 do `data_model.md` |
+| `85%` | a base; os outros 15% são os pontos livres | `BASE_SHARE` |
+| `crescimento` | linear: **34% do perfil no nível 0** (85% × 0,40) até 85% no 100 | D91 |
+| `pontos livres` | `Character.freePoints`; **HP vale 5 por ponto** | NPC usa a distribuição padrão (abaixo) |
+| `% dos traços` | soma dos `STAT_MODIFIER`; **positivos param em +15%** (D88), negativos entram inteiros | só os traços que valem para o personagem |
+
+- **Arredondamento:** para inteiro, no fim (stats inteiros, como na tabela das classes).
+- **Ordem:** os traços multiplicam a base **com** os pontos livres.
+- **Traço de família:** só entra se o personagem tiver a variante da família. Quem monta o snapshot filtra (peça 2).
+- **Depois:** DOM e equipamento vivo entram como novas fontes nesta mesma função.
+
+**Distribuição padrão dos pontos livres** (`defaultFreePoints`, usada pelo NPC): os 15% do perfil na mesma proporção do
+próprio perfil, limitados aos pontos que o nível já concedeu (10 a cada 10 níveis), arredondando para baixo. No nível
+100 ela reconstrói o perfil (diferença de no máximo 1 por stat).
+
+**Exemplo** (Vanguarda, perfil 700 / 100 / 120 / 75 / 85 / 55 / 95):
+
+| Situação | HP | Ataque | Defesa | Velocidade | Precisão | Esquiva | Vontade |
+|---|---|---|---|---|---|---|---|
+| Nível 0 (34%) | 238 | 34 | 41 | 26 | 29 | 19 | 32 |
+| Nível 100, sem pontos (85%) | 595 | 85 | 102 | 64 | 72 | 47 | 81 |
+| Nível 100, distribuição padrão | 700 | 100 | 120 | 75 | 84 | 55 | 95 |
+| Nível 100, sem pontos, Berserker (+10% dano melee, −8% Defesa) | 595 | 85 | 94 | 64 | 72 | 47 | 81 |
+| Nível 100, sem pontos, dois traços de +10% de Ataque | 595 | **98** (teto +15%) | 102 | 64 | 72 | 47 | 81 |
+
+Distribuição padrão da Vanguarda no nível 100: HP 21 · Ataque 15 · Defesa 18 · Velocidade 11 · Precisão 12 · Esquiva 8 ·
+Vontade 14 (99 de 100 pontos). No nível 50, metade (ex.: Defesa 9).
+
+```ts
+computeStats({
+  profile: kaelTemplate.stats,
+  level: 100,
+  freePoints: kael.freePoints,
+  traitEffects: applicableTraits.flatMap((t) => t.effects),
+})
+// { HP: 700, ATTACK: 100, DEFENSE: 120, ... }
+```
+
+**Domínio:** `src/domain/characters/services/stat-calculator.ts` (`computeStats`, `baseGrowth`, `traitPercents`);
+distribuição padrão em `src/domain/characters/services/free-points.ts` (`defaultFreePoints`).

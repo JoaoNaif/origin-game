@@ -39,6 +39,29 @@ export function availableFreePoints(level: number): number {
   return Math.floor(level / LEVELS_PER_GRANT) * FREE_POINTS_PER_GRANT
 }
 
+/** Pontos livres no nível 100 (10 concessões). */
+export const MAX_FREE_POINTS = availableFreePoints(100)
+
+/**
+ * Distribuição padrão dos pontos livres (usada pelo NPC, D103): os 15% do perfil que não são base, na mesma
+ * proporção do perfil, limitados aos pontos que o nível já concedeu. Arredonda para baixo (nunca passa do total).
+ */
+export function defaultFreePoints(
+  profile: StatBlock,
+  level: number
+): StatBlock {
+  const share = availableFreePoints(level) / MAX_FREE_POINTS
+
+  return Object.fromEntries(
+    (Object.keys(profile) as Stat[]).map((stat) => {
+      const freeShare = profile[stat] * (1 - BASE_SHARE) * share
+      const points = stat === Stat.HP ? freeShare / HP_PER_POINT : freeShare
+
+      return [stat, Math.floor(points)]
+    })
+  ) as StatBlock
+}
+
 /**
  * Máximo de pontos livres por stat: o stat final (base 85% do perfil + pontos) não passa do teto da classe.
  * Medido na escala do nível 100, onde o perfil é definido.

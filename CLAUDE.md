@@ -35,6 +35,8 @@ aprovados**, a calibrar por simulação (IA contra IA).
 | Equipamento vivo, contratos com bestas | [`docs/living_gear_brief.md`](./docs/living_gear_brief.md), [`docs/beast_contracts_brief.md`](./docs/beast_contracts_brief.md) |
 | Família e organizações | [`docs/family_faction_brief.md`](./docs/family_faction_brief.md) |
 | PvP, ranqueado, faixas, IA | [`docs/pvp_brief.md`](./docs/pvp_brief.md) |
+| Modelo de dados (Prisma e entidades) | [`docs/data_model.md`](./docs/data_model.md) |
+| Motor de combate (fórmulas e peças) | [`docs/engine.md`](./docs/engine.md) |
 
 O `skills_brief.md` lista o que já é **enraizado** (risco x retorno, sem vantagem entre linhagens, ranged nunca
 superior ao melee, troca de posição custa o turno, etc.). Dados de **conteúdo** (famílias, campos, catálogo de
