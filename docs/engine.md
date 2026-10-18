@@ -20,7 +20,7 @@
 | # | Peça | Estado |
 |---|---|---|
 | 1 | Cálculo de stats | **feito** |
-| 2 | Montar o snapshot (jogador e máquina) | a fazer |
+| 2 | Montar o snapshot (jogador e máquina) | **feito** |
 | 3 | Barra de ação e fila de turnos | a fazer |
 | 4 | Acerto e dano | a fazer |
 | 5 | Desgaste | a fazer |
@@ -57,7 +57,8 @@ crescimento(nível) = 0,40 + 0,60 × nível / 100        (0,40 no nível 0, 1,0 
 
 - **Arredondamento:** para inteiro, no fim (stats inteiros, como na tabela das classes).
 - **Ordem:** os traços multiplicam a base **com** os pontos livres.
-- **Traço de família:** só entra se o personagem tiver a variante da família. Quem monta o snapshot filtra (peça 2).
+- **Traço de família:** só vale para quem tem a variante da família, e isso já é garantido pelo modelo (um
+  `CharacterTemplate` com família sempre tem a variante dela, `data_model.md` 3.3). Por isso o snapshot não filtra.
 - **Depois:** DOM e equipamento vivo entram como novas fontes nesta mesma função.
 
 **Distribuição padrão dos pontos livres** (`defaultFreePoints`, usada pelo NPC): os 15% do perfil na mesma proporção do
@@ -89,3 +90,57 @@ computeStats({
 
 **Domínio:** `src/domain/characters/services/stat-calculator.ts` (`computeStats`, `baseGrowth`, `traitPercents`);
 distribuição padrão em `src/domain/characters/services/free-points.ts` (`defaultFreePoints`).
+
+### 3.2 Montar o snapshot
+
+Transforma o que está guardado (`Character` + `Squad` do jogador e `NpcSquad` da máquina) na **foto do início da
+batalha** (`BattleSnapshot`, `data_model.md` 3.10). É o que o motor recebe; dali em diante ele não consulta mais nada.
+
+**Funções** (`src/domain/combat/services/build-snapshot.ts`):
+
+| Função | O que faz |
+|---|---|
+| `buildPlayerSide` | o squad do jogador como está **agora** (nível, pontos livres, traços, build e aprimoramentos) |
+| `buildNpcSide` | o squad da máquina, com a **distribuição padrão** de pontos livres no nível de cada membro (3.1) |
+| `buildPveSnapshot` | junta os dois lados |
+
+**Catálogo carregado (`SnapshotCatalog`):** modelos, variantes, skills e traços indexados pelo id. Quem chama (o caso de
+uso de iniciar batalha) busca tudo no repositório antes; o domínio só monta a foto, sem acessar banco.
+
+**Como cada unidade é montada:**
+
+| Campo | Jogador | Máquina |
+|---|---|---|
+| `ref` | `PLAYER:0` a `PLAYER:3`, na ordem do squad | `OPPONENT:0` a `OPPONENT:3` |
+| `name`, `templateKey`, `characterClass`, `passive`, `profile` | do modelo | do modelo |
+| `lineages` | linhagens das variantes do modelo, **principal primeiro** | idem |
+| `level` | o do personagem | o do membro |
+| `freePoints` | os do personagem | `defaultFreePoints(perfil, nível)` |
+| `traitEffects` | efeitos de todos os traços do personagem (inclui o de família) | efeitos dos traços do membro |
+| `skills` | a **build** (4, na ordem dos slots), com `isEnhanced` | as 4 do membro, nunca aprimoradas |
+| `row`, `column` | a célula no squad | a célula no squad da máquina |
+
+**Skills como valor:** cada skill é copiada com todos os números (`toSnapshotSkill`). Se o admin mudar a skill depois,
+o replay continua com a original. O aprimoramento é guardado como `isEnhanced`; o **ganho** (+15%) e o limite da faixa
+do ranqueado são aplicados pelo motor.
+
+**Erros (`BuildSnapshotError`):** squad de outra conta; **squad incompleto** (personagem vendido, 3.8 do
+`data_model.md`); personagem, modelo, variante, skill ou traço não carregado; personagem sem build completa.
+
+**Exemplo** (fictício): o squad "Muralha" de `tester_01` contra `beginner-wall` no nível 20.
+
+| `ref` | Unidade | Nível | Pontos livres | Traços | Célula |
+|---|---|---|---|---|---|
+| `PLAYER:0` | Kael Pyranth (fogo) | o dela | os dela | `family-pyranth`, `veteran` | 0:0 |
+| `OPPONENT:0` | Recruta 1 | 20 | padrão do nível 20 (Defesa 3, ...) | | 0:0 |
+
+```ts
+const snapshot = buildPveSnapshot(
+  { account: tester, squad: muralha, characters, catalog },
+  { npcSquad: beginnerWall, catalog }
+)
+// right(BattleSnapshot) → vai para Battle.startPve({ ..., snapshot })
+
+buildPlayerSide({ account: tester, squad: muralhaSemUmPersonagem, characters, catalog })
+// left(BuildSnapshotError): squad incompleto (3 de 4): complete a formação
+```
