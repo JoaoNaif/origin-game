@@ -44,7 +44,7 @@
 | 2 | `Trait` (+ enums `TraitCategory`, `TraitSource`) | Catálogo | Variant (opcional) | **feito** |
 | 3 | `CharacterTemplate` (+ `CharacterTemplateVariant` e enums `CharacterClass`, `Rarity`, `DangerLevel`, `Exclusivity`) | Catálogo | Variant, Trait | **feito** |
 | 4 | `Skill` (+ enums `SkillTier`, `SkillTarget`, `SkillRange`, `SkillArea`, `SkillKitSlot`) | Catálogo | Variant (opcional) | **feito** |
-| 5 | `Account` | Jogador | nada | a fazer |
+| 5 | `Account` | Jogador | nada | **feito** |
 | 6 | `Character` (+ `CharacterTrait`) | Jogador | Account, CharacterTemplate, Trait, Variant | a fazer |
 | 7 | `CharacterSkill` (+ enum `CharacterSkillSource`) | Jogador | Character, Skill | a fazer |
 | 8 | `Squad` (+ `SquadMember`) | Jogador | Account, Character | a fazer |
@@ -477,3 +477,49 @@ Skill.create({ ...flameWave, target: SkillTarget.ALLY })
 Fábrica de teste em `test/factories/make-skill.ts`.
 
 **Fora do MVP:** a skill única do DOM e o catálogo do despertar (`Awakening`) entram com essas camadas.
+
+### 3.5 Account (jogador)
+
+A conta do jogador. **Mínima no MVP:** só precisa ser dona dos personagens e dos squads e aparecer na batalha. A
+máquina **não é uma conta**: o adversário do PvE vem do `NpcSquad` (modelo nº 9).
+
+| Campo | Tipo | Regra |
+|---|---|---|
+| `id` | uuid | |
+| `username` | texto, **único** | normalizado (sem espaços nas pontas, minúsculo); 3 a 20 caracteres: letras minúsculas, números e `_` |
+| `displayName` | texto | 2 a 30 caracteres (sem espaços nas pontas); nome exibido na batalha |
+| `createdAt`, `updatedAt` | data | |
+
+**Regras (domínio, `InvalidAccountError`):** formato do `username` e tamanho do `displayName`.
+
+**Fica para depois** (cada um com a sua migração):
+
+| Quando | Campos |
+|---|---|
+| Autenticação | `email` (único), `passwordHash` |
+| Economia (D100) | moeda, espaços de inventário |
+| Organizações (D101) | organização ativa, reputação por organização |
+| Ranqueado (D99) | pontos, faixa, histórico mínimo |
+
+**Autenticação depois (aprovado):** o MVP valida a batalha e usa uma conta de teste criada pelo seed. E-mail e senha
+entram junto com o login, numa migração própria.
+
+**Exemplo** (fictício):
+
+| `username` | `displayName` | Resultado |
+|---|---|---|
+| `joao_naif` | João | válido |
+| `  Tester_01 ` | Tester | válido, salvo como `tester_01` |
+| `Joao Naif!` | João | **inválido**: espaço e símbolo |
+
+No `seed.ts`:
+
+```ts
+Account.create({ username: 'tester_01', displayName: 'Tester' })
+// right(Account)
+
+Account.create({ username: 'Joao Naif!', displayName: 'João' })
+// left(InvalidAccountError): username com 3 a 20 caracteres: letras minúsculas, números e _
+```
+
+**Domínio:** `src/domain/accounts/entities/account.ts`. Fábrica de teste em `test/factories/make-account.ts`.

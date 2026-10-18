@@ -244,3 +244,20 @@ model Skill {
   @@index([kitClass, variantId])
   @@map("skills")
 }
+
+// ---------------------------------------------------------------------------
+// Jogador
+// ---------------------------------------------------------------------------
+
+// Conta (mínima no MVP): dona dos personagens e dos squads. `username` já chega
+// normalizado (minúsculo) pelo domínio. E-mail/senha entram com a autenticação;
+// moeda, inventário, organização e ranking com as suas camadas.
+model Account {
+  id          String   @id @default(uuid())
+  username    String   @unique
+  displayName String   @map("display_name")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("accounts")
+}
