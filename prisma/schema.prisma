@@ -498,6 +498,13 @@ enum BattleEndReason {
   ABANDON
 }
 
+enum BattleActionType {
+  SKILL
+  MOVE
+  SWAP
+  DEFEND
+}
+
 // Batalha: guarda seed, snapshot dos dois lados no início e o log de decisões, NÃO o estado.
 // Motor determinístico: seed + snapshot + ações = replay (D8). A seed nunca vai ao cliente (D33).
 model Battle {
@@ -521,11 +528,30 @@ model Battle {
   createdAt      DateTime         @default(now()) @map("created_at")
   updatedAt      DateTime         @updatedAt @map("updated_at")
 
-  account  Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  squad    Squad?    @relation(fields: [squadId], references: [id], onDelete: SetNull)
-  npcSquad NpcSquad? @relation(fields: [npcSquadId], references: [id], onDelete: SetNull)
+  account  Account        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  squad    Squad?         @relation(fields: [squadId], references: [id], onDelete: SetNull)
+  npcSquad NpcSquad?      @relation(fields: [npcSquadId], references: [id], onDelete: SetNull)
+  actions  BattleAction[]
 
   @@index([accountId, startedAt])
   @@index([npcSquadId])
   @@map("battles")
+}
+
+// Uma decisão de turno (só a entrada; o resultado o motor reproduz). `payload` é JSON
+// (BattleActionPayload no domínio). `actorRef` aponta para a unidade no snapshot.
+model BattleAction {
+  battleId  String           @map("battle_id")
+  sequence  Int
+  round     Int
+  side      BattleSide
+  actorRef  String           @map("actor_ref")
+  type      BattleActionType
+  payload   Json
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  battle Battle @relation(fields: [battleId], references: [id], onDelete: Cascade)
+
+  @@id([battleId, sequence])
+  @@map("battle_actions")
 }

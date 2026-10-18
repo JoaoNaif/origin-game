@@ -50,7 +50,7 @@
 | 8 | `Squad` (+ `SquadMember`) | Jogador | Account, Character | **feito** |
 | 9 | `NpcSquad` (+ `NpcSquadMember`, `NpcSquadMemberSkill`, `NpcSquadMemberTrait`, enums `AiProfile`, `AiDifficulty`) | Batalha | CharacterTemplate, Skill, Trait, Variant | **feito** |
 | 10 | `Battle` (+ enums `BattleMode`, `BattleStatus`, `BattleSide`, `BattleEndReason`) | Batalha | Account, Squad, NpcSquad | **feito** |
-| 11 | `BattleAction` (+ enum `BattleActionType`) | Batalha | Battle | a fazer |
+| 11 | `BattleAction` (+ enum `BattleActionType`) | Batalha | Battle | **feito** |
 
 **Fora do MVP** (cada um vira migração própria quando a camada chegar): inventário, equipamento vivo, bestas, DOM,
 despertar, economia, mercado, baús, materiais e organizações.
@@ -873,3 +873,83 @@ guarda **valores, não referências**, porque o personagem e o catálogo podem m
 
 **Fica para depois:** recompensas (XP e moeda, D92 e D100) entram no caso de uso que encerra a batalha; PvP
 (adversário conta) entra com o `opponentAccountId` quando o PvP chegar.
+
+### 3.11 BattleAction (batalha)
+
+Uma **decisão** de turno, em ordem. Guarda **só a entrada** (o que o jogador ou a IA escolheu); o resultado (acerto,
+dano, status) o motor reproduz pela seed. As ações da máquina também são guardadas, para auditoria e para conferir o
+replay.
+
+**Enum `BattleActionType`:** `SKILL`, `MOVE`, `SWAP`, `DEFEND`.
+
+| Campo | Tipo | Regra |
+|---|---|---|
+| `battleId` + `sequence` | chave composta | `sequence` 0, 1, 2... em ordem |
+| `round` | inteiro | 1 a 30 |
+| `side` | `BattleSide` | |
+| `actorRef` | texto | a unidade que agiu (`SnapshotUnit.ref`) |
+| `type` | `BattleActionType` | igual ao `type` do payload (coluna para consulta) |
+| `payload` | JSON (`BattleActionPayload`) | os dados da decisão |
+| `createdAt` | data | |
+
+**Payload:**
+
+| `type` | Campos | Regra |
+|---|---|---|
+| `SKILL` | `skillKey`, `targetSide`, `target` (célula) | célula dentro da grade |
+| `MOVE` | `to` (célula) | dentro da grade (adjacência é regra do motor, D42) |
+| `SWAP` | `withRef` | só com aliado |
+| `DEFEND` | | sem skill possível ou tempo esgotado (D38) |
+
+**Exemplo** (fictício): `tester_01` com o squad "Muralha" contra `beginner-wall`, seed `42`.
+
+| `sequence` | `round` | `side` | `actorRef` | `payload` |
+|---|---|---|---|---|
+| 0 | 1 | `PLAYER` | `PLAYER:2` | `SKILL` `flame-wave` em `OPPONENT` 1:0 |
+| 1 | 1 | `OPPONENT` | `OPPONENT:0` | `SKILL` `none-0` em `PLAYER` 0:0 |
+| 2 | 1 | `PLAYER` | `PLAYER:0` | `DEFEND` |
+| 3 | 2 | `OPPONENT` | `OPPONENT:3` | `MOVE` para 1:1 |
+
+Fim: `winner = PLAYER`, `endReason = ELIMINATION`, `rounds = 12`.
+
+No código:
+
+```ts
+const battle = Battle.startPve({
+  account: tester,
+  squadId: muralha.id,
+  npcSquad: beginnerWall,
+  seed: 42,
+  engineVersion: '0.1.0',
+  contentVersion: 'seed-1',
+  snapshot,
+  startedAt: now,
+})
+// right(Battle)
+
+battle.recordAction({
+  round: 1,
+  side: BattleSide.PLAYER,
+  actorRef: 'PLAYER:2',
+  payload: { type: 'SKILL', skillKey: 'flame-wave', targetSide: BattleSide.OPPONENT, target: { row: 1, column: 0 } },
+})
+// right({ sequence: 0, ... })
+
+battle.recordAction({ round: 1, side: BattleSide.PLAYER, actorRef: 'OPPONENT:0', payload: { type: 'DEFEND' } })
+// left(InvalidBattleError): unidade OPPONENT:0 não está nesse lado
+```
+
+**Domínio:** `src/domain/combat/entities/battle.ts`; snapshot e ações em `src/domain/combat/value-objects/`.
+Fábricas de teste em `test/factories/make-battle-snapshot.ts` e `test/factories/make-npc-squad.ts`.
+
+---
+
+## 4. Próximos passos
+
+Os **11 modelos do MVP estão feitos**. Falta:
+
+1. **Primeira migração** (`npm run services:up` e `npm run prisma:migrate`), quando o Postgres estiver rodando.
+2. **Montar o snapshot** a partir de `Character` + `Squad` (jogador) e `NpcSquad` (máquina): serviço de domínio, junto
+   com o cálculo de stats do motor.
+3. **Mapeadores** do Prisma para o domínio (em `infra/`), validando os JSONs na borda.
+4. **Motor de combate** (fatias em `CLAUDE.md`), **IA** e o **simulador** para calibrar.
