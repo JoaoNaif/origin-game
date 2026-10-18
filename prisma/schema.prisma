@@ -243,6 +243,8 @@ model Skill {
 
   variant Variant? @relation(fields: [variantId], references: [id], onDelete: Restrict)
 
+  characters CharacterSkill[]
+
   // pool por variante (ofertas de skill) e kit por classe + variante
   @@index([variantId, minLevel])
   @@index([kitClass, variantId])
@@ -294,6 +296,7 @@ model Character {
   template        CharacterTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
   awakenedVariant Variant?          @relation("CharacterAwakening", fields: [awakenedVariantId], references: [id], onDelete: Restrict)
   traits          CharacterTrait[]
+  skills          CharacterSkill[]
 
   @@index([accountId])
   @@index([templateId])
@@ -312,4 +315,29 @@ model CharacterTrait {
   @@id([characterId, traitId])
   @@index([traitId])
   @@map("character_traits")
+}
+
+// Como o personagem aprendeu a skill: kit básico (nível 0) ou oferta a cada 5 níveis (D77).
+enum CharacterSkillSource {
+  KIT
+  OFFER
+}
+
+// Skills aprendidas pelo personagem. `buildSlot` 1 a 4 = está na build de batalha (D43);
+// nulo = guardada. Único por personagem (Postgres aceita vários nulos).
+model CharacterSkill {
+  characterId String               @map("character_id")
+  skillId     String               @map("skill_id")
+  source      CharacterSkillSource
+  isEnhanced  Boolean              @default(false) @map("is_enhanced")
+  buildSlot   Int?                 @map("build_slot")
+  acquiredAt  DateTime             @default(now()) @map("acquired_at")
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  skill     Skill     @relation(fields: [skillId], references: [id], onDelete: Restrict)
+
+  @@id([characterId, skillId])
+  @@unique([characterId, buildSlot])
+  @@index([skillId])
+  @@map("character_skills")
 }

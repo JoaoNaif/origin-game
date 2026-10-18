@@ -46,7 +46,7 @@
 | 4 | `Skill` (+ enums `SkillTier`, `SkillTarget`, `SkillRange`, `SkillArea`, `SkillKitSlot`) | Catálogo | Variant (opcional) | **feito** |
 | 5 | `Account` | Jogador | nada | **feito** |
 | 6 | `Character` (+ `CharacterTrait`) | Jogador | Account, CharacterTemplate, Trait, Variant | **feito** |
-| 7 | `CharacterSkill` (+ enum `CharacterSkillSource`) | Jogador | Character, Skill | a fazer |
+| 7 | `CharacterSkill` (+ enum `CharacterSkillSource`) | Jogador | Character, Skill | **feito** |
 | 8 | `Squad` (+ `SquadMember`) | Jogador | Account, Character | a fazer |
 | 9 | `NpcSquad` (+ `NpcSquadMember`, `NpcSquadMemberSkill`, `NpcSquadMemberTrait`, enums `AiProfile`, `AiDifficulty`) | Batalha | CharacterTemplate, Skill, Trait, Variant | a fazer |
 | 10 | `Battle` (+ enums `BattleMode`, `BattleStatus`, `BattleSide`, `BattleEndReason`) | Batalha | Account, Squad, NpcSquad | a fazer |
@@ -597,3 +597,67 @@ kael.allocateFreePoints({ ...EMPTY_FREE_POINTS, ATTACK: 26 }, kaelTemplate)
 
 **Fica para depois:** subida da periculosidade, DOM (pilares e níveis), equipamento vivo, contratos, títulos e as
 missões ocultas do despertar (o `awaken` já valida a regra; o sorteio e as missões entram com a camada).
+
+### 3.7 CharacterSkill (jogador)
+
+As skills que o personagem **aprendeu** (kit e escolhas), se cada uma está **aprimorada**, e quais 4 estão na
+**build** de batalha. Faz parte do `Character` (as operações são métodos dele).
+
+**Enum `CharacterSkillSource`:** `KIT` (kit básico, desde o nível 0) ou `OFFER` (escolhida num bloco de 3 a cada 5
+níveis, D77, inclusive as despertadas).
+
+| Campo | Tipo | Regra |
+|---|---|---|
+| `characterId` + `skillId` | chave composta | sem repetir skill |
+| `source` | `CharacterSkillSource` | |
+| `isEnhanced` | booleano | aprimorada (+15% de Poder, D100); **um aprimoramento só** (D80) |
+| `buildSlot` | inteiro opcional | **1 a 4 = na build** (D43); nulo = guardada; **único por personagem** (`@@unique`) |
+| `acquiredAt` | data | |
+
+Apagar o personagem apaga as linhas; o banco não deixa apagar uma skill que alguém aprendeu.
+
+**Kit básico na criação (D92, D97):** `Character.create` recebe as 4 skills do kit do modelo, que entram com
+`source = KIT` e nos slots 1 a 4. O kit precisa ter:
+- 4 skills de kit **da classe do modelo**, **um de cada papel** (`BASIC`, `STANDARD`, `ROLE`, `SIGNATURE`);
+- a **divisão por variante** do D97: 1 variante = 4; 2 = 2 e 2; 3 = 2 da principal e 1 de cada outra; sem variante =
+  4 skills none.
+
+**Operações (métodos do `Character`, `InvalidCharacterError`):**
+
+| Operação | Regras |
+|---|---|
+| `learnSkill(skill, template)` | só das **próprias variantes** (none só para quem não tem variante, D25); **nível mínimo** atingido; a **despertada** só depois de despertar, e na variante despertada dele (D96); sem repetir. Entra como `OFFER`, guardada |
+| `equipSkills([4 ids])` | exatamente **4 aprendidas**, sem repetir; os slots seguem a ordem; as demais ficam guardadas. Se der erro, a build anterior continua |
+| `enhanceSkill(id)` | skill aprendida e ainda não aprimorada. A **chance e o custo** da tentativa (D100) ficam no caso de uso; a entidade só registra o sucesso |
+
+**Na batalha** (motor, não modelo): a faixa do ranqueado limita as skills por nível mínimo (D99) e o aprimoramento
+(0%, 50% ou 100% do ganho). O modelo guarda o que o personagem tem; o motor decide o que vale naquela partida.
+
+**Exemplo** (fictício): a Kael (Vanguarda de fogo) no nível 40.
+
+| Skill | `source` | `isEnhanced` | `buildSlot` |
+|---|---|---|---|
+| `fire-strike` (kit, BASIC) | `KIT` | sim | 1 |
+| `flame-wave` (Forte, nível 40) | `OFFER` | | 2 |
+| `kael-kit-role` (kit, ROLE) | `KIT` | | 3 |
+| `kael-kit-signature` (kit, SIGNATURE) | `KIT` | | 4 |
+| `kael-kit-standard` (kit, STANDARD) | `KIT` | | guardada |
+
+No `seed.ts`:
+
+```ts
+const kael = Character.create({ account: tester, template: kaelTemplate, familyTrait: familyPyranth, kitSkills: kaelKit })
+// right(Character): 4 skills do kit nos slots 1 a 4
+
+kael.learnSkill(flameWave, kaelTemplate) // right, se o nível for ≥ 40
+kael.equipSkills([fireStrike.id, flameWave.id, kitRole.id, kitSignature.id]) // right
+
+kael.learnSkill(steelStrike, kaelTemplate)
+// left(InvalidCharacterError): só skills das próprias variantes
+```
+
+**Domínio:** métodos em `src/domain/characters/entities/character.ts`; validação do kit em
+`src/domain/characters/services/basic-kit.ts`. Fábrica de teste do kit em `test/factories/make-basic-kit.ts`.
+
+**Em aberto (pergunta ao usuário):** o D97 diz **quantas** skills do kit vêm de cada variante, mas não **quais papéis**
+(ex.: com 2 variantes, a principal dá `BASIC` e `ROLE`?). Hoje o domínio só valida a quantidade e exige um de cada papel.
