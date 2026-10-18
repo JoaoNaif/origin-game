@@ -16,13 +16,19 @@ describe('Entity', () => {
   })
 
   it('should be able to compare entities by id', () => {
-    const other = FakeEntity.create({ name: 'b' }, new UniqueEntityId('same-id'))
+    const other = FakeEntity.create(
+      { name: 'b' },
+      new UniqueEntityId('same-id')
+    )
 
     expect(sut.equals(other)).toBe(true)
   })
 
   it('should not be equal when ids differ', () => {
-    const other = FakeEntity.create({ name: 'a' }, new UniqueEntityId('other-id'))
+    const other = FakeEntity.create(
+      { name: 'a' },
+      new UniqueEntityId('other-id')
+    )
 
     expect(sut.equals(other)).toBe(false)
   })
