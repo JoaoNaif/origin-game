@@ -44,7 +44,8 @@ model Variant {
   awakensFrom Variant?  @relation("VariantAwakening", fields: [awakensFromId], references: [id], onDelete: Restrict)
   awakenings  Variant[] @relation("VariantAwakening")
 
-  traits Trait[]
+  traits    Trait[]
+  templates CharacterTemplateVariant[]
 
   @@index([awakensFromId])
   @@map("variants")
@@ -81,6 +82,93 @@ model Trait {
   // só vale para esta variante (traços de família)
   variant Variant? @relation(fields: [variantId], references: [id], onDelete: Restrict)
 
+  familyTemplates CharacterTemplate[]
+
   @@index([variantId])
   @@map("traits")
+}
+
+// As 8 classes (D69).
+enum CharacterClass {
+  VANGUARD
+  MARKSMAN
+  EXECUTOR
+  CONTROLLER
+  SUPPORT
+  ARTILLERY
+  GUARDIAN
+  TACTICIAN
+}
+
+// Raridade do modelo (D86): dificuldade de obter, não poder.
+enum Rarity {
+  E
+  D
+  C
+  B
+  A
+  S
+  SS
+}
+
+// Periculosidade (D86). O modelo define a inicial; a instância sobe.
+enum DangerLevel {
+  DISCRETE
+  CONTINUOUS
+  DIFFERENTIABLE
+  NON_LINEAR
+  CHAOTIC
+}
+
+// Exclusivo de evento ou ranking não vem de baú nem é vendido (D82).
+enum Exclusivity {
+  NONE
+  EVENT
+  RANKING
+}
+
+// Modelo de personagem (catálogo). Stats = perfil no nível 100, já com a distribuição
+// padrão dos pontos livres (base = 85%, D91). `passive` é JSON validado no domínio.
+model CharacterTemplate {
+  id             String         @id @default(uuid())
+  key            String         @unique
+  name           String
+  description    String?
+  characterClass CharacterClass @map("character_class")
+  rarity         Rarity
+  initialDanger  DangerLevel    @map("initial_danger")
+  exclusivity    Exclusivity    @default(NONE)
+  familyTraitId  String?        @map("family_trait_id")
+  hp             Int
+  attack         Int
+  defense        Int
+  speed          Int
+  precision      Int
+  evasion        Int
+  will           Int
+  passive        Json
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  familyTrait Trait?                     @relation(fields: [familyTraitId], references: [id], onDelete: Restrict)
+  variants    CharacterTemplateVariant[]
+
+  @@index([familyTraitId])
+  @@index([characterClass])
+  @@map("character_templates")
+}
+
+// Ligação modelo ↔ variante (0 a 3 por modelo; sem variante = nenhuma linha).
+// `isPrimary` decide a divisão do kit básico (D97). Regras validadas no domínio.
+model CharacterTemplateVariant {
+  templateId String  @map("template_id")
+  variantId  String  @map("variant_id")
+  isPrimary  Boolean @default(false) @map("is_primary")
+
+  template CharacterTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  variant  Variant           @relation(fields: [variantId], references: [id], onDelete: Restrict)
+
+  @@id([templateId, variantId])
+  @@index([variantId])
+  @@map("character_template_variants")
 }

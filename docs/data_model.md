@@ -42,7 +42,7 @@
 |---|---|---|---|---|
 | 1 | `Variant` (+ enum `Lineage`) | Catálogo | nada | **feito** |
 | 2 | `Trait` (+ enums `TraitCategory`, `TraitSource`) | Catálogo | Variant (opcional) | **feito** |
-| 3 | `CharacterTemplate` (+ `CharacterTemplateVariant` e enums `CharacterClass`, `Rarity`, `DangerLevel`, `Exclusivity`) | Catálogo | Variant, Trait | a fazer |
+| 3 | `CharacterTemplate` (+ `CharacterTemplateVariant` e enums `CharacterClass`, `Rarity`, `DangerLevel`, `Exclusivity`) | Catálogo | Variant, Trait | **feito** |
 | 4 | `Skill` (+ enums `SkillTier`, `SkillTarget`, `SkillRange`, `SkillArea`, `SkillKitSlot`) | Catálogo | Variant (opcional) | a fazer |
 | 5 | `Account` | Jogador | nada | a fazer |
 | 6 | `Character` (+ `CharacterTrait`) | Jogador | Account, CharacterTemplate, Trait, Variant | a fazer |
@@ -228,3 +228,112 @@ Trait.create({
 ```
 
 **Domínio:** `src/domain/characters/entities/trait.ts` (`Trait.create` devolve `Either`).
+
+### 3.3 CharacterTemplate (catálogo)
+
+O **modelo** de personagem: o "Kael Pyranth" igual para todos os jogadores. Tudo o que muda por jogador (nível, XP,
+pontos livres, traços conquistados, skills, build) mora na instância, `Character` (modelo nº 6).
+
+**Enums:**
+- `CharacterClass`: `VANGUARD`, `MARKSMAN`, `EXECUTOR`, `CONTROLLER`, `SUPPORT`, `ARTILLERY`, `GUARDIAN`, `TACTICIAN`.
+- `Rarity`: `E`, `D`, `C`, `B`, `A`, `S`, `SS` (dificuldade de obter, D86).
+- `DangerLevel`: `DISCRETE`, `CONTINUOUS`, `DIFFERENTIABLE`, `NON_LINEAR`, `CHAOTIC` (periculosidade inicial, D86).
+- `Exclusivity`: `NONE`, `EVENT`, `RANKING` (D82).
+
+| Campo | Tipo | Regra |
+|---|---|---|
+| `id` | uuid | |
+| `key` | texto, **único** | estável (ex.: `kael-pyranth`) |
+| `name`, `description` | texto | |
+| `characterClass` | `CharacterClass` | |
+| `rarity` | `Rarity` | |
+| `initialDanger` | `DangerLevel` | |
+| `exclusivity` | `Exclusivity` | padrão `NONE` |
+| `familyTraitId` | FK opcional → `Trait` | o traço precisa ser `TEMPLATE`; se ligado a uma variante, o modelo precisa tê-la |
+| `hp`, `attack`, `defense`, `speed`, `precision`, `evasion`, `will` | inteiros | **perfil no nível 100**; maiores que zero; orçamento dentro de ±3% da classe |
+| `passive` | JSON (`Passive`) | obrigatória, com pelo menos 1 efeito |
+| `createdAt`, `updatedAt` | data | |
+
+**Ligação `CharacterTemplateVariant`** (chave composta `templateId` + `variantId`):
+
+| Campo | Regra |
+|---|---|
+| `templateId`, `variantId` | par único; de 0 a 3 por modelo; sem variante = nenhuma linha; nunca variante despertada |
+| `isPrimary` | exatamente uma principal quando houver variante (decide a divisão do kit 2/1/1, D97) |
+
+**Como os stats são usados:** o perfil guardado já inclui a distribuição padrão dos pontos livres (igual à tabela das
+classes). O motor deriva: **base** = 85% do perfil (cresce de 34% no nível 0 até 100%, D91); **pontos livres** = os
+outros 15%, que o jogador redistribui; **tetos** = perfil × 1,25 nos picos da classe (×1,15 em Ataque e Velocidade) e
+×1,10 nos demais. **Orçamento** = HP/5 + os outros 6 stats; classe 670 (Artilharia 640), com tolerância de ±3% para o
+admin ajustar por personagem.
+
+**Onde ficam os traços do personagem:** o modelo só guarda o **traço de família** (fixo para todos). Os traços
+**conquistados** são de cada instância e moram na ligação `CharacterTrait` (modelo nº 6). Ao criar a instância, o traço
+de família é **copiado** para lá (com `source = TEMPLATE`), para que o campo de batalha, os bônus e o limite de 5 slots
+leiam **uma lista só**.
+
+**Passiva (JSON, `src/domain/characters/value-objects/passive.ts`):** `name`, `description`, `trigger` e `effects`. O
+gatilho cobre os 4 formatos do D83.
+
+| Gatilhos | `ALWAYS` (permanente), `PERIODIC` (`everyTurns`), `TURN_START`, `ON_ATTACK`, `ON_HIT`, `ON_KILL`, `ON_HEAL`, `HP_BELOW` (`percent`), `ON_DESGASTE`, `ON_FIELD_CHANGE`, `ON_STATUS` |
+|---|---|
+| **Efeitos** | `IGNORE_SHIELD`, `REDUCE_COOLDOWN` (`amount`, `scope`), `APPLY_STATUS` (`status` do enum `StatusType`, 3.4; `target`, `chance`), `HEAL` (`percentOfMaxHp`), `ADVANCE_TURN` (`percent`), `REDUCE_DAMAGE` (`percent`), `STAT_MODIFIER` (só condicional, nunca permanente: D83) |
+
+**Regras (domínio, `InvalidCharacterTemplateError`):** variantes (máx. 3, sem repetir, uma principal, **nenhuma
+despertada**); traço de família
+`TEMPLATE` e com a variante dele no modelo; stats positivos e orçamento em ±3%; passiva com efeito.
+
+**Exemplo** (fictício, só para ilustrar; os personagens reais são do admin):
+
+| `key` | Classe | Variantes | Família | Raridade | Periculosidade |
+|---|---|---|---|---|---|
+| `kael-pyranth` | `VANGUARD` | `fire` (principal) | `family-pyranth` | `B` | `CONTINUOUS` |
+| `mira-voss` | `MARKSMAN` | `gravity` (principal), `steel` | | `A` | `DIFFERENTIABLE` |
+| `recruit-guardian` | `GUARDIAN` | nenhuma | | `E` | `DISCRETE` |
+
+Linhas de `character_template_variants`: (`kael-pyranth`, `fire`, principal), (`mira-voss`, `gravity`, principal),
+(`mira-voss`, `steel`). O `recruit-guardian` não tem nenhuma.
+
+Passivas (`passive`):
+
+```json
+{
+  "name": "Brasa interna",
+  "description": "Ao ser atingido, 20% de chance de queimar o atacante.",
+  "trigger": { "type": "ON_HIT" },
+  "effects": [{ "type": "APPLY_STATUS", "status": "DOT", "target": "ATTACKER", "chance": 0.2 }]
+}
+```
+
+```json
+{
+  "name": "Dobra do tempo",
+  "description": "A cada 3 turnos, reduz em 1 a recarga das skills que estão recarregando.",
+  "trigger": { "type": "PERIODIC", "everyTurns": 3 },
+  "effects": [{ "type": "REDUCE_COOLDOWN", "amount": 1, "scope": "RECHARGING" }]
+}
+```
+
+No `seed.ts`:
+
+```ts
+CharacterTemplate.create({
+  key: 'kael-pyranth',
+  name: 'Kael Pyranth',
+  characterClass: CharacterClass.VANGUARD,
+  rarity: Rarity.B,
+  initialDanger: DangerLevel.CONTINUOUS,
+  exclusivity: Exclusivity.NONE,
+  variants: [{ variant: fire, isPrimary: true }],
+  familyTrait: familyPyranth,
+  stats: { HP: 700, ATTACK: 100, DEFENSE: 120, SPEED: 75, PRECISION: 85, EVASION: 55, WILL: 95 },
+  passive: brasaInterna,
+})
+// right(CharacterTemplate): orçamento 670
+
+CharacterTemplate.create({ ...kael, variants: [{ variant: steel, isPrimary: true }] })
+// left(InvalidCharacterTemplateError): o personagem precisa ter a variante da família
+```
+
+**Domínio:** `src/domain/characters/entities/character-template.ts`. Fábricas de teste em
+`test/factories/make-character-template.ts` e `test/factories/make-trait.ts`.
