@@ -43,7 +43,7 @@
 | 1 | `Variant` (+ enum `Lineage`) | Catálogo | nada | **feito** |
 | 2 | `Trait` (+ enums `TraitCategory`, `TraitSource`) | Catálogo | Variant (opcional) | **feito** |
 | 3 | `CharacterTemplate` (+ `CharacterTemplateVariant` e enums `CharacterClass`, `Rarity`, `DangerLevel`, `Exclusivity`) | Catálogo | Variant, Trait | **feito** |
-| 4 | `Skill` (+ enums `SkillTier`, `SkillTarget`, `SkillRange`, `SkillArea`, `SkillKitSlot`) | Catálogo | Variant (opcional) | a fazer |
+| 4 | `Skill` (+ enums `SkillTier`, `SkillTarget`, `SkillRange`, `SkillArea`, `SkillKitSlot`) | Catálogo | Variant (opcional) | **feito** |
 | 5 | `Account` | Jogador | nada | a fazer |
 | 6 | `Character` (+ `CharacterTrait`) | Jogador | Account, CharacterTemplate, Trait, Variant | a fazer |
 | 7 | `CharacterSkill` (+ enum `CharacterSkillSource`) | Jogador | Character, Skill | a fazer |
@@ -337,3 +337,143 @@ CharacterTemplate.create({ ...kael, variants: [{ variant: steel, isPrimary: true
 
 **Domínio:** `src/domain/characters/entities/character-template.ts`. Fábricas de teste em
 `test/factories/make-character-template.ts` e `test/factories/make-trait.ts`.
+
+### 3.4 Skill (catálogo)
+
+A skill do catálogo, igual para todos. A instância (aprendida, aprimorada, na build) mora em `CharacterSkill` (modelo
+nº 7). Regras de jogo em `skills_brief.md` (seção 12 = valores).
+
+**Enums (Prisma e domínio):**
+- `SkillTier` (o **tipo**, a força da skill, D92):
+
+| `tier` | Nome no doc | Poder | Cooldown | Desgaste | Nível mínimo |
+|---|---|---|---|---|---|
+| `BASIC` | Básica | 0,8 | 0 | 1% | 0 |
+| `STANDARD` | Padrão | 1,0 | 1 | 1,5% | 0 |
+| `REINFORCED` | Reforçada | 1,3 | 2 | 3% | 20 |
+| `STRONG` | Forte | 1,6 | 3 | 5% | 40 |
+| `FINAL` | Final | 2,0 | 4 | 8% | 60 |
+
+- `SkillTarget`: `ENEMY`, `ALLY`, `SELF`.
+- `SkillRange`: `MELEE`, `RANGED`, `PIERCING`, `FLANK` (só em skill de inimigo).
+- `SkillArea`: `SINGLE`, `LINE`, `COLUMN`, `GRID`.
+- `SkillKitSlot`: `BASIC`, `STANDARD`, `ROLE` (função da classe), `SIGNATURE` (assinatura da variante).
+
+**Enum só do domínio** (vive dentro do JSON): `StatusType` = `STUN`, `LOCK` (Travado), `ROOT` (Preso), `EXPOSE`, `MARK`,
+`DOT` (dano contínuo). A passiva do personagem (3.3) usa o mesmo enum.
+
+| Campo | Tipo | Regra |
+|---|---|---|
+| `id` | uuid | |
+| `key` | texto, **único** | estável (ex.: `flame-wave`) |
+| `name`, `description` | texto | |
+| `variantId` | FK opcional → `Variant` | **nulo = skill none** (linhagem `NONE`) |
+| `tier` | `SkillTier` | |
+| `target` | `SkillTarget` | |
+| `range` | `SkillRange`, opcional | obrigatório se `ENEMY`; nulo se `ALLY` ou `SELF` |
+| `area` | `SkillArea` | `SELF` é sempre `SINGLE` |
+| `cooldown` | inteiro | ≥ 0, em turnos do próprio personagem |
+| `desgastePercent` | decimal | ≥ 0, % do stat base da linhagem |
+| `baseHitChance` | decimal, opcional | obrigatório se `ENEMY` (0,8 na normal); **nulo = sem teste de acerto** (cobra sempre) |
+| `minLevel` | inteiro | 0 a 100; nunca abaixo do mínimo do tipo; **despertada ≥ 80** |
+| `kitClass` + `kitSlot` | opcionais, **sempre juntos** | marca a skill como parte do kit básico daquela classe nesta variante; `minLevel` 0; despertada nunca é kit |
+| `effects` | JSON (lista de `SkillEffect`) | pelo menos 1 efeito |
+| `createdAt`, `updatedAt` | data | |
+
+**Linhagem e despertar não são colunas:** a linhagem vem da variante (ou `NONE` sem variante), e "despertada" vem de
+`Variant.awakensFromId` (3.1). A entidade de domínio guarda os dois prontos (`lineage`, `isAwakened`) para o motor não
+precisar buscar a variante a cada ação; quem monta a entidade a partir do banco preenche pelo join.
+
+**Valores guardados prontos + calculadora de referência:** o banco guarda os números finais, porque o admin pode fugir
+da tabela (D16). A função `skillReference()` (`src/domain/skills/services/skill-reference.ts`) calcula o padrão a
+partir de tipo + forma, para o seed gerar e o admin comparar:
+
+| Forma | Poder | Custo |
+|---|---|---|
+| `RANGED` | ×0,9 | ×1,25 |
+| `FLANK` | ×1,0 | ×1,4 |
+| `PIERCING` | ×0,65 | ×1,5 |
+| `LINE` / `COLUMN` (inimigo) | ×0,85 | ×1,3 |
+| `GRID` (inimigo) | ×0,5 | ×1,5 |
+| Área em aliados (buff de squad, D102) | ×0,7 | ×1,3 |
+| Skill none (sem variante) | ×0,85 | ×0,5 (cooldown −1, mín. 0) |
+
+**Tipos de efeito** (`src/domain/skills/value-objects/skill-effect.ts`). Todos aceitam `appliesTo`: `TARGET` (padrão)
+ou `SELF` (ex.: ataca e ganha um buff).
+
+| `type` | Campos | Observação |
+|---|---|---|
+| `DAMAGE` | `power` | 0 a 2,5 |
+| `HEAL` / `SHIELD` | `power` | 1,0 = 10% do HP máximo do alvo |
+| `STAT_MODIFIER` | `stat`, `percent`, `duration` | buff (+) ou debuff (−) |
+| `APPLY_STATUS` | `status`, `duration`, `baseChance` | chance contra a Vontade (`skills_brief.md` 12.4) |
+| `REPOSITION` | `kind`: `PUSH`, `PULL`, `SWAP`, `MOVE_ALLY`, `DASH` | |
+| `TURN_SHIFT` | `percent` | + adianta, − atrasa (D102) |
+| `CHANGE_FIELD` | `duration`, `multiplier` | troca de campo (D98) |
+
+**Regras (domínio, `InvalidSkillError`):**
+1. Pelo menos 1 efeito.
+2. Inimigo exige `range` e `baseHitChance`; aliado e si mesmo não têm nenhum; si mesmo é sempre `SINGLE`.
+3. `minLevel` de 0 a 100, nunca abaixo do mínimo do tipo; skill despertada ≥ 80 (D96).
+4. Poder de 0 a 2,5; cooldown inteiro ≥ 0; Desgaste ≥ 0; chances entre 0 e 1; durações ≥ 1.
+5. `kitClass` e `kitSlot` juntos; kit tem `minLevel` 0 e nunca é despertado.
+
+**Exemplo** (fictício, só para ilustrar; as skills reais são do admin):
+
+| `key` | Variante | Tipo | Alvo / alcance / área | Poder | CD | Desgaste | Acerto | Kit |
+|---|---|---|---|---|---|---|---|---|
+| `fire-strike` | `fire` | `BASIC` | inimigo / `MELEE` / `SINGLE` | 0,8 | 0 | 1% | 0,8 | `VANGUARD` · `BASIC` |
+| `flame-wave` | `fire` | `STRONG` | inimigo / `RANGED` / `LINE` | 1,22 | 3 | 8,13% | 0,8 | |
+| `cauterize` | `fire` | `STANDARD` | aliado / `SINGLE` | cura 1,0 | 1 | 1,5% | | `SUPPORT` · `ROLE` |
+| `blue-inferno` | `blue-fire` | `FINAL` | inimigo / `MELEE` / `SINGLE` | 2,5 | 4 | 12% | 0,8 | (despertada, nível 80) |
+| `dry-blow` | nenhuma | `BASIC` | inimigo / `MELEE` / `SINGLE` | 0,68 | 0 | 0,5% | 0,8 | |
+
+O `flame-wave` mostra a calculadora: 1,6 × 0,9 × 0,85 = **1,22** de Poder; 5% × 1,25 × 1,3 = **8,13%** de Desgaste. O
+`blue-inferno` é a Final despertada (×1,25 de Poder e ×1,5 de Desgaste, D96). O `dry-blow` é none.
+
+`effects` do `flame-wave`:
+
+```json
+[
+  { "type": "DAMAGE", "power": 1.22 },
+  { "type": "APPLY_STATUS", "status": "DOT", "duration": 3, "baseChance": 0.8 }
+]
+```
+
+No `seed.ts`:
+
+```ts
+const ref = skillReference({
+  tier: SkillTier.STRONG,
+  target: SkillTarget.ENEMY,
+  range: SkillRange.RANGED,
+  area: SkillArea.LINE,
+}) // { power: 1.22, desgastePercent: 8.13, cooldown: 3, minLevel: 40 }
+
+Skill.create({
+  key: 'flame-wave',
+  name: 'Onda de chamas',
+  variant: fire,
+  tier: SkillTier.STRONG,
+  target: SkillTarget.ENEMY,
+  range: SkillRange.RANGED,
+  area: SkillArea.LINE,
+  cooldown: ref.cooldown,
+  desgastePercent: ref.desgastePercent,
+  baseHitChance: 0.8,
+  minLevel: ref.minLevel,
+  effects: [
+    { type: 'DAMAGE', power: ref.power },
+    { type: 'APPLY_STATUS', status: StatusType.DOT, duration: 3, baseChance: 0.8 },
+  ],
+})
+// right(Skill), lineage = ELEMENTAL
+
+Skill.create({ ...flameWave, target: SkillTarget.ALLY })
+// left(InvalidSkillError): skill em aliado ou si mesmo não tem alcance
+```
+
+**Domínio:** `src/domain/skills/entities/skill.ts`; referência em `src/domain/skills/services/skill-reference.ts`.
+Fábrica de teste em `test/factories/make-skill.ts`.
+
+**Fora do MVP:** a skill única do DOM e o catálogo do despertar (`Awakening`) entram com essas camadas.

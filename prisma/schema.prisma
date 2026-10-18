@@ -46,6 +46,7 @@ model Variant {
 
   traits    Trait[]
   templates CharacterTemplateVariant[]
+  skills    Skill[]
 
   @@index([awakensFromId])
   @@map("variants")
@@ -171,4 +172,75 @@ model CharacterTemplateVariant {
   @@id([templateId, variantId])
   @@index([variantId])
   @@map("character_template_variants")
+}
+
+// Tipo (força) da skill (D92).
+enum SkillTier {
+  BASIC
+  STANDARD
+  REINFORCED
+  STRONG
+  FINAL
+}
+
+// Quem a skill atinge. Aliado e si mesmo: sem bloqueio e sem teste de acerto.
+enum SkillTarget {
+  ENEMY
+  ALLY
+  SELF
+}
+
+// Alcance (skills_brief 11.1). Só em skill de inimigo.
+enum SkillRange {
+  MELEE
+  RANGED
+  PIERCING
+  FLANK
+}
+
+// Área (D34).
+enum SkillArea {
+  SINGLE
+  LINE
+  COLUMN
+  GRID
+}
+
+// Papel no kit básico (D92).
+enum SkillKitSlot {
+  BASIC
+  STANDARD
+  ROLE
+  SIGNATURE
+}
+
+// Skill do catálogo. Números guardados prontos (o admin pode fugir da referência, D16);
+// a referência vem de skillReference() no domínio. variantId nulo = skill none (linhagem NONE).
+// Skill despertada = skill de variante despertada (Variant.awakensFromId). `effects` é JSON.
+model Skill {
+  id              String          @id @default(uuid())
+  key             String          @unique
+  name            String
+  description     String?
+  variantId       String?         @map("variant_id")
+  tier            SkillTier
+  target          SkillTarget
+  range           SkillRange?
+  area            SkillArea
+  cooldown        Int
+  desgastePercent Float           @map("desgaste_percent")
+  baseHitChance   Float?          @map("base_hit_chance")
+  minLevel        Int             @map("min_level")
+  kitClass        CharacterClass? @map("kit_class")
+  kitSlot         SkillKitSlot?   @map("kit_slot")
+  effects         Json
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  variant Variant? @relation(fields: [variantId], references: [id], onDelete: Restrict)
+
+  // pool por variante (ofertas de skill) e kit por classe + variante
+  @@index([variantId, minLevel])
+  @@index([kitClass, variantId])
+  @@map("skills")
 }
