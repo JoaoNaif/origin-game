@@ -1,5 +1,6 @@
-// Persistência fica para depois do motor de combate (ver CLAUDE.md).
-// Os modelos entram quando o domínio estiver estável.
+// Schema do Origin.
+// Referência do modelo de dados: docs/data_model.md
+// Convenções: id uuid, campos em camelCase mapeados para snake_case, tabelas no plural.
 
 generator client {
   provider = "prisma-client-js"
@@ -8,4 +9,41 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Catálogo (dados do admin; no MVP vêm do seed.ts)
+// ---------------------------------------------------------------------------
+
+// Linhagem (D25). NONE só aparece em skill none e no Fragmento Neutro;
+// uma variante real nunca tem NONE (validado no domínio).
+enum Lineage {
+  FUNDAMENTAL
+  ELEMENTAL
+  MATERIAL
+  VECTORIAL
+  PSYCHIC
+  BIOLOGICAL
+  NONE
+}
+
+// Variante (ex.: fogo, gelo). "Sem variante" não é uma linha: o personagem
+// simplesmente não tem variante ligada (docs/data_model.md, Variant).
+// `awakensFromId` != nulo = variante despertada (ex.: fogo azul evolui de fogo, D67);
+// mesma linhagem da base e sem despertar de despertada (validado no domínio).
+model Variant {
+  id            String   @id @default(uuid())
+  key           String   @unique
+  name          String
+  lineage       Lineage
+  description   String?
+  awakensFromId String?  @map("awakens_from_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  awakensFrom Variant?  @relation("VariantAwakening", fields: [awakensFromId], references: [id], onDelete: Restrict)
+  awakenings  Variant[] @relation("VariantAwakening")
+
+  @@index([awakensFromId])
+  @@map("variants")
 }
