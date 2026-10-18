@@ -53,6 +53,7 @@ export function makeSnapshotUnit(
     profile: VANGUARD_STATS,
     freePoints: { ...EMPTY_FREE_POINTS },
     traitEffects: [],
+    lineageCostPercent: {},
     passive: {
       name: 'Firmeza',
       description: 'Com HP abaixo de 30%, recebe 10% menos dano.',

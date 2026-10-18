@@ -859,6 +859,7 @@ guarda **valores, não referências**, porque o personagem e o catálogo podem m
 | `name`, `templateKey`, `characterClass`, `lineages` | identidade (linhagens das variantes, principal primeiro) |
 | `level`, `profile`, `freePoints` | o motor calcula os stats a partir disso (NPC usa a distribuição padrão) |
 | `traitEffects`, `passive` | efeitos dos traços e a passiva |
+| `lineageCostPercent` | modificador de custo do Desgaste por linhagem (ex.: sangue puro −10% na linhagem da família), já resolvido pela variante do traço |
 | `skills` | as 4 da build, com todos os valores (Poder, custo, cooldown, acerto, efeitos, aprimorada, despertada) |
 | `row`, `column` | a célula no início |
 

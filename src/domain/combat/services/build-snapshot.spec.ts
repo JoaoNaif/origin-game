@@ -59,7 +59,10 @@ describe('Build Snapshot', () => {
       key: 'family-pyranth',
       source: TraitSource.TEMPLATE,
       variantId: fire.id,
-      effects: [{ type: 'STAT_MODIFIER', stat: Stat.HP, percent: 3 }],
+      effects: [
+        { type: 'STAT_MODIFIER', stat: Stat.HP, percent: 3 },
+        { type: 'LINEAGE_COST_MODIFIER', percent: -10 },
+      ],
     })
     veteran = makeTrait({ key: 'veteran' })
 
@@ -155,7 +158,9 @@ describe('Build Snapshot', () => {
         expect(kael.name).toBe('Kael Pyranth')
         expect(kael.level).toBe(characters[0].level)
         expect(kael.lineages).toEqual([Lineage.ELEMENTAL])
-        expect(kael.traitEffects).toHaveLength(2)
+        expect(kael.traitEffects).toHaveLength(3)
+        // sangue puro: −10% de custo só na linhagem da família (D88)
+        expect(kael.lineageCostPercent).toEqual({ [Lineage.ELEMENTAL]: -10 })
         expect(kael.skills).toHaveLength(4)
         expect(kael).toMatchObject({ row: 0, column: 0 })
       }

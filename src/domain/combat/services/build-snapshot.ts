@@ -70,6 +70,34 @@ export function toSnapshotSkill(
   }
 }
 
+/**
+ * Modificadores de custo por linhagem vindos dos traços (LINEAGE_COST_MODIFIER). Traço ligado a uma variante (família)
+ * vale só para a linhagem dela; sem variante, vale para todas as linhagens da unidade.
+ */
+function lineageCostPercent(
+  traits: readonly Trait[],
+  lineages: readonly Lineage[],
+  catalog: SnapshotCatalog
+): Partial<Record<Lineage, number>> {
+  const result: Partial<Record<Lineage, number>> = {}
+
+  for (const trait of traits) {
+    const variantLineage = trait.variantId
+      ? catalog.variants.get(trait.variantId.toValue())?.lineage
+      : undefined
+    const targets = variantLineage ? [variantLineage] : lineages
+
+    for (const effect of trait.effects) {
+      if (effect.type !== 'LINEAGE_COST_MODIFIER') continue
+      for (const lineage of new Set(targets)) {
+        result[lineage] = (result[lineage] ?? 0) + effect.percent
+      }
+    }
+  }
+
+  return result
+}
+
 /** Linhagens das variantes do modelo, principal primeiro (vazio = sem variante). */
 function templateLineages(
   template: CharacterTemplate,
@@ -155,6 +183,11 @@ export function buildPlayerSide(
       profile: { ...template.value.stats },
       freePoints: { ...character.freePoints },
       traitEffects: character.traits.flatMap((t) => [...t.effects]),
+      lineageCostPercent: lineageCostPercent(
+        character.traits,
+        lineages.value,
+        catalog
+      ),
       passive: template.value.passive,
       skills: build.map((s) => toSnapshotSkill(s.skill, s.isEnhanced)),
       row: member.row,
@@ -188,13 +221,13 @@ export function buildNpcSide(
       skills.push(toSnapshotSkill(skill, false))
     }
 
-    const traitEffects = []
+    const traits: Trait[] = []
     for (const traitId of member.traitIds) {
       const trait = catalog.traits.get(traitId.toValue())
       if (!trait) {
         return left(new BuildSnapshotError(`traço ${traitId} não carregado`))
       }
-      traitEffects.push(...trait.effects)
+      traits.push(trait)
     }
 
     units.push({
@@ -206,7 +239,8 @@ export function buildNpcSide(
       level: member.level,
       profile: { ...template.value.stats },
       freePoints: defaultFreePoints(template.value.stats, member.level),
-      traitEffects,
+      traitEffects: traits.flatMap((t) => [...t.effects]),
+      lineageCostPercent: lineageCostPercent(traits, lineages.value, catalog),
       passive: template.value.passive,
       skills,
       row: member.row,

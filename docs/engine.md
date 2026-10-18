@@ -23,7 +23,7 @@
 | 2 | Montar o snapshot (jogador e máquina) | **feito** |
 | 3 | Barra de ação e fila de turnos | **feito** |
 | 4 | Acerto e dano | **feito** |
-| 5 | Desgaste | a fazer |
+| 5 | Desgaste | **feito** |
 | 6 | Alcance, bloqueio, área e queda | a fazer |
 | 7 | Status e empilhamento | a fazer |
 | 8 | Defender, Interceptar e reposicionamento | a fazer |
@@ -273,3 +273,79 @@ if (roll(rng, chance)) {
   const result = applyDamage(damage, { hp: target.hp, shield: target.shield })
 }
 ```
+
+### 3.5 Desgaste
+
+O custo das skills (9.4 e 9.4b do `skills_brief.md`, D71, D91, D96, D97). Acumula durante a batalha, **nunca usa
+aleatoriedade** (custo é lei) e some no fim (D32). Fica em `DesgasteState`, um por unidade
+(`src/domain/combat/services/desgaste.ts`).
+
+**Onde cada linhagem cobra** (9.4):
+
+| Linhagem | Cobra em | Como |
+|---|---|---|
+| Fundamental | HP máximo | reduz o máximo (cura comum não recupera, D59) |
+| Elemental | HP atual | dano em si, imediato (cura desfaz) |
+| Material | Defesa | perda no stat |
+| Vetorial | Precisão | perda no stat |
+| Psíquica | Vontade | perda no stat |
+| Biológica | Esquiva | perda no stat |
+| none (sem variante) | Defesa | perda no stat (D107; divide com a Material, mas nunca juntos) |
+
+**Quanto cobra:** `desgastePercent` da skill (já com os modificadores do tipo e da forma, 12.1 e 12.2) **sobre o stat
+base** (o stat fora de batalha, 3.1), vezes os modificadores da unidade:
+
+| Modificador | Efeito |
+|---|---|
+| Despertado (D96) | skill **não** despertada custa ×0,75 se a build tem uma despertada (a despertada já vem com ×1,5 no valor) |
+| Sangue puro (D88) | −10% na linhagem da família (`lineageCostPercent` do snapshot) |
+| Ressonância (D97) | a skill cobra 100% na própria linhagem e mais **60%** na outra variante (2 variantes) ou **40%** em cada uma das outras (3) |
+
+- A ressonância conta **por variante**: duas variantes da mesma linhagem (ex.: fogo e gelo, Elemental) cobram as duas
+  partes no mesmo stat (160%).
+- **Quando cobrar** (regra do chamador, peça de resolução): só se a skill produziu efeito em pelo menos 1 alvo (errar
+  não cobra); skill sem teste de acerto cobra sempre; área cobra uma vez.
+
+**Piso (D91):** o stat nunca cai abaixo de **80% do base** (perde no máximo 20%). No Elemental, o dano em si nunca leva o
+HP atual abaixo de 80% do máximo. O que passa do piso simplesmente não é cobrado.
+
+**Potência (9.4b):** depende da **folga na linhagem da própria skill** antes de cobrar:
+
+```
+potência = 0,5 + 0,5 × min(1, folga / custo pedido)
+```
+
+Com folga suficiente, 100%; parcial, interpola; sem folga, **50%**. Multiplica dano, cura, buff e debuff; **duração e
+acerto não mudam**. A skill nunca deixa de poder ser usada.
+
+**Alívio (`relieve`, 9.4b, placeholders):** remove uma fração do Desgaste acumulado: cura **20%**, Defender **10%**, skill
+de recuperação **50%**. A cura comum não devolve o HP máximo perdido pela Fundamental; só a skill de recuperação. O
+"buff no mesmo stat soma direto" entra na peça de status e empilhamento.
+
+**Exemplo** (Vanguarda Material, nível 100, Defesa base 120 → piso 96):
+
+| Ação | Pede | Cobra | Defesa | Potência |
+|---|---|---|---|---|
+| Forte (5%) | 6 | 6 | 114 | 100% |
+| Forte | 6 | 6 | 108 | 100% |
+| Forte | 6 | 6 | 102 | 100% |
+| Reforçada (2,5%) | 3 | 3 | 99 | 100% |
+| Forte | 6 | 3 | **96** (piso) | 75% |
+| Forte | 6 | 0 | 96 | **50%** |
+
+Com 2 variantes (Material + Vetorial, Precisão base 84), a mesma Forte também tira 60% × 5% × 84 = **2,52** de Precisão.
+
+```ts
+const desgaste = new DesgasteState({
+  baseStats,
+  lineages: unit.lineages,
+  hasAwakenedSkill: unit.skills.some((s) => s.isAwakened),
+  lineageCostPercent: unit.lineageCostPercent,
+})
+
+const { potency, selfDamage } = desgaste.charge(skill, currentHp) // só se a skill teve efeito
+const defense = desgaste.stat(Stat.DEFENSE) // entra no dano já com o Desgaste
+```
+
+**Fica para depois:** o custo do equipamento vivo no elo pleno (D94) e a Vontade da Dominância (D95), quando essas
+camadas entrarem.

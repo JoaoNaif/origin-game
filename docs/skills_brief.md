@@ -277,6 +277,7 @@ A Biológica **saiu de velocidade** (ver 9.2). Ataque e Velocidade não são cus
 | Vetorial | perda de tato | **Precisão** |
 | Psíquica | esgotamento neural | **Vontade** (fica vulnerável a controle) |
 | Biológica | sobrecarga metabólica | **Esquiva** |
+| none (sem variante) | desgaste do corpo | **Defesa** (D107). Exceção consciente ao "um stat por linhagem": quem usa none não tem variante, então nunca paga junto com a Material |
 
 - Todo custo respeita o **piso do Desgaste** (`character_brief.md` 2): o stat nunca cai abaixo do mínimo.
 - Exceções por skill continuam permitidas (D16). Os **valores** dependem da fórmula de dano (9.8).

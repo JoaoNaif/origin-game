@@ -43,6 +43,11 @@ export interface SnapshotUnit extends GridPosition {
   /** Pontos livres (HP em pontos); NPC usa a distribuição padrão. */
   freePoints: StatBlock
   traitEffects: TraitEffect[]
+  /**
+   * Modificador de custo do Desgaste por linhagem, em % (ex.: sangue puro −10% na linhagem da família, D88). Já
+   * resolvido pela variante do traço, porque `traitEffects` não guarda de qual variante o efeito é.
+   */
+  lineageCostPercent: Partial<Record<Lineage, number>>
   passive: Passive
   /** As 4 skills da build, na ordem dos slots. */
   skills: SnapshotSkill[]
