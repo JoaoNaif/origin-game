@@ -48,6 +48,8 @@ model Variant {
   templates CharacterTemplateVariant[]
   skills    Skill[]
 
+  awakenedCharacters Character[] @relation("CharacterAwakening")
+
   @@index([awakensFromId])
   @@map("variants")
 }
@@ -84,6 +86,7 @@ model Trait {
   variant Variant? @relation(fields: [variantId], references: [id], onDelete: Restrict)
 
   familyTemplates CharacterTemplate[]
+  characters      CharacterTrait[]
 
   @@index([variantId])
   @@map("traits")
@@ -153,6 +156,7 @@ model CharacterTemplate {
 
   familyTrait Trait?                     @relation(fields: [familyTraitId], references: [id], onDelete: Restrict)
   variants    CharacterTemplateVariant[]
+  characters  Character[]
 
   @@index([familyTraitId])
   @@index([characterClass])
@@ -259,5 +263,53 @@ model Account {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  characters Character[]
+
   @@map("accounts")
+}
+
+// Instância do personagem (a Yuki da conta). Stats NÃO são guardados: o motor calcula a partir
+// do perfil do modelo + nível + pontos livres. Pontos livres em pontos (HP: 1 ponto = 5 de HP).
+model Character {
+  id                String      @id @default(uuid())
+  accountId         String      @map("account_id")
+  templateId        String      @map("template_id")
+  level             Int         @default(0)
+  // XP dentro do nível atual (menor que o custo do próximo nível, D92)
+  xp                Int         @default(0)
+  danger            DangerLevel
+  dangerPoints      Int         @default(0) @map("danger_points")
+  awakenedVariantId String?     @map("awakened_variant_id")
+  freeHp            Int         @default(0) @map("free_hp")
+  freeAttack        Int         @default(0) @map("free_attack")
+  freeDefense       Int         @default(0) @map("free_defense")
+  freeSpeed         Int         @default(0) @map("free_speed")
+  freePrecision     Int         @default(0) @map("free_precision")
+  freeEvasion       Int         @default(0) @map("free_evasion")
+  freeWill          Int         @default(0) @map("free_will")
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
+
+  account         Account           @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  template        CharacterTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  awakenedVariant Variant?          @relation("CharacterAwakening", fields: [awakenedVariantId], references: [id], onDelete: Restrict)
+  traits          CharacterTrait[]
+
+  @@index([accountId])
+  @@index([templateId])
+  @@map("characters")
+}
+
+// Traços do personagem (até 5, D39), incluindo o de família copiado do modelo na criação (D105).
+model CharacterTrait {
+  characterId String   @map("character_id")
+  traitId     String   @map("trait_id")
+  acquiredAt  DateTime @default(now()) @map("acquired_at")
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  trait     Trait     @relation(fields: [traitId], references: [id], onDelete: Restrict)
+
+  @@id([characterId, traitId])
+  @@index([traitId])
+  @@map("character_traits")
 }

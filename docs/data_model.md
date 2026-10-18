@@ -45,7 +45,7 @@
 | 3 | `CharacterTemplate` (+ `CharacterTemplateVariant` e enums `CharacterClass`, `Rarity`, `DangerLevel`, `Exclusivity`) | Catálogo | Variant, Trait | **feito** |
 | 4 | `Skill` (+ enums `SkillTier`, `SkillTarget`, `SkillRange`, `SkillArea`, `SkillKitSlot`) | Catálogo | Variant (opcional) | **feito** |
 | 5 | `Account` | Jogador | nada | **feito** |
-| 6 | `Character` (+ `CharacterTrait`) | Jogador | Account, CharacterTemplate, Trait, Variant | a fazer |
+| 6 | `Character` (+ `CharacterTrait`) | Jogador | Account, CharacterTemplate, Trait, Variant | **feito** |
 | 7 | `CharacterSkill` (+ enum `CharacterSkillSource`) | Jogador | Character, Skill | a fazer |
 | 8 | `Squad` (+ `SquadMember`) | Jogador | Account, Character | a fazer |
 | 9 | `NpcSquad` (+ `NpcSquadMember`, `NpcSquadMemberSkill`, `NpcSquadMemberTrait`, enums `AiProfile`, `AiDifficulty`) | Batalha | CharacterTemplate, Skill, Trait, Variant | a fazer |
@@ -523,3 +523,77 @@ Account.create({ username: 'Joao Naif!', displayName: 'João' })
 ```
 
 **Domínio:** `src/domain/accounts/entities/account.ts`. Fábrica de teste em `test/factories/make-account.ts`.
+
+### 3.6 Character (jogador)
+
+A **instância** do personagem: a Kael da conta, com nível, pontos livres e traços próprios. O que é igual para todos
+fica no modelo (`CharacterTemplate`, 3.3).
+
+| Campo | Tipo | Regra |
+|---|---|---|
+| `id` | uuid | |
+| `accountId` | FK → `Account` | dona; apagar a conta apaga os personagens |
+| `templateId` | FK → `CharacterTemplate` | o modelo não pode ser apagado com instâncias |
+| `level` | inteiro | 0 a 100; começa em 0 |
+| `xp` | inteiro | XP **dentro do nível atual**, sempre menor que o custo do próximo (`70 × (1 + n/25)²`, D92); 0 no nível 100 |
+| `danger` | `DangerLevel` | periculosidade atual; começa na inicial do modelo e só sobe (D86) |
+| `dangerPoints` | inteiro | pontos de periculosidade (limiares 500 / 1.500 / 4.000 / 10.000, D100); a subida entra com a progressão |
+| `awakenedVariantId` | FK opcional → `Variant` | a variante despertada; nulo = não despertou |
+| `freeHp` … `freeWill` | 7 inteiros | pontos livres por stat; **HP em pontos** (1 ponto = 5 de HP, D69) |
+| `createdAt`, `updatedAt` | data | |
+
+**Ligação `CharacterTrait`** (chave composta `characterId` + `traitId`, com `acquiredAt`): os traços do personagem,
+**até 5**. Na criação, o traço de família do modelo é **copiado** para cá (D105), então o campo de batalha, os bônus e o
+limite leem uma lista só.
+
+**Stats não são guardados.** O motor calcula o stat final a partir do perfil do modelo + nível + pontos livres (+
+traços, DOM e equipamento quando essas camadas entrarem). Guardar o valor criaria duas fontes da verdade.
+
+**Pontos livres (D91):**
+- **Disponíveis:** 10 pontos a cada 10 níveis (`floor(nível / 10) × 10`, até 100 no nível 100).
+- **Teto por stat**, na escala do nível 100: `perfil × multiplicador − 85% do perfil`. Multiplicador ×1,25 nos picos
+  da classe (×1,15 se o pico for Ataque ou Velocidade) e ×1,10 nos demais. Picos = stats em negrito na tabela de
+  `classes_brief.md` 2 (`CLASS_PEAK_STATS`).
+- Redistribuição grátis fora da batalha (D48): `allocateFreePoints` troca a distribuição inteira de uma vez.
+
+**Operações (domínio, `InvalidCharacterError`):**
+
+| Operação | Regras |
+|---|---|
+| `Character.create` | nível 0, periculosidade inicial do modelo; o traço de família é obrigatório quando o modelo tem e proibido quando não tem; recebe o **kit básico** (3.7), que entra aprendido e na build |
+| `gainXp` | sobe de nível pela curva; para no 100 com XP 0 |
+| `addTrait` | só `CONQUERED`; sem repetir; no máximo 5; soma dos `STAT_MODIFIER` positivos num stat ≤ +15% (D88) |
+| `allocateFreePoints` | inteiros ≥ 0; total ≤ disponível no nível; cada stat ≤ teto da classe |
+| `awaken` | só com **exatamente 1 variante**; nível ≥ 80; a variante é uma despertada **da variante do personagem**; um despertar só (D67, D96) |
+| `Character.restore` | recompõe a partir do banco, sem as regras de criação |
+
+**Exemplo** (fictício): a Kael (Vanguarda, perfil 700 / 100 / 120 / 75 / 85 / 55 / 95) de `tester_01`.
+
+| `level` | `xp` | `danger` | `awakenedVariantId` | Pontos livres | Traços |
+|---|---|---|---|---|---|
+| 0 | 0 | `CONTINUOUS` | | todos 0 (0 disponíveis) | `family-pyranth` |
+| 20 | 120 | `CONTINUOUS` | | Defesa 10, Vontade 10 (20 de 20) | `family-pyranth`, `veteran` |
+| 85 | 900 | `DIFFERENTIABLE` | `blue-fire` | HP 20, Defesa 40, Vontade 20 (80 de 80) | `family-pyranth`, `veteran`, `berserker` |
+
+Tetos da Vanguarda (pontos): HP 35 · Ataque 25 · **Defesa 48** (pico) · Velocidade 18 · Precisão 21 · Esquiva 13 ·
+Vontade 23.
+
+No `seed.ts`:
+
+```ts
+const kael = Character.create({ account: tester, template: kaelTemplate, familyTrait: familyPyranth })
+// right(Character): nível 0, traços = [family-pyranth]
+
+kael.gainXp(5_000) // sobe vários níveis pela curva
+kael.allocateFreePoints({ ...EMPTY_FREE_POINTS, DEFENSE: 10, WILL: 10 }, kaelTemplate)
+// right, se o nível for ≥ 20
+
+kael.allocateFreePoints({ ...EMPTY_FREE_POINTS, ATTACK: 26 }, kaelTemplate)
+// left(InvalidCharacterError): acima do teto da classe em ATTACK (máx. 25)
+```
+
+**Domínio:** `src/domain/characters/entities/character.ts`; curva em `services/level-curve.ts`; pontos livres em
+`services/free-points.ts`.
+
+**Fica para depois:** subida da periculosidade, DOM (pilares e níveis), equipamento vivo, contratos, títulos e as
+missões ocultas do despertar (o `awaken` já valida a regra; o sorteio e as missões entram com a camada).
