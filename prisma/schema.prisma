@@ -44,6 +44,43 @@ model Variant {
   awakensFrom Variant?  @relation("VariantAwakening", fields: [awakensFromId], references: [id], onDelete: Restrict)
   awakenings  Variant[] @relation("VariantAwakening")
 
+  traits Trait[]
+
   @@index([awakensFromId])
   @@map("variants")
+}
+
+// Categoria do traço (D47).
+enum TraitCategory {
+  COMBAT
+  POSTURE
+  ORIGIN
+}
+
+// De onde o traço vem: TEMPLATE (modelo do personagem, ex.: família; fica na venda)
+// ou CONQUERED (metas e eventos; se perde na venda).
+enum TraitSource {
+  TEMPLATE
+  CONQUERED
+}
+
+// Traço do catálogo (D27, D39, D47). `effects` é uma lista JSON validada no domínio
+// (TraitEffect); efeito é valor, não entidade (docs/data_model.md, Trait).
+model Trait {
+  id          String        @id @default(uuid())
+  key         String        @unique
+  name        String
+  description String?
+  category    TraitCategory
+  source      TraitSource
+  variantId   String?       @map("variant_id")
+  effects     Json
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  // só vale para esta variante (traços de família)
+  variant Variant? @relation(fields: [variantId], references: [id], onDelete: Restrict)
+
+  @@index([variantId])
+  @@map("traits")
 }

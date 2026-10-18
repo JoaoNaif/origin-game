@@ -41,7 +41,7 @@
 | # | Modelo | Grupo | Depende de | Estado |
 |---|---|---|---|---|
 | 1 | `Variant` (+ enum `Lineage`) | Catálogo | nada | **feito** |
-| 2 | `Trait` (+ enums `TraitCategory`, `TraitSource`) | Catálogo | Variant (opcional) | a fazer |
+| 2 | `Trait` (+ enums `TraitCategory`, `TraitSource`) | Catálogo | Variant (opcional) | **feito** |
 | 3 | `CharacterTemplate` (+ `CharacterTemplateVariant` e enums `CharacterClass`, `Rarity`, `DangerLevel`, `Exclusivity`) | Catálogo | Variant, Trait | a fazer |
 | 4 | `Skill` (+ enums `SkillTier`, `SkillTarget`, `SkillRange`, `SkillArea`, `SkillKitSlot`) | Catálogo | Variant (opcional) | a fazer |
 | 5 | `Account` | Jogador | nada | a fazer |
@@ -132,3 +132,99 @@ Variant.create({ key: 'steel-fire', name: 'Fogo de aço', lineage: Lineage.MATER
 
 **Domínio:** `src/domain/characters/entities/variant.ts` (`Variant.create` devolve `Either`;
 `InvalidAwakenedVariantError` para as regras de despertar).
+
+### 3.2 Trait (catálogo)
+
+Traço do personagem (D27, D39, D47): bônus moderado em status e skills, podendo ter lado negativo. Até **5 por
+personagem**, e o **traço de família ocupa 1 dos 5** (D105). O teto de +15% por stat somando traços (D88) é regra do
+**personagem**, não do traço.
+
+**Enums:**
+- `TraitCategory`: `COMBAT`, `POSTURE`, `ORIGIN`.
+- `TraitSource`: `TEMPLATE` (vem no modelo do personagem, ex.: família; **fica na venda**) ou `CONQUERED` (metas do
+  histórico e eventos; **se perde na venda**). Enum em vez de booleano para aceitar um terceiro valor no futuro.
+
+| Campo | Tipo | Regra |
+|---|---|---|
+| `id` | uuid | |
+| `key` | texto, **único** | estável (ex.: `berserker`) |
+| `name` | texto | |
+| `description` | texto, opcional | |
+| `category` | `TraitCategory` | `TEMPLATE` é sempre `ORIGIN` |
+| `source` | `TraitSource` | |
+| `variantId` | FK opcional → `Variant` | o traço só vale para essa variante; quem tem é sempre `TEMPLATE` (família) |
+| `effects` | JSON (lista de `TraitEffect`) | pelo menos 1 efeito |
+| `createdAt`, `updatedAt` | data | |
+
+**Tipos de efeito** (`src/domain/characters/value-objects/trait-effect.ts`). No banco a coluna é só `Json`; o formato
+é garantido pelo tipo do TypeScript e validado na borda ao ler do banco ou do seed. Novo tipo = nova linha no TS, sem
+migração.
+
+| `type` | Campos | Uso |
+|---|---|---|
+| `STAT_MODIFIER` | `stat`, `percent` | +5% de Ataque, −8% de Defesa |
+| `SKILL_DAMAGE_MODIFIER` | `range` (`MELEE`, `RANGED`, `PIERCING`, `FLANK`), `percent` | +10% de dano corpo a corpo |
+| `LINEAGE_COST_MODIFIER` | `percent` | −10% de Desgaste na própria variante (sangue puro) |
+| `GEAR_REQUIREMENT_WAIVER` | `count` | vale 1 requisito no elo (Prodígio) |
+| `EXTRA_BEAST_SLOT` | `count` | +1 besta (Domador) |
+
+**Regras (domínio, `InvalidTraitError`):** pelo menos 1 efeito; `TEMPLATE` só em `ORIGIN`; com `variantId`, sempre
+`TEMPLATE`.
+
+**Exemplo** (fictício, só para ilustrar; os traços reais são do admin):
+
+| `key` | `category` | `source` | variante | Efeitos |
+|---|---|---|---|---|
+| `berserker` | `COMBAT` | `CONQUERED` | | +10% dano corpo a corpo · −8% Defesa |
+| `martial-artist` | `COMBAT` | `CONQUERED` | | +8% dano corpo a corpo |
+| `stealthy` | `POSTURE` | `CONQUERED` | | +6% Esquiva |
+| `veteran` | `ORIGIN` | `CONQUERED` | | +3% Vontade · +3% HP |
+| `tamer` | `ORIGIN` | `CONQUERED` | | +1 besta |
+| `prodigy` | `ORIGIN` | `CONQUERED` | | vale 1 requisito no elo |
+| `family-pyranth` | `ORIGIN` | `TEMPLATE` | `fire` | +3% Ataque · +3% HP · −10% Desgaste (sangue puro) |
+
+JSON de `effects` do Berserker e da família Pyranth:
+
+```json
+[
+  { "type": "SKILL_DAMAGE_MODIFIER", "range": "MELEE", "percent": 10 },
+  { "type": "STAT_MODIFIER", "stat": "DEFENSE", "percent": -8 }
+]
+```
+
+```json
+[
+  { "type": "STAT_MODIFIER", "stat": "ATTACK", "percent": 3 },
+  { "type": "STAT_MODIFIER", "stat": "HP", "percent": 3 },
+  { "type": "LINEAGE_COST_MODIFIER", "percent": -10 }
+]
+```
+
+No `seed.ts`:
+
+```ts
+Trait.create({
+  key: 'family-pyranth',
+  name: 'Família Pyranth',
+  category: TraitCategory.ORIGIN,
+  source: TraitSource.TEMPLATE,
+  variantId: fire.id,
+  effects: [
+    { type: 'STAT_MODIFIER', stat: Stat.ATTACK, percent: 3 },
+    { type: 'STAT_MODIFIER', stat: Stat.HP, percent: 3 },
+    { type: 'LINEAGE_COST_MODIFIER', percent: -10 },
+  ],
+})
+// right(Trait)
+
+Trait.create({
+  key: 'born-warrior',
+  name: 'Guerreiro nato',
+  category: TraitCategory.COMBAT,
+  source: TraitSource.TEMPLATE,
+  effects: [{ type: 'STAT_MODIFIER', stat: Stat.ATTACK, percent: 5 }],
+})
+// left(InvalidTraitError): traço TEMPLATE é sempre da categoria ORIGIN
+```
+
+**Domínio:** `src/domain/characters/entities/trait.ts` (`Trait.create` devolve `Either`).
