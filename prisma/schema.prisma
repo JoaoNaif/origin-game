@@ -271,6 +271,7 @@ model Account {
 
   characters Character[]
   squads     Squad[]
+  battles    Battle[]
 
   @@map("accounts")
 }
@@ -358,6 +359,7 @@ model Squad {
 
   account Account       @relation(fields: [accountId], references: [id], onDelete: Cascade)
   members SquadMember[]
+  battles Battle[]
 
   @@index([accountId])
   @@map("squads")
@@ -414,6 +416,7 @@ model NpcSquad {
   updatedAt   DateTime     @updatedAt @map("updated_at")
 
   members NpcSquadMember[]
+  battles Battle[]
 
   @@index([difficulty, profile])
   @@map("npc_squads")
@@ -468,4 +471,61 @@ model NpcSquadMemberTrait {
   @@id([memberId, traitId])
   @@index([traitId])
   @@map("npc_squad_member_traits")
+}
+
+// Modo da partida. No MVP só PVE (D75); os demais entram com o PvP.
+enum BattleMode {
+  PVE
+  CASUAL
+  RANKED
+  FRIENDLY
+}
+
+enum BattleStatus {
+  IN_PROGRESS
+  FINISHED
+}
+
+enum BattleSide {
+  PLAYER
+  OPPONENT
+}
+
+// Eliminação, fim forçado na rodada 30 (D72) ou abandono. Sempre há vencedor.
+enum BattleEndReason {
+  ELIMINATION
+  ROUND_LIMIT
+  ABANDON
+}
+
+// Batalha: guarda seed, snapshot dos dois lados no início e o log de decisões, NÃO o estado.
+// Motor determinístico: seed + snapshot + ações = replay (D8). A seed nunca vai ao cliente (D33).
+model Battle {
+  id             String           @id @default(uuid())
+  accountId      String           @map("account_id")
+  mode           BattleMode
+  status         BattleStatus     @default(IN_PROGRESS)
+  squadId        String?          @map("squad_id")
+  npcSquadId     String?          @map("npc_squad_id")
+  aiProfile      AiProfile?       @map("ai_profile")
+  aiDifficulty   AiDifficulty?    @map("ai_difficulty")
+  seed           Int
+  engineVersion  String           @map("engine_version")
+  contentVersion String           @map("content_version")
+  snapshot       Json
+  winner         BattleSide?
+  endReason      BattleEndReason? @map("end_reason")
+  rounds         Int?
+  startedAt      DateTime         @map("started_at")
+  finishedAt     DateTime?        @map("finished_at")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  account  Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  squad    Squad?    @relation(fields: [squadId], references: [id], onDelete: SetNull)
+  npcSquad NpcSquad? @relation(fields: [npcSquadId], references: [id], onDelete: SetNull)
+
+  @@index([accountId, startedAt])
+  @@index([npcSquadId])
+  @@map("battles")
 }

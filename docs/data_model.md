@@ -49,7 +49,7 @@
 | 7 | `CharacterSkill` (+ enum `CharacterSkillSource`) | Jogador | Character, Skill | **feito** |
 | 8 | `Squad` (+ `SquadMember`) | Jogador | Account, Character | **feito** |
 | 9 | `NpcSquad` (+ `NpcSquadMember`, `NpcSquadMemberSkill`, `NpcSquadMemberTrait`, enums `AiProfile`, `AiDifficulty`) | Batalha | CharacterTemplate, Skill, Trait, Variant | **feito** |
-| 10 | `Battle` (+ enums `BattleMode`, `BattleStatus`, `BattleSide`, `BattleEndReason`) | Batalha | Account, Squad, NpcSquad | a fazer |
+| 10 | `Battle` (+ enums `BattleMode`, `BattleStatus`, `BattleSide`, `BattleEndReason`) | Batalha | Account, Squad, NpcSquad | **feito** |
 | 11 | `BattleAction` (+ enum `BattleActionType`) | Batalha | Battle | a fazer |
 
 **Fora do MVP** (cada um vira migração própria quando a camada chegar): inventário, equipamento vivo, bestas, DOM,
@@ -821,3 +821,55 @@ NpcSquad.create({ ...beginnerWall, members: membersAtLevel(30) })
 
 **Fica para depois:** o DOM e o equipamento do Grão-mestre (D103 diz "com DOM e equipamento") entram com essas
 camadas; perfil próprio para chefes de evento (pós-MVP).
+
+### 3.10 Battle (batalha)
+
+A partida. Segue a decisão geral nº 2: **guarda seed, snapshot dos dois lados no início e o log de decisões, não o
+estado**. Como o motor é determinístico (D8), `seed + snapshot + ações` reproduzem a batalha inteira (é o replay), e o
+servidor é a autoridade (D9).
+
+**Enums:**
+- `BattleMode`: `PVE`, `CASUAL`, `RANKED`, `FRIENDLY`. **No MVP só `PVE`** (D75); o domínio só tem `Battle.startPve`.
+- `BattleStatus`: `IN_PROGRESS`, `FINISHED`.
+- `BattleSide`: `PLAYER` (dono da partida), `OPPONENT` (a máquina no PvE).
+- `BattleEndReason`: `ELIMINATION`, `ROUND_LIMIT` (fim forçado na rodada 30, D72), `ABANDON` (W.O.). **Sempre há
+  vencedor:** no fim forçado vence quem tem mais % de HP; empate pelo menor Desgaste e depois pela seed (D72).
+
+| Campo | Tipo | Regra |
+|---|---|---|
+| `id` | uuid | |
+| `accountId` | FK → `Account` | dono; apagar a conta apaga o histórico |
+| `mode`, `status` | enums | começa `IN_PROGRESS` |
+| `squadId` | FK opcional → `Squad` | o squad usado (só referência; apagar o squad deixa nulo) |
+| `npcSquadId` | FK opcional → `NpcSquad` | o adversário (só referência; apagar deixa nulo) |
+| `aiProfile`, `aiDifficulty` | enums opcionais | copiados do `NpcSquad` (para filtrar histórico e calcular XP/moeda) |
+| `seed` | inteiro | 0 a 2.147.483.647; **só no servidor, nunca vai ao cliente** (D33) |
+| `engineVersion`, `contentVersion` | texto | obrigatórias; o replay só é garantido com as mesmas versões |
+| `snapshot` | JSON (`BattleSnapshot`) | foto dos dois lados no início |
+| `winner`, `endReason`, `rounds` | opcionais | preenchidos no fim; `rounds` de 1 a 30; `ROUND_LIMIT` só com 30 |
+| `startedAt`, `finishedAt` | data | vindas de fora (o domínio não lê o relógio); fim não antes do início |
+| `createdAt`, `updatedAt` | data | |
+
+**Snapshot (`src/domain/combat/value-objects/battle-snapshot.ts`):** cada lado tem nome e **4 unidades**. Cada unidade
+guarda **valores, não referências**, porque o personagem e o catálogo podem mudar depois e o replay precisa do original:
+
+| Campo da unidade | O que é |
+|---|---|
+| `ref` | identificador na batalha (`PLAYER:0` a `PLAYER:3`, `OPPONENT:0` a `OPPONENT:3`), usado pelas ações |
+| `name`, `templateKey`, `characterClass`, `lineages` | identidade (linhagens das variantes, principal primeiro) |
+| `level`, `profile`, `freePoints` | o motor calcula os stats a partir disso (NPC usa a distribuição padrão) |
+| `traitEffects`, `passive` | efeitos dos traços e a passiva |
+| `skills` | as 4 da build, com todos os valores (Poder, custo, cooldown, acerto, efeitos, aprimorada, despertada) |
+| `row`, `column` | a célula no início |
+
+**Operações (domínio, `InvalidBattleError`):**
+
+| Operação | Regras |
+|---|---|
+| `Battle.startPve` | seed válida; versões preenchidas; snapshot com 4 unidades por lado, dentro da grade, sem célula repetida, refs únicas e 4 skills cada |
+| `recordAction` | só em andamento; rodada de 1 a 30 e nunca voltando; a unidade é do lado que age; a sequência é atribuída em ordem |
+| `finish` | só em andamento; rodadas de 1 a 30; `ROUND_LIMIT` só na 30; fim não antes do início |
+| `Battle.restore` | recompõe a partir do banco |
+
+**Fica para depois:** recompensas (XP e moeda, D92 e D100) entram no caso de uso que encerra a batalha; PvP
+(adversário conta) entra com o `opponentAccountId` quando o PvP chegar.
