@@ -22,7 +22,7 @@
 | 1 | Cálculo de stats | **feito** |
 | 2 | Montar o snapshot (jogador e máquina) | **feito** |
 | 3 | Barra de ação e fila de turnos | **feito** |
-| 4 | Acerto e dano | a fazer |
+| 4 | Acerto e dano | **feito** |
 | 5 | Desgaste | a fazer |
 | 6 | Alcance, bloqueio, área e queda | a fazer |
 | 7 | Status e empilhamento | a fazer |
@@ -205,4 +205,71 @@ const queue = new TurnQueue(
 
 const turn = queue.next() // { ref: 'PLAYER:2', tick: 9, round: 1 }
 queue.shift('PLAYER:0', 50) // Tático adianta um aliado em 50%
+```
+
+### 3.4 Acerto e dano
+
+**Acerto** (`src/domain/combat/services/hit.ts`, D68, D91):
+
+```
+chance de acerto = base da skill × 2 × Precisão / (Precisão + Esquiva)      entre 30% e 100%
+```
+
+- Com Precisão igual à Esquiva, a chance é a própria base (0,8 na skill normal).
+- O sorteio usa a seed (`roll`): acerta se o próximo número da `Rng` for menor que a chance. Com chance de 100% não
+  sorteia (não gasta a seed). **Errar não cobra Desgaste** (9.4b do `skills_brief.md`).
+- Skill sem teste de acerto (aliado ou si mesmo, `baseHitChance` nulo) não passa por aqui.
+
+**Chance de status** (mesma forma, contra a Vontade, D92):
+
+```
+chance de status = base do status × 2 × Precisão / (Precisão + Vontade)      entre 30% e 90%
+```
+
+O teto de 90% garante que nenhum status é certo.
+
+| Exemplo (base 0,8) | Precisão | Esquiva | Acerto |
+|---|---|---|---|
+| Atirador → Vanguarda | 125 | 55 | 100% (teto) |
+| Atirador → Executor | 125 | 115 | 83% |
+| Vanguarda → Executor | 85 | 115 | 68% |
+| Guardião → Executor | 70 | 115 | 60% |
+
+**Dano** (`src/domain/combat/services/damage.ts`, D68):
+
+```
+dano base = Poder × Ataque² / (Ataque + Defesa)
+```
+
+- **Razão, não subtração:** o dano nunca zera e o equilíbrio é o mesmo em qualquer nível. Sem variação aleatória e sem
+  crítico.
+- **Ataque e Defesa já entram ajustados** (buffs, debuffs e Desgaste, peças 5 e 7).
+- **Poder efetivo:** skill aprimorada ganha **+15%** (D100). No ranqueado o ganho é limitado pela faixa (100% na
+  Platina, 50% no Ouro, 0 no Bronze e na Prata, D99); no PvE vale inteiro.
+- **Ordem completa (D68):** dano base → queda da linha (peça 6) → modificadores de dano (Marcado, Exaustão, traços de
+  dano: peças 7 e 9) → Defender (peça 8) → escudo → HP.
+- **Arredondamento:** inteiro no fim; um acerto sempre tira pelo menos 1.
+
+**Escudo e HP (`applyDamage`):** o escudo absorve primeiro (é a única forma de "passar" do HP); o resto sai do HP, que
+não fica negativo. A passiva "ignora escudos" (ex.: Ecko, D83) pula o escudo.
+
+**Cura e escudo concedidos (`healAmount`, D92):** Poder 1,0 = **10% do HP máximo do alvo** (cura 2,0 em quem tem 420 de
+HP = 84). A cura não passa do HP máximo (8.3 do `skills_brief.md`), regra aplicada quando a cura entrar na resolução.
+
+**Conferido com a tabela de `classes_brief.md` 4** (Poder 1,0, nível 100):
+
+| Ataque → Alvo | Ataque | Defesa do alvo | HP do alvo | Dano | % do HP |
+|---|---|---|---|---|---|
+| Vanguarda → Vanguarda | 100 | 120 | 700 | 45 | 6,5% |
+| Executor → Atirador | 140 | 60 | 420 | 98 | 23,3% |
+| Atirador → Executor | 125 | 55 | 400 | 87 | 21,7% |
+| Guardião → Guardião | 60 | 140 | 780 | 18 | 2,3% |
+
+```ts
+const chance = hitChance(skill.baseHitChance, attacker.PRECISION, target.EVASION)
+if (roll(rng, chance)) {
+  const power = effectivePower(skill.power, skill.isEnhanced)
+  const damage = finalDamage(baseDamage(power, attacker.ATTACK, target.DEFENSE))
+  const result = applyDamage(damage, { hp: target.hp, shield: target.shield })
+}
 ```
