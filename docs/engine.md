@@ -25,7 +25,7 @@
 | 4 | Acerto e dano | **feito** |
 | 5 | Desgaste | **feito** |
 | 6 | Alcance, bloqueio, área e queda | **feito** |
-| 7 | Status e empilhamento | a fazer |
+| 7 | Status e empilhamento | **feito** |
 | 8 | Defender, Interceptar e reposicionamento | a fazer |
 | 9 | Exaustão e fim da batalha | a fazer |
 | 10 | IA da máquina | a fazer |
@@ -439,3 +439,73 @@ const hits = resolveTargets({
 
 **Fica para outras peças:** o Interceptar do Guardião (peça 8) desvia golpes de alvo único depois daqui; a
 dificuldade de cada alvo (acerto) é por alvo atingido (peça 4).
+
+### 3.7 Status e empilhamento
+
+Os estados e os buffs/debuffs de cada unidade (`skills_brief.md` 11.9, 11.10, 12.4, 12.5, D31, D73). Ficam em
+`UnitConditions`, um por unidade (`src/domain/combat/services/conditions.ts`). **Não sorteia:** a chance de aplicar
+já foi decidida antes (`statusChance` + `roll`, 3.4).
+
+**Status** (valores do 12.4; duração em **turnos do afetado**, D31):
+
+| Status | Efeito | Duração | Base |
+|---|---|---|---|
+| Atordoado | perde a próxima ação; depois fica **imune a novo Atordoado por 1 turno** (anti-cadeia) | 1 | 70% |
+| Travado | **+2 de recarga** numa skill do alvo (instantâneo) | | 80% |
+| Preso | não pode se mover nem ser movido | 2 | 80% |
+| Exposto | vira alvo de corpo a corpo mesmo atrás de alguém (3.6) | 2 | 85% |
+| Marcado | recebe **+20%** de dano | 3 | 80% |
+| Dano contínuo | perde **4% do HP máximo** no início de cada turno dele (ignora a Defesa) | 3 | 80% |
+
+- **Início do turno do afetado** (`startTurn`): aplica o dano contínuo, consome o Atordoado (perde a ação e ganha a
+  imunidade) e baixa 1 de todas as durações (status e modificadores).
+- **O mesmo status de novo renova** (fica a maior duração e o maior valor), não soma (9.5b).
+- **Travado (D110):** instantâneo; coloca **+2 de recarga na skill mais forte que está pronta** (maior tipo; empate, maior
+  Poder; empate, a primeira da build). Se nenhuma está pronta, trava a que ficaria pronta primeiro. Fica em
+  `SkillCooldowns.lock` (abaixo).
+
+**Buffs e debuffs** (`addModifier`, D73, D92):
+
+- **Multiplicativos** sobre o stat (já com o Desgaste): `stat × (1 + %₁) × (1 + %₂)...`. A ordem não importa: +20% e
+  −20% dão ×0,96.
+- **No máximo 2 buffs e 2 debuffs por stat** (contados separados). Magnitudes 10%, 15% e 20% (12.5): no máximo **+44%** e
+  **−36%**.
+- **A mesma fonte** (a mesma skill) **renova** a duração (e fica o maior valor), não soma.
+- **Fonte além do limite (D110):** substitui a **mais fraca** do mesmo sentido se for **mais forte ou igual**; se for mais
+  fraca, é ignorada (trocar um 15% por um 10% pioraria o personagem).
+- **Fora do limite** (`unlimited`): o Defender (+50% de Defesa, D102) e o bônus do campo de batalha (D98).
+
+**Exemplo** (Ataque 100, com Desgaste já aplicado):
+
+| Ação | Fontes no Ataque | Multiplicador | Ataque |
+|---|---|---|---|
+| Grito de guerra +20% | +20 | ×1,20 | 120 |
+| Comando +20% | +20, +20 | ×1,44 | 144 (teto prático) |
+| Encorajar +15% | ignorado (mais fraco que os dois) | ×1,44 | 144 |
+| Maldição −20% | +20, +20, −20 | ×1,152 | 115 |
+
+```ts
+const conditions = new UnitConditions()
+
+if (roll(rng, statusChance(0.8, attacker.PRECISION, target.WILL))) {
+  conditions.applyDefaultStatus(StatusType.MARK) // +20% de dano recebido por 3 turnos dele
+}
+
+const { skipAction, dotDamage } = conditions.startTurn(maxHp) // no início do turno do afetado
+const attack = conditions.effectiveStat(Stat.ATTACK, desgaste.stat(Stat.ATTACK))
+```
+
+**Recarga** (`SkillCooldowns`, `src/domain/combat/services/cooldowns.ts`, D92 e 8.2 do `skills_brief.md`):
+
+- Conta em **turnos do próprio personagem**: recarga **N** = a skill fica **fora dos próximos N turnos dele**. A Básica
+  (recarga 0) pode ser usada todo turno.
+- Baixa 1 no **fim de cada turno** dele, menos na skill usada naquele turno.
+- O Travado soma 2 à recarga da skill travada (uma skill pronta fica fora dos próximos 2 turnos).
+
+| Turno do personagem | Usa | Padrão (recarga 1) | Final (recarga 4) |
+|---|---|---|---|
+| 1 | Final | pronta | entra em 4 |
+| 2 | Padrão | entra em 1 | 3 |
+| 3 | Básica | 0 → pronta no 4 | 2 |
+| 4 | Padrão | entra em 1 | 1 |
+| 5 | Básica | pronta no 6 | 0 → pronta no 6 |
