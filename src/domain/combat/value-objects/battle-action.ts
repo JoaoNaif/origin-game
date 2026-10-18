@@ -14,6 +14,8 @@ export type BattleActionPayload =
       target: GridPosition
       /** Trocar inimigos (D111): o inimigo adjacente ao alvo com quem ele troca de lugar. */
       swapWith?: GridPosition
+      /** Avançar/recuar (DASH) e mover aliado (MOVE_ALLY): a célula de destino. */
+      moveTo?: GridPosition
     }
   /** Move para uma célula adjacente (custa o turno, D42). */
   | { type: 'MOVE'; to: GridPosition }

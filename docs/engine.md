@@ -28,7 +28,9 @@
 | 7 | Status, empilhamento e recarga | **feito** |
 | 8 | Defender, Interceptar e reposicionamento | **feito** |
 | 9 | Exaustão e fim da batalha | **feito** |
-| 10 | Resolução do turno (juntar as peças num motor que executa a batalha) | a fazer |
+| 10 | Resolução do turno (juntar as peças num motor que executa a batalha) | **feito** |
+| 10b | Passivas dos personagens (executar os gatilhos e efeitos do D83) | a fazer |
+| 10c | Campo de batalha no snapshot e no motor (D98) | a fazer |
 | 11 | IA da máquina | a fazer |
 | 12 | Simulador IA contra IA (calibração) | a fazer |
 
@@ -613,3 +615,79 @@ O multiplicador de dano entra nos "modificadores de dano" da ordem do D68 (3.4);
 | Máquina | 100, 100, 0, 0 | 10% | 0,10 | |
 
 Se os dois tivessem 10%, venceria a máquina, que tem menos Desgaste.
+
+### 3.10 Resolução do turno (o motor)
+
+`BattleEngine` (`src/domain/combat/engine/battle-engine.ts`) junta todas as peças e roda a batalha. Recebe o **snapshot**
+(3.2) e a **`Rng` da seed**; não acessa banco nem relógio. **Mesmo snapshot + mesma seed + mesmas ações = mesmos
+eventos** (D8): é o que permite o servidor ser a autoridade (D9) e o replay.
+
+**Como usar:**
+
+```ts
+const engine = new BattleEngine(battle.snapshot, new SeededRng(battle.seed))
+
+for (let turn = engine.nextTurn(); turn; turn = engine.nextTurn()) {
+  const payload = await decide(turn) // jogador (pela API) ou IA da máquina
+  const result = engine.act(payload) // left(InvalidActionError) se a ação for inválida: nada muda, a vez continua
+  if (result.isRight()) battle.recordAction({ round: turn.round, side: turn.side, actorRef: turn.ref, payload })
+}
+
+engine.outcome // { winner, reason }
+engine.events // o que aconteceu, em ordem (para o front e para conferir o replay)
+```
+
+**No início** cada unidade tem os stats de fora da batalha (3.1), HP cheio, sem escudo, todas as skills prontas. A ordem
+dos Guardiões de cada lado é sorteada pela seed (D102).
+
+**`nextTurn()`** avança a fila (3.3) até alguém precisar decidir, resolvendo sozinho o início do turno:
+1. dano contínuo (pode derrotar a unidade);
+2. **Atordoado** ou **troca com aliado no turno anterior** (D42): perde a ação; o turno conta para a recarga.
+
+**`act(payload)`** executa a ação da vez:
+
+| Ação | O que faz |
+|---|---|
+| `SKILL` | resolve a skill (abaixo) |
+| `MOVE` | move para célula adjacente e vazia (3.8) |
+| `SWAP` | troca com um aliado; **o aliado perde a próxima ação** (D42) |
+| `DEFEND` | +50% de Defesa e alívio de 10% (3.8) |
+
+**Resolução de uma skill:**
+1. Valida: skill na build e pronta (recarga), lado alvo certo, alvo válido (3.6).
+2. **Potência** pela folga do Desgaste, calculada antes (3.5).
+3. **Interceptar** (golpe de alvo único: o Guardião adjacente recebe no lugar, 3.8).
+4. Para cada atingido: **teste de acerto** (3.4; skill de aliado ou si mesmo não testa). Errou: segue para o próximo.
+5. Efeitos em quem foi atingido:
+   - **dano:** Poder (com aprimoramento) × potência → `Poder × Ataque² / (Ataque + Defesa)` × queda × Exaustão × Marcado ×
+     traço de dano pelo alcance → escudo → HP (ordem do D68);
+   - **cura e escudo:** 10% do HP máximo por Poder × potência × Exaustão; a cura não passa do máximo e alivia 20% do Desgaste;
+   - **buff e debuff:** magnitude × potência (3.7);
+   - **status:** teste contra a Vontade só se for hostil; Travado vai para a skill mais forte pronta (D110);
+   - **reposicionamento:** empurrar, puxar e trocar inimigos com resistência da Vontade (D111); avançar e mover aliado
+     usam `moveTo`;
+   - **adiantar/atrasar a vez:** na fila; o atrasado fica imune a novo atraso até agir (D102).
+6. Efeitos com `appliesTo: SELF` em quem usou, uma vez.
+7. **Desgaste** só se acertou alguém (ou não tinha teste); o dano em si do Elemental sai do HP; HP cortado ao novo máximo da
+   Fundamental.
+8. **Recarga** sempre, mesmo errando.
+
+**Depois de cada ação:** recalcula as Velocidades (buffs e debuffs mudam a fila), confere a **eliminação** e, quando a
+rodada 30 fecha, o **fim forçado** (3.9). Derrotado sai da fila e da grade (deixa de bloquear).
+
+**Eventos (`BattleEvent`, `src/domain/combat/engine/battle-events.ts`):** `TURN`, `SKIP`, `DOT`, `SKILL`, `INTERCEPT`,
+`MISS`, `DAMAGE`, `HEAL`, `SHIELD`, `MODIFIER`, `STATUS`, `LOCK`, `MOVE`, `MOVE_BLOCKED`, `TURN_SHIFT`, `DESGASTE`,
+`DEFEND`, `FIELD_IGNORED`, `DEFEATED`, `BATTLE_END`. Não vão para o banco: o banco guarda só as ações (3.11 do
+`data_model.md`), e os eventos são reproduzidos.
+
+**Conferido** (squad de teste: 8 Vanguardas no nível 15, só a skill básica, seed 1): 8 turnos por rodada enquanto todos
+vivem, dano médio de **5,2% do HP** (o que a tabela do `classes_brief.md` 4 prevê para Vanguarda contra Vanguarda com
+Poder 0,8), 6 derrotados e fim forçado na rodada 30 com 1 contra 1. É o confronto mais lento possível; com squads
+variados o dano de referência é o dobro (D68).
+
+**Ainda não entra no motor:**
+- **Passivas** dos personagens (peça 10b): o catálogo de gatilhos e efeitos existe (3.3 do `data_model.md`), falta
+  executar. Até lá o motor ignora a passiva.
+- **Campo de batalha** (peça 10c): o snapshot ainda não guarda o campo; a skill de trocar campo fica sem efeito
+  (`FIELD_IGNORED`).
+- Equipamento vivo, contratos, DOM e despertar com efeito próprio (camadas pós-MVP).

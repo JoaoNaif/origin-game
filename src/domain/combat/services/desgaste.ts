@@ -174,17 +174,25 @@ export class DesgasteState {
   }
 
   /**
+   * Potência da skill agora, sem cobrar (o motor calcula o efeito antes de saber se a skill acertou alguém):
+   * `0,5 + 0,5 × min(1, folga / custo)` na linhagem da própria skill.
+   */
+  potencyFor(skill: DesgasteSkill, currentHp: number): number {
+    const own = this.costOf(skill)[0]
+    const ownSlack = this.slack(own.target, currentHp)
+    const ratio = own.requested > 0 ? Math.min(1, ownSlack / own.requested) : 1
+
+    return POTENCY_AT_FLOOR + (1 - POTENCY_AT_FLOOR) * ratio
+  }
+
+  /**
    * Cobra o Desgaste da skill (chamar só se ela produziu efeito em pelo menos 1 alvo; errar não cobra). Devolve a
    * potência, que depende da folga na linhagem da própria skill: com folga ≥ custo, 100%; parcial, interpola;
    * sem folga, 50%.
    */
   charge(skill: DesgasteSkill, currentHp: number): ChargeResult {
     const requests = this.costOf(skill)
-    const own = requests[0]
-
-    const ownSlack = this.slack(own.target, currentHp)
-    const ratio = own.requested > 0 ? Math.min(1, ownSlack / own.requested) : 1
-    const potency = POTENCY_AT_FLOOR + (1 - POTENCY_AT_FLOOR) * ratio
+    const potency = this.potencyFor(skill, currentHp)
 
     let selfDamage = 0
     let hp = currentHp
