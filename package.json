@@ -24,7 +24,8 @@
     "services:up": "docker compose up -d",
     "services:down": "docker compose down",
     "simulate": "vitest run --config vitest.sim.config.ts",
-    "db:seed": "prisma db seed"
+    "db:seed": "prisma db seed",
+    "balance": "vitest run --config vitest.sim.config.ts scripts/balance.sim.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

@@ -7,7 +7,7 @@ import { SnapshotCatalog } from '@/domain/combat/services/build-snapshot'
 import { Skill } from '@/domain/skills/entities/skill'
 import { NpcSquad } from '@/domain/squads/entities/npc-squad'
 import { buildFields, buildTraits, buildVariants } from './catalog'
-import { BuiltCharacter, buildCharacters } from './characters'
+import { BuiltCharacter, buildCharacters, ContentOverrides } from './characters'
 import { buildNpcSquads } from './npc-squads'
 
 /** Todo o conteúdo do MVP (`CLAUDE.md`: no MVP o conteúdo vem do `seed.ts`), já validado pelo domínio. */
@@ -21,10 +21,10 @@ export interface SeedContent {
   catalog: SnapshotCatalog
 }
 
-export function loadSeedContent(): SeedContent {
+export function loadSeedContent(overrides: ContentOverrides = {}): SeedContent {
   const variants = buildVariants()
   const traits = buildTraits(variants)
-  const characters = buildCharacters(variants, traits)
+  const characters = buildCharacters(variants, traits, overrides)
   const fields = buildFields(traits)
   const npcSquads = buildNpcSquads(characters, traits)
 

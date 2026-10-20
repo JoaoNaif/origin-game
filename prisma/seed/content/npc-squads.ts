@@ -2,8 +2,6 @@ import { AiDifficulty } from '@/domain/ai/enums/ai-difficulty'
 import { AiProfile } from '@/domain/ai/enums/ai-profile'
 import { Trait } from '@/domain/characters/entities/trait'
 import { Skill } from '@/domain/skills/entities/skill'
-import { SkillKitSlot } from '@/domain/skills/enums/skill-kit-slot'
-import { SkillTier } from '@/domain/skills/enums/skill-tier'
 import { NpcSquad } from '@/domain/squads/entities/npc-squad'
 import { GridPosition } from '@/domain/squads/value-objects/grid-position'
 import { unwrap } from './catalog'
@@ -61,28 +59,27 @@ const COMPOSITIONS: Record<
   },
 }
 
-const TIER_ORDER: SkillTier[] = [
-  SkillTier.FINAL,
-  SkillTier.STRONG,
-  SkillTier.REINFORCED,
-  SkillTier.STANDARD,
-  SkillTier.BASIC,
-]
-
-/**
- * Build do NPC no nível: a de função e a de assinatura do kit, mais as 2 de maior tipo já liberadas (Final, Forte,
- * Reforçada, Padrão, Básica).
- */
+/** Build do NPC no nível: as 4 primeiras skills da prioridade do personagem já liberadas (`npcPriority`). */
 export function npcBuild(character: BuiltCharacter, level: number): Skill[] {
-  const kept = character.skills.filter(
-    (s) =>
-      s.kitSlot === SkillKitSlot.ROLE || s.kitSlot === SkillKitSlot.SIGNATURE
+  const byKey = new Map(
+    character.skills.map((s) => [s.key.split(':')[1], s] as const)
   )
-  const rest = character.skills
-    .filter((s) => !kept.includes(s) && s.minLevel <= level)
-    .sort((a, b) => TIER_ORDER.indexOf(a.tier) - TIER_ORDER.indexOf(b.tier))
+  const build = character.spec.npcPriority
+    .map((key) => {
+      const skill = byKey.get(key)
+      if (!skill)
+        throw new Error(`seed: ${character.spec.key} sem a skill ${key}`)
+      return skill
+    })
+    .filter((s) => s.minLevel <= level)
+    .slice(0, 4)
+  if (build.length < 4) {
+    throw new Error(
+      `seed: ${character.spec.key} sem 4 skills no nível ${level}`
+    )
+  }
 
-  return [...rest.slice(0, 2), ...kept]
+  return build
 }
 
 /** 4 perfis × 5 dificuldades = 20 squads (`CLAUDE.md`, montagem do MVP). */

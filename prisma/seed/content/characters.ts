@@ -108,15 +108,6 @@ type Effects = (power: number) => SkillEffect[]
 
 const r2 = (x: number) => Math.round(x * 100) / 100
 
-/** Magnitude de buff/debuff por tipo (`skills_brief.md` 12.5: 10 / 15 / 20%). */
-const MODIFIER_BY_TIER: Record<SkillTier, number> = {
-  BASIC: 10,
-  STANDARD: 10,
-  REINFORCED: 15,
-  STRONG: 20,
-  FINAL: 20,
-}
-
 const damage =
   (multiplier = 1): Effects =>
   (power) => [{ type: 'DAMAGE', power: r2(power * multiplier) }]
@@ -187,6 +178,11 @@ export interface CharacterSpec {
   familyTrait?: string
   /** Traço conquistado que os NPCs desse modelo levam (liga com os campos). */
   npcTrait: string
+  /**
+   * Ordem de preferência da build dos NPCs (`key` das skills): entram as 4 primeiras já liberadas no nível. Montada à
+   * mão, como um designer faria: golpe forte, a função da classe e a assinatura.
+   */
+  npcPriority: string[]
   passive: Passive
   skills: SkillSpec[]
 }
@@ -209,6 +205,15 @@ export const CHARACTERS: CharacterSpec[] = [
     variants: ['antimateria'],
     familyTrait: 'nocthar',
     npcTrait: 'berserker',
+    npcPriority: [
+      'aniquilacao-total',
+      'salto-de-aniquilacao',
+      'intangivel',
+      'infiltracao',
+      'apagar',
+      'corte-de-antimateria',
+      'toque-do-vazio',
+    ],
     passive: {
       name: 'Aniquilação',
       description:
@@ -290,6 +295,15 @@ export const CHARACTERS: CharacterSpec[] = [
     danger: DangerLevel.DIFFERENTIABLE,
     variants: ['explosao', 'endurecimento'],
     npcTrait: 'muralha-viva',
+    npcPriority: [
+      'detonacao-total',
+      'colosso',
+      'onda-de-choque',
+      'detonacao',
+      'punho-de-aco',
+      'soco-explosivo',
+      'blindagem',
+    ],
     passive: {
       name: 'Disciplina de Guerra',
       description: 'Com HP abaixo de 50%, endurece: +15% de Defesa.',
@@ -370,6 +384,15 @@ export const CHARACTERS: CharacterSpec[] = [
     danger: DangerLevel.DIFFERENTIABLE,
     variants: ['regeneracao'],
     npcTrait: 'berserker',
+    npcPriority: [
+      'moedor-de-carne',
+      'atrito',
+      'sangue-que-volta',
+      'nao-morre',
+      'golpe-do-corpo',
+      'pancada',
+      'pele-viva',
+    ],
     passive: {
       name: 'Imortal',
       description: 'No começo de cada turno, regenera 3% do HP máximo.',
@@ -455,6 +478,15 @@ export const CHARACTERS: CharacterSpec[] = [
     variants: ['relampago', 'tempo'],
     familyTrait: 'nocthar',
     npcTrait: 'olho-de-aguia',
+    npcPriority: [
+      'instante-parado',
+      'trovao',
+      'corrente',
+      'marcar-o-instante',
+      'passo-adiante',
+      'raio',
+      'faisca',
+    ],
     passive: {
       name: 'Fluxo do Tempo',
       description: 'A cada 3 turnos dele, as recargas em andamento baixam 1.',
@@ -539,6 +571,15 @@ export const CHARACTERS: CharacterSpec[] = [
     danger: DangerLevel.NON_LINEAR,
     variants: ['gelo-superionico'],
     npcTrait: 'sangue-frio',
+    npcPriority: [
+      'superionico',
+      'zero-absoluto',
+      'congelar',
+      'grilhao',
+      'muralha-de-gelo',
+      'lanca-de-gelo',
+      'estilhaco',
+    ],
     passive: {
       name: 'Controle Absoluto',
       description: 'Ao causar dano, 20% de chance de Prender o alvo.',
@@ -628,6 +669,15 @@ export const CHARACTERS: CharacterSpec[] = [
     variants: ['sombra'],
     familyTrait: 'hyperion',
     npcTrait: 'passo-leve',
+    npcPriority: [
+      'eclipse',
+      'assassinato-silencioso',
+      'compressao',
+      'travamento',
+      'pela-sombra',
+      'golpe-da-sombra',
+      'lamina-de-sombra',
+    ],
     passive: {
       name: 'Visão Sombria',
       description: 'Ao derrubar alguém, adianta a própria vez em 30%.',
@@ -707,6 +757,15 @@ export const CHARACTERS: CharacterSpec[] = [
     danger: DangerLevel.DIFFERENTIABLE,
     variants: ['terra'],
     npcTrait: 'muralha-viva',
+    npcPriority: [
+      'coracao-da-terra',
+      'terremoto',
+      'bastiao',
+      'tremor',
+      'muralha-de-terra',
+      'martelo-de-pedra',
+      'pedrada',
+    ],
     passive: {
       name: 'Coração da CORE',
       description:
@@ -789,6 +848,15 @@ export const CHARACTERS: CharacterSpec[] = [
     danger: DangerLevel.CONTINUOUS,
     variants: ['alma'],
     npcTrait: 'mira-firme',
+    npcPriority: [
+      'sacrificio',
+      'atravessar',
+      'cacada',
+      'rastro',
+      'ferir-a-alma',
+      'tiro-da-alma',
+      'flecha-espiritual',
+    ],
     passive: {
       name: 'Primeiro a Cair',
       description: 'Com HP abaixo de 30%, +15% de Ataque.',
@@ -868,6 +936,15 @@ export const CHARACTERS: CharacterSpec[] = [
     danger: DangerLevel.CONTINUOUS,
     variants: ['ilusao'],
     npcTrait: 'sangue-frio',
+    npcPriority: [
+      'civilizacao',
+      'abrigo-ilusorio',
+      'refugio',
+      'confianca',
+      'vertigem',
+      'pesadelo',
+      'miragem',
+    ],
     passive: {
       name: 'Irmã Mais Velha',
       description: 'Ao curar, adianta a própria vez em 15%.',
@@ -951,6 +1028,15 @@ export const CHARACTERS: CharacterSpec[] = [
     danger: DangerLevel.DIFFERENTIABLE,
     variants: ['resistencia'],
     npcTrait: 'impeto',
+    npcPriority: [
+      'agora',
+      'comando',
+      'contra-ataque',
+      'postura-firme',
+      'ler-o-terreno',
+      'reposicionar-tropa',
+      'golpe-veterano',
+    ],
     passive: {
       name: 'Experiência',
       description: 'Recebe sempre 5% menos dano.',
@@ -1033,6 +1119,15 @@ export const CHARACTERS: CharacterSpec[] = [
     danger: DangerLevel.CONTINUOUS,
     variants: ['telecinese'],
     npcTrait: 'olho-de-aguia',
+    npcPriority: [
+      'queda-livre',
+      'tempestade',
+      'esmagamento',
+      'chuva-de-destrocos',
+      'puxao',
+      'projetil',
+      'arremesso',
+    ],
     passive: {
       name: 'Explosiva',
       description:
@@ -1117,6 +1212,15 @@ export const CHARACTERS: CharacterSpec[] = [
     danger: DangerLevel.DISCRETE,
     variants: [],
     npcTrait: 'muralha-viva',
+    npcPriority: [
+      'esforco',
+      'guarda-alta',
+      'escudo-humano',
+      'firmeza',
+      'investida',
+      'muralha-humana',
+      'soco-firme',
+    ],
     passive: {
       name: 'Constância',
       description: 'Com HP abaixo de 40%, recebe 15% menos dano.',
@@ -1202,15 +1306,18 @@ export interface BuiltCharacter {
 function buildSkill(
   spec: SkillSpec,
   owner: CharacterSpec,
-  variants: Map<string, Variant>
+  variants: Map<string, Variant>,
+  overrides: ContentOverrides = {}
 ): Skill {
   const target = spec.target ?? SkillTarget.ENEMY
   const area = spec.area ?? SkillArea.SINGLE
   const enemy = target === SkillTarget.ENEMY
+  const range =
+    overrides.skillRanges?.[`${owner.key}:${spec.key}`] ?? spec.range
   const ref = skillReference({
     tier: spec.tier,
     target,
-    range: enemy ? spec.range : null,
+    range: enemy ? range : null,
     area,
     isNone: spec.variant === null,
   })
@@ -1222,7 +1329,7 @@ function buildSkill(
       variant: spec.variant ? variants.get(spec.variant)! : null,
       tier: spec.tier,
       target,
-      range: enemy ? spec.range! : null,
+      range: enemy ? range! : null,
       area,
       cooldown: spec.cooldown ?? ref.cooldown,
       desgastePercent: ref.desgastePercent,
@@ -1230,15 +1337,30 @@ function buildSkill(
       minLevel: ref.minLevel,
       kitClass: spec.slot ? owner.characterClass : null,
       kitSlot: spec.slot ?? null,
-      effects: spec.effects(ref.power),
+      effects:
+        overrides.skillEffects?.[`${owner.key}:${spec.key}`] ??
+        spec.effects(ref.power),
     }),
     `skill ${owner.key}:${spec.key}`
   )
 }
 
+/** Ajustes para experimentos de balanceamento (`scripts/balance.sim.ts`): stats por classe ou por personagem. */
+export interface ContentOverrides {
+  classProfiles?: Partial<Record<CharacterClass, Partial<StatBlock>>>
+  characterStats?: Record<string, Partial<StatBlock>>
+  /** Efeitos de uma skill (`modelo:skill`), com o Poder já final. */
+  skillEffects?: Record<string, SkillEffect[]>
+  /** Alcance de uma skill (`modelo:skill`); a referência de Poder e custo é recalculada. */
+  skillRanges?: Record<string, SkillRange>
+  /** Efeitos da passiva de um personagem (`key` do modelo). */
+  passiveEffects?: Record<string, Passive['effects']>
+}
+
 export function buildCharacters(
   variants: Map<string, Variant>,
-  traits: Map<string, Trait>
+  traits: Map<string, Trait>,
+  overrides: ContentOverrides = {}
 ): BuiltCharacter[] {
   return CHARACTERS.map((spec) => {
     const template = unwrap(
@@ -1255,8 +1377,14 @@ export function buildCharacters(
           isPrimary: i === 0,
         })),
         familyTrait: spec.familyTrait ? traits.get(spec.familyTrait)! : null,
-        stats: { ...CLASS_PROFILE[spec.characterClass] },
-        passive: spec.passive,
+        stats: {
+          ...CLASS_PROFILE[spec.characterClass],
+          ...overrides.classProfiles?.[spec.characterClass],
+          ...overrides.characterStats?.[spec.key],
+        },
+        passive: overrides.passiveEffects?.[spec.key]
+          ? { ...spec.passive, effects: overrides.passiveEffects[spec.key] }
+          : spec.passive,
       }),
       `modelo ${spec.key}`
     )
@@ -1264,7 +1392,7 @@ export function buildCharacters(
     return {
       spec,
       template,
-      skills: spec.skills.map((s) => buildSkill(s, spec, variants)),
+      skills: spec.skills.map((s) => buildSkill(s, spec, variants, overrides)),
     }
   })
 }
