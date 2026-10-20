@@ -536,7 +536,7 @@ const attack = conditions.effectiveStat(Stat.ATTACK, desgaste.stat(Stat.ATTACK))
 | Movimento | Regra |
 |---|---|
 | Mover (ação) | só para célula **adjacente e vazia**; custa o turno |
-| Trocar com aliado (ação) | os dois perdem a ação (D42); pelo Tático, nenhum perde (D102) |
+| Trocar com aliado (ação) | só com aliado **adjacente** (D120); os dois perdem a ação (D42); pelo Tático, nenhum perde (D102) |
 | Empurrar (skill) | o alvo vai para o **fundo** (coluna +1), na mesma linha |
 | Puxar (skill) | o alvo vem para a **frente** (coluna −1), na mesma linha |
 | Avançar/recuar (DASH, skill) | quem usa vai para uma célula adjacente e vazia |
@@ -654,7 +654,7 @@ dos Guardiões de cada lado é sorteada pela seed (D102).
 |---|---|
 | `SKILL` | resolve a skill (abaixo) |
 | `MOVE` | move para célula adjacente e vazia (3.8) |
-| `SWAP` | troca com um aliado; **o aliado perde a próxima ação** (D42) |
+| `SWAP` | troca com um aliado **adjacente** (D120); **o aliado perde a próxima ação** (D42) |
 | `DEFEND` | +50% de Defesa e alívio de 10% (3.8) |
 
 **Resolução de uma skill:**
@@ -805,10 +805,11 @@ batalha reproduzida sairia diferente. Continua determinística (D90): mesma seed
 
 1. **Gerar as ações legais** (`generateCandidates`): cada skill pronta em cada célula que dá um conjunto diferente de
    alvos, com as escolhas extras (com quem trocar o inimigo, para onde avançar ou mover o aliado, qual campo); mover para
-   célula adjacente vazia; trocar com um aliado; Defender (sempre existe).
+   célula adjacente vazia; trocar com um aliado adjacente; Defender (sempre existe).
 2. **Prévia** (`engine.previewSkill`): o motor calcula o que a skill faria em cada alvo (chance de acerto, dano, cura,
-   escudo, chance de status, buff, atraso), **sem mudar nada e sem usar a Rng**. É a mesma conta da ação de verdade.
-   Não prevê o Interceptar.
+   escudo, chance de status, buff, atraso, recuperação), **sem mudar nada e sem usar a Rng**. É a mesma conta da ação de
+   verdade. **Já mostra o golpe desviado pelo Interceptar** (Guardião adjacente, uma vez por rodada; a prévia não gasta
+   o Interceptar).
 3. **Fatores** (`scoreFactors`, 10.1), em "% de HP equivalente ÷ 25", teto 1:
    - **Dano:** chance × dano (limitado à vida + escudo do alvo) em % do HP máximo, somando os alvos.
    - **Abate:** (dano esperado ÷ vida + escudo)², somando os alvos, teto 1.
@@ -816,7 +817,8 @@ batalha reproduzida sairia diferente. Continua determinística (D90): mesma seed
    - **Risco** (subtrai): 50% × (custo do Desgaste ÷ folga, teto 1) + 50% × "HP baixo e ação ofensiva", + 0,10 da skill
      forte (abaixo).
    - **Defesa/cura/status:** tabela do 10.1 (cura e escudo × (1 + o que falta de vida); status × chance; buff/debuff 0,3
-     por ponto; adiantar/atrasar X% × 11; Defender 4; mover/trocar 2).
+     por ponto; adiantar/atrasar X% × 11; Defender 4; mover/trocar 2; recuperação: fração aliviada em pontos % × 0,3,
+     como buff).
    - **Situação:** `s × abate − s × defesa`, com `s` = HP% aliado − HP% inimigo.
 4. **Nota** = soma ponderada pelo perfil, **só dos fatores que o nível enxerga** (os outros valem 0).
 5. **Normaliza** (min-max), soma o **bônus de proteção** do log, **corta** abaixo de 0,2 e **sorteia** com

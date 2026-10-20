@@ -43,7 +43,8 @@ export class InterceptState {
   intercept(
     attack: InterceptAttack,
     guardians: readonly InterceptCandidate[],
-    round: number
+    round: number,
+    options: { dryRun?: boolean } = {}
   ): string | undefined {
     if (!canBeIntercepted(attack)) return undefined
 
@@ -56,7 +57,9 @@ export class InterceptState {
         this.usedInRound.get(g.ref) !== round
     )
 
-    if (interceptor) this.usedInRound.set(interceptor.ref, round)
+    // dryRun: só prevê (a IA, `engine.md` 3.13), sem gastar o Interceptar da rodada
+    if (interceptor && !options.dryRun)
+      this.usedInRound.set(interceptor.ref, round)
 
     return interceptor?.ref
   }

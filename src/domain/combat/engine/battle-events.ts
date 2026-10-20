@@ -24,6 +24,8 @@ export type BattleEvent =
     }
   | { type: 'HEAL'; ref: string; targetRef: string; amount: number }
   | { type: 'SHIELD'; ref: string; targetRef: string; amount: number }
+  /** Skill de recuperação: `relieved` = fração do Desgaste aliviada (soma das frações dos stats). */
+  | { type: 'RECOVER'; ref: string; targetRef: string; relieved: number }
   | {
       type: 'MODIFIER'
       targetRef: string

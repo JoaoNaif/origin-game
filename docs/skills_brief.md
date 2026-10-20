@@ -327,7 +327,7 @@ alcance, área), não só o número.
 | **Buff no mesmo stat** | Soma direto (D37), sem regra nova |
 | **Cura** | Remove uma parte **menor** do Desgaste acumulado (~20%), para o Suporte não anular o custo (D13) |
 | **Defender** | Remove um valor pequeno (~10%) |
-| **Skill de recuperação** | Remove mais (~50%); marca de skill de Suporte |
+| **Skill de recuperação** | Remove **50%**, inclusive o HP máximo da Fundamental (efeito `RECOVER`, D120); marca de skill de Suporte |
 
 **Exceções:** Fundamental reduz o **HP máximo**: cura não recupera (D59), só buff de HP máximo ou skill específica.
 Elemental reduz o **HP atual**: a cura desfaz. Se o HP máximo cai abaixo do atual, o atual é cortado para o novo
@@ -414,7 +414,7 @@ os **valores** dos stats. Bloqueiam: valores da tabela 9.4, queda de dano (9.3),
 ### 10.4 Reposicionamento [ENRAIZADO]
 
 - Mover só para **célula adjacente**, e custa a ação do turno.
-- **Trocar com um aliado:** os **dois perdem a ação**.
+- **Trocar com um aliado:** só com aliado **adjacente** (D120), e os **dois perdem a ação**.
 - **Skills que reposicionam** (empurrar, puxar, trocar) existem e são uma peça estratégica.
 - **Não pode** empurrar para célula ocupada nem para fora da grade: o movimento é barrado, mas **o resto da skill
   (dano etc.) acontece normalmente**.

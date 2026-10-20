@@ -30,6 +30,8 @@ export type SkillEffect = EffectBase &
       }
     | { type: 'TURN_SHIFT'; percent: number }
     | { type: 'CHANGE_FIELD'; duration: number; multiplier: number }
+    /** Skill de recuperação (9.4b, D120): alivia 50% do Desgaste acumulado, incluindo o HP máximo da Fundamental. */
+    | { type: 'RECOVER' }
   )
 
 export type SkillEffectType = SkillEffect['type']

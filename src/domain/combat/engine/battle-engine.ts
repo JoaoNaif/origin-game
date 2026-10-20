@@ -27,7 +27,11 @@ import {
   healMultiplier,
   SideSummary,
 } from '../services/battle-end'
-import { BattleGrid, FORCED_MOVE_BASE_CHANCE } from '../services/battle-grid'
+import {
+  BattleGrid,
+  FORCED_MOVE_BASE_CHANCE,
+  isAdjacent,
+} from '../services/battle-grid'
 import { STATUS_RULES, UnitConditions } from '../services/conditions'
 import { SkillCooldowns } from '../services/cooldowns'
 import {
@@ -107,6 +111,8 @@ export type PreviewEffect =
     }
   | { type: 'TURN_SHIFT'; percent: number }
   | { type: 'CHANGE_FIELD' }
+  /** Fração do Desgaste que a recuperação aliviaria. */
+  | { type: 'RECOVER'; relieved: number }
 
 export interface PreviewHit {
   ref: string
@@ -255,7 +261,7 @@ export class BattleEngine {
 
   /**
    * Prévia de uma skill para a IA (`engine.md` 3.13): valida e calcula o que ela faria em cada alvo, **sem mudar nada
-   * e sem usar a Rng** (chances viram números, não sorteios). Não prevê o Interceptar.
+   * e sem usar a Rng** (chances viram números, não sorteios). Já mostra o golpe desviado pelo Interceptar.
    */
   previewSkill(
     actorRef: string,
@@ -277,7 +283,8 @@ export class BattleEngine {
         cost: own.requested,
         slack: actor.desgaste.slack(own.target, actor.hp),
       },
-      hits: hits
+      // o Interceptar é previsível (Guardião adjacente, uma vez por rodada): a prévia já mostra o golpe desviado
+      hits: this.applyIntercept(skill, hits, payload.target, true)
         .filter((hit) => this.get(hit.ref).alive)
         .map((hit) =>
           this.previewHit(actor, this.get(hit.ref), skill, potency, hit, round)
@@ -365,6 +372,11 @@ export class BattleEngine {
             }
           case 'CHANGE_FIELD':
             return { type: 'CHANGE_FIELD' }
+          case 'RECOVER':
+            return {
+              type: 'RECOVER',
+              relieved: target.desgaste.totalFraction() * RELIEF.RECOVERY_SKILL,
+            }
         }
       })
 
@@ -507,6 +519,16 @@ export class BattleEngine {
           ally.ref === actor.ref
         ) {
           return left(new InvalidActionError('troca só com aliado vivo'))
+        }
+        if (
+          !isAdjacent(
+            this.grids[actor.side].positionOf(actor.ref),
+            this.grids[actor.side].positionOf(ally.ref)
+          )
+        ) {
+          return left(
+            new InvalidActionError('troca só com aliado adjacente (D120)')
+          )
         }
         const swapped = this.grids[actor.side].swap(actor.ref, ally.ref, {
           a: actor.conditions.canBeMoved,
@@ -672,7 +694,8 @@ export class BattleEngine {
   private applyIntercept(
     skill: SnapshotSkill,
     hits: TargetHit[],
-    cell: GridPosition
+    cell: GridPosition,
+    dryRun = false
   ): TargetHit[] {
     if (skill.target !== SkillTarget.ENEMY || hits.length !== 1) return hits
 
@@ -696,11 +719,18 @@ export class BattleEngine {
         area: skill.area,
       },
       guardians,
-      this.queue.currentRound
+      this.queue.currentRound,
+      { dryRun }
     )
     if (!guardianRef) return hits
 
-    this.log.push({ type: 'INTERCEPT', guardianRef, protectedRef: target.ref })
+    if (!dryRun) {
+      this.log.push({
+        type: 'INTERCEPT',
+        guardianRef,
+        protectedRef: target.ref,
+      })
+    }
 
     return [{ ref: guardianRef, falloff: hits[0].falloff }]
   }
@@ -884,6 +914,20 @@ export class BattleEngine {
           effect.multiplier
         )
         return
+
+      case 'RECOVER': {
+        // alivia 50% de todo o Desgaste, inclusive o HP máximo perdido pela Fundamental (9.4b, D59, D120)
+        const before = target.desgaste.totalFraction()
+        target.desgaste.relieve(RELIEF.RECOVERY_SKILL, { includeMaxHp: true })
+        this.log.push({
+          type: 'RECOVER',
+          ref: actor.ref,
+          targetRef: target.ref,
+          relieved: before - target.desgaste.totalFraction(),
+        })
+        this.refreshSpeeds()
+        return
+      }
     }
   }
 

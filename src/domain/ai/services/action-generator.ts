@@ -3,7 +3,7 @@ import {
   BattleEngine,
   SkillPreview,
 } from '@/domain/combat/engine/battle-engine'
-import { adjacentCells } from '@/domain/combat/services/battle-grid'
+import { adjacentCells, isAdjacent } from '@/domain/combat/services/battle-grid'
 import { BattleActionPayload } from '@/domain/combat/value-objects/battle-action'
 import { SkillArea } from '@/domain/skills/enums/skill-area'
 import { SkillTarget } from '@/domain/skills/enums/skill-target'
@@ -93,7 +93,13 @@ export function generateCandidates(
     }
 
     for (const ref of engine.aliveRefs(actor.side)) {
-      if (ref !== actorRef && engine.unit(ref).canBeMoved) {
+      const ally = engine.unit(ref)
+      if (
+        ref !== actorRef &&
+        ally.canBeMoved &&
+        ally.position &&
+        isAdjacent(actor.position!, ally.position)
+      ) {
         candidates.push({
           payload: { type: 'SWAP', withRef: ref },
           preview: null,

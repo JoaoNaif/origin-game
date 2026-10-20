@@ -203,6 +203,10 @@ function allyValue(engine: BattleEngine, hit: PreviewHit): number {
       case 'REPOSITION':
         value += MOVE_VALUE
         break
+      case 'RECOVER':
+        // fração aliviada em pontos percentuais de stat, como os buffs (D120)
+        value += effect.relieved * 100 * MODIFIER_VALUE_PER_PERCENT
+        break
     }
   }
 

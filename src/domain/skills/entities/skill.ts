@@ -213,6 +213,10 @@ function validate(
       }
     }
 
+    if (effect.type === 'RECOVER' && props.target === SkillTarget.ENEMY) {
+      return 'recuperação só em aliado ou em si mesmo'
+    }
+
     if (effect.type === 'APPLY_STATUS' && !isProbability(effect.baseChance)) {
       return 'chance de status entre 0 e 1'
     }
