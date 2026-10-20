@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-> O **design de jogo está fechado até o D114** (regras e valores iniciais do MVP). A estrutura de código abaixo ainda é
+> O **design de jogo está fechado até o D116** (regras e valores iniciais do MVP). A estrutura de código abaixo ainda é
 > rascunho e pode mudar. **Setup feito** (Nest, Vitest, ESLint, Prisma sem modelos); o motor de combate ainda não foi escrito.
 > Contexto permanente do projeto para o Claude. Leia antes de mexer em qualquer coisa.
 
@@ -15,7 +15,7 @@ e **escrever a resposta no doc**. Não inventar regra de combate.
 
 ## Estado atual
 
-Só documentação, mas **as regras e os valores iniciais estão fechados** (registro das decisões D1 a D114 em
+Só documentação, mas **as regras e os valores iniciais estão fechados** (registro das decisões D1 a D116 em
 [`docs/game_design.md`](./docs/game_design.md)). Combate: fila em barra de ação (0 a 1000, Velocidade soma por tick),
 grade 3x3, 4 personagens com 4 skills cada, 7 stats, fórmula de dano `Poder × Ataque² / (Ataque + Defesa)`, Desgaste
 como risco x retorno (piso de 80%), vitória por eliminação ou % de HP na rodada 30. Os valores são **placeholders

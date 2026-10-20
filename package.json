@@ -22,7 +22,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "services:up": "docker compose up -d",
-    "services:down": "docker compose down"
+    "services:down": "docker compose down",
+    "db:seed": "prisma db seed"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -45,10 +46,14 @@
     "globals": "^15.14.0",
     "prettier": "^3.4.2",
     "prisma": "^6.3.1",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.20.0",
     "unplugin-swc": "^1.5.1",
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^3.0.4"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }

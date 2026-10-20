@@ -997,12 +997,59 @@ BattleField.create({ ...forest, requiredTraits: [warrior, berserker] })
 ---
 
 
-## 4. Próximos passos
+## 4. Seed do MVP (conteúdo)
 
-Os **12 modelos do MVP estão feitos** (o 12º, o campo de batalha, entrou com o motor). Falta:
+Código: `prisma/seed/content/` (o conteúdo, criado pelas entidades do domínio e validado por elas) e `prisma/seed.ts`
+(grava no banco). Rodar: `npm run db:seed` (precisa do Postgres e da migração). Idempotente: atualiza pela `key` e
+recria as ligações. O simulador usa o mesmo conteúdo sem banco (`loadSeedContent()`).
 
-1. **Primeira migração** (`npm run services:up` e `npm run prisma:migrate`), quando o Postgres estiver rodando.
-2. **Montar o snapshot** a partir de `Character` + `Squad` (jogador) e `NpcSquad` (máquina): serviço de domínio, junto
-   com o cálculo de stats do motor.
-3. **Mapeadores** do Prisma para o domínio (em `infra/`), validando os JSONs na borda.
-4. **Motor de combate** (fatias em `CLAUDE.md`), **IA** e o **simulador** para calibrar.
+**Variantes (13):** antimatéria, tempo e alma (Fundamental); relâmpago, gelo superiônico (Elemental); explosão
+(Vetorial); endurecimento, terra (Material); regeneração, resistência (Biológica); sombra, ilusão, telecinese (Psíquica).
+
+**Personagens (12).** Stats = perfil da classe (`classes_brief.md` 2). Passivas do Ecko e do Lucky vêm do usuário; as
+outras 10 foram propostas e aprovadas (D116), placeholder de valor.
+
+| Personagem | Classe | Variantes | Raridade | Família | Passiva |
+|---|---|---|---|---|---|
+| Ecko Nocthar | Executor | antimatéria | SS | Nocthar | **Aniquilação:** todo dano ignora escudo |
+| Kael Vaz | Vanguarda | explosão + endurecimento | A | | **Disciplina de Guerra:** HP < 50%, +15% Defesa |
+| Derik Okoro | Vanguarda | regeneração | A | | **Imortal:** início do turno, cura 3% do HP máx. |
+| Lucky | Atirador | relâmpago + tempo | SS | Nocthar | **Fluxo do Tempo:** a cada 3 turnos, recargas −1 |
+| Sunna | Controlador | gelo superiônico | S | | **Controle Absoluto:** ao causar dano, 20% de Prender |
+| Nox | Executor | sombra | A | Hyperion | **Visão Sombria:** ao derrubar, adianta a vez 30% |
+| Gaia | Guardião | terra | A | | **Coração da CORE:** ao ser atingida, +10% Defesa |
+| Rolf Eidvar | Atirador | alma | B | | **Primeiro a Cair:** HP < 30%, +15% Ataque |
+| Kara | Suporte | ilusão | B | | **Irmã Mais Velha:** ao curar, adianta a vez 15% |
+| Tyir Ossvald | Tático | resistência | A | | **Experiência:** sempre 5% menos dano |
+| Isis Maccarthy | Artilharia | telecinese | B | | **Explosiva:** ao pagar Desgaste, +10% Velocidade |
+| Tank Valen | Guardião | sem variante | C | | **Constância:** HP < 40%, 15% menos dano |
+
+**Skills (84):** 7 por personagem, todas com os números de `skillReference` (tipo + forma, D92, D108, D109) e acerto
+base 0,8. Kit básico (nível 0): Básica, Padrão, Função da classe, Assinatura (0,8 do Poder + efeito pequeno). Pool:
+Reforçada (nível 20), Forte (40) e Final (60). Juntas cobrem as 8 classes, as 7 linhagens (incluindo none), os 4
+alcances, as 4 áreas, os 6 status, cura, escudo, buff, debuff, adiantar/atrasar e empurrar/puxar.
+
+**Traços (9):** Nocthar (família, +3% Ataque e Velocidade, qualquer variante) e Hyperion (família da sombra, +5%
+Esquiva); conquistados: Berserker e Olho de Águia (+10% de dano corpo a corpo / à distância), Mira Firme, Muralha Viva,
+Sangue Frio, Passo Leve, Ímpeto (+5% em um stat).
+
+**Campos (6, 3 traços cada):** Arena, Floresta, Fortaleza, Planície Aberta, Ruínas de Carmesin, Noite sem Lua
+(+6% / +4%, D98).
+
+**Squads de NPC (20):** 4 composições (uma por perfil) × 5 dificuldades, no meio da faixa de nível do D103 (18, 35, 58,
+80 e 95). Build: Função + Assinatura + as 2 skills de maior tipo já liberadas. Traços: a família (se tiver) + 1
+conquistado.
+
+| Perfil | Squad | Frente (coluna 0) | Atrás |
+|---|---|---|---|
+| Agressivo | Trindade | Kael, Ecko, Derik | Isis |
+| Cauteloso | Muralha da CORE | Gaia, Tank | Rolf, Kara |
+| Focado em abater | Caçada | Nox, Tyir | Lucky, Sunna |
+| Equilibrado | CORE | Gaia, Kael | Lucky, Kara |
+
+## 5. Próximos passos
+
+1. **Migração** dos campos (`battle_fields`) e **seed** no banco: `npm run services:up`, `npm run prisma:migrate`,
+   `npm run db:seed` (Docker desligado na última sessão).
+2. **Mapeadores** do Prisma para o domínio (em `infra/`), validando os JSONs na borda.
+3. **Calibração** da IA com as squads do seed (`engine.md` 3.14).
