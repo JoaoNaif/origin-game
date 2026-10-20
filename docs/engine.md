@@ -32,7 +32,7 @@
 | 10b | Passivas dos personagens (executar os gatilhos e efeitos do D83) | **feito** |
 | 10c | Campo de batalha no snapshot e no motor (D98) | **feito** |
 | 11 | IA da máquina (D90, D103, D114) | **feito** |
-| 12 | Simulador IA contra IA (calibração) | a fazer |
+| 12 | Simulador IA contra IA (calibração) | **feito** (calibração em andamento, 3.14) |
 
 ---
 
@@ -838,3 +838,20 @@ nunca é sorteado.
 | 5 | Onde entra o bônus do log | **Depois** da normalização (soma na nota', antes do corte) |
 | 6 | "Skill forte" e "exposto" do +0,10 | Forte, Final ou despertada, já vista e pronta; exposto = frente da linha ou com Exposto; vale só para ação de skill (mover, trocar e Defender tiram o risco) |
 | 7 | Ameaça | Multiplicada pela chance de acerto no alvo |
+
+### 3.14 Simulador IA contra IA (calibração)
+
+Código: `src/domain/ai/simulation/` (`simulateBattle`, `runMatchup`), script `scripts/calibrate.sim.ts`, squad
+`test/factories/make-calibration-snapshot.ts`.
+
+- **`simulateBattle(snapshot, seed, setups)`:** uma batalha inteira IA contra IA. Devolve vencedor, motivo, rodada e as
+  ações no formato do log (`BattleActionRecord`), então a batalha simulada pode ser reproduzida pelo replay.
+- **`runMatchup`:** o mesmo confronto em N seeds, **trocando de lado a cada batalha** (A é PLAYER nas pares e OPPONENT
+  nas ímpares), para tirar a vantagem de lado da medida.
+- **Squad de calibração:** espelhada (os dois lados iguais, como pede o 10.4), nível 50: Guardião e Vanguarda na frente,
+  Atirador e Suporte atrás. Cobre dano único, linha, atordoar, marcar, veneno, cura, escudo e buffs, com os valores do
+  `skills_brief.md` 12. Quando o `seed.ts` existir, a calibração passa a usar as squads de NPC de verdade.
+
+**Rodar:** `npm run simulate` (fora do `npm test`, leva alguns minutos). Variáveis: `SIM_BATTLES` (padrão 100),
+`SIM_LEVEL` (padrão 50), `SIM_SECTIONS` (`mirror,gap1,gap2,gap4,profiles`) e `SIM_OVERRIDES` (JSON com pesos ou regras
+de nível, para testar valores sem mudar o código).

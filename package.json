@@ -23,6 +23,7 @@
     "prisma:studio": "prisma studio",
     "services:up": "docker compose up -d",
     "services:down": "docker compose down",
+    "simulate": "vitest run --config vitest.sim.config.ts",
     "db:seed": "prisma db seed"
   },
   "dependencies": {
