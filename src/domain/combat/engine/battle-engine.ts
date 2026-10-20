@@ -46,7 +46,12 @@ import { DesgasteState, RELIEF } from '../services/desgaste'
 import { hitChance, roll, statusChance } from '../services/hit'
 import { InterceptState } from '../services/intercept'
 import { resolveTargets, TargetHit } from '../services/targeting'
-import { statAverage, Turn, TurnQueue } from '../services/turn-queue'
+import {
+  ACTION_BAR_MAX,
+  statAverage,
+  Turn,
+  TurnQueue,
+} from '../services/turn-queue'
 import { BattleEvent } from './battle-events'
 
 /** Estado de uma unidade durante a batalha. */
@@ -154,6 +159,11 @@ export class BattleEngine {
   private current: Turn | null = null
   private result: BattleOutcome | null = null
   private readonly log: BattleEvent[] = []
+  /** Dano causado por lado nos inimigos (HP + escudo), para o resumo do fim da batalha. */
+  private readonly damageDealt: Record<BattleSide, number> = {
+    PLAYER: 0,
+    OPPONENT: 0,
+  }
   /** O que a skill em resolução fez (para os gatilhos de passiva depois dela). */
   private action = {
     damaged: [] as EngineUnit[],
@@ -367,8 +377,7 @@ export class BattleEngine {
           case 'TURN_SHIFT':
             return {
               type: 'TURN_SHIFT',
-              percent:
-                effect.percent < 0 && target.delayImmune ? 0 : effect.percent,
+              percent: this.effectiveShift(target, effect.percent),
             }
           case 'CHANGE_FIELD':
             return { type: 'CHANGE_FIELD' }
@@ -432,6 +441,8 @@ export class BattleEngine {
       if (start.dotDamage > 0) {
         const damage = applyDamage(start.dotDamage, unit)
         this.setHp(unit, damage.hpLeft, damage.shieldLeft)
+        this.damageDealt[other(unit.side)] +=
+          damage.hpLost + damage.shieldAbsorbed
         this.log.push({ type: 'DOT', ref: unit.ref, amount: start.dotDamage })
       }
 
@@ -772,6 +783,7 @@ export class BattleEngine {
           shieldAbsorbed: result.shieldAbsorbed,
         })
         if (target.side !== actor.side) {
+          this.damageDealt[actor.side] += result.hpLost + result.shieldAbsorbed
           this.action.damaged.push(target)
           if (!target.alive) this.action.killed.push(target)
           else this.firePassive(target, 'ON_HIT', { attacker: actor })
@@ -929,6 +941,19 @@ export class BattleEngine {
         return
       }
     }
+  }
+
+  /**
+   * Quanto o adiantar/atrasar move de fato a barra do alvo, em %: a barra fica entre 0 e 1000 (D102), então adiantar
+   * quem já está perto da vez desperdiça o resto; o atraso respeita a imunidade até agir.
+   */
+  private effectiveShift(target: EngineUnit, percent: number): number {
+    if (percent < 0 && target.delayImmune) return 0
+    const gauge = (this.queue.gaugeOf(target.ref) / ACTION_BAR_MAX) * 100
+
+    return percent > 0
+      ? Math.min(percent, Math.max(0, 100 - gauge))
+      : Math.max(percent, -gauge)
   }
 
   /** Dano de um efeito DAMAGE num alvo, antes do escudo (ordem do D68). */
@@ -1100,6 +1125,7 @@ export class BattleEngine {
         startingMaxHp: u.startingMaxHp,
       })),
       desgaste: units.reduce((sum, u) => sum + u.desgaste.totalFraction(), 0),
+      damageDealt: this.damageDealt[side],
     }
   }
 

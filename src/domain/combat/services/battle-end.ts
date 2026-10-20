@@ -34,6 +34,8 @@ export interface SideSummary {
   units: readonly { hp: number; startingMaxHp: number }[]
   /** Desgaste acumulado do lado (soma de `DesgasteState.totalFraction`). */
   desgaste: number
+  /** Dano que o lado causou nos inimigos (HP + escudo; curas não descontam). */
+  damageDealt?: number
 }
 
 export interface BattleOutcome {
