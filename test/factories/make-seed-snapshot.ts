@@ -3,13 +3,17 @@ import {
   buildNpcSide,
   SnapshotCatalog,
 } from '@/domain/combat/services/build-snapshot'
-import { BattleSnapshot } from '@/domain/combat/value-objects/battle-snapshot'
+import {
+  BattleSnapshot,
+  SnapshotFieldSetup,
+} from '@/domain/combat/value-objects/battle-snapshot'
 import { NpcSquad } from '@/domain/squads/entities/npc-squad'
 
 /** Foto com a mesma squad de NPC dos dois lados (calibração "mesmo squad", `pvp_brief.md` 10.4). */
 export function makeMirrorSnapshot(
   npcSquad: NpcSquad,
-  catalog: SnapshotCatalog
+  catalog: SnapshotCatalog,
+  field: SnapshotFieldSetup = { initial: null, catalog: [] }
 ): BattleSnapshot {
   const side = buildNpcSide({ npcSquad, catalog })
   if (side.isLeft()) throw side.value
@@ -26,6 +30,6 @@ export function makeMirrorSnapshot(
       })),
     },
     opponent,
-    field: { initial: null, catalog: [] },
+    field,
   }
 }

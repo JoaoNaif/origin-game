@@ -5,6 +5,7 @@ import { MatchupResult, runMatchup } from '@/domain/ai/simulation/run-matchup'
 import { AiSetup } from '@/domain/ai/simulation/simulate-battle'
 import { makeCalibrationSnapshot } from 'test/factories/make-calibration-snapshot'
 import { makeMirrorSnapshot } from 'test/factories/make-seed-snapshot'
+import { toSnapshotField } from '@/domain/combat/services/build-snapshot'
 import { loadSeedContent } from '../prisma/seed/content'
 import { afterAll, describe, it } from 'vitest'
 
@@ -38,7 +39,19 @@ const snapshots =
         const content = loadSeedContent()
         return content.npcSquads
           .filter((s) => s.difficulty === SQUAD_DIFFICULTY)
-          .map((s) => makeMirrorSnapshot(s, content.catalog))
+          .map((s) => {
+            // campo inicial a cada par de batalhas (os dois lados no mesmo campo), girando pelos 6 do seed
+            const fields = content.fields.map((f) => {
+              const field = toSnapshotField(f, content.catalog.traits)
+              if (field.isLeft()) throw field.value
+              return field.value
+            })
+            return (seed: number) =>
+              makeMirrorSnapshot(s, content.catalog, {
+                initial: fields[Math.floor((seed - 1) / 2) % fields.length],
+                catalog: fields,
+              })
+          })
       })()
 
 if (process.env.SIM_OVERRIDES) {

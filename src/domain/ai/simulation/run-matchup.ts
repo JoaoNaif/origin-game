@@ -3,7 +3,8 @@ import { BattleSnapshot } from '@/domain/combat/value-objects/battle-snapshot'
 import { AiSetup, simulateBattle } from './simulate-battle'
 
 export interface MatchupInput {
-  snapshot: BattleSnapshot
+  /** A foto, ou uma função da seed (ex.: para variar o campo de batalha a cada par de batalhas). */
+  snapshot: BattleSnapshot | ((seed: number) => BattleSnapshot)
   a: AiSetup
   b: AiSetup
   /** Quantas batalhas (seeds `firstSeed`, `firstSeed + 1`...). */
@@ -38,7 +39,12 @@ export function runMatchup(input: MatchupInput): MatchupResult {
         ? { PLAYER: input.a, OPPONENT: input.b }
         : { PLAYER: input.b, OPPONENT: input.a }
 
-    const battle = simulateBattle(input.snapshot, firstSeed + i, setups)
+    const seed = firstSeed + i
+    const snapshot =
+      typeof input.snapshot === 'function'
+        ? input.snapshot(seed)
+        : input.snapshot
+    const battle = simulateBattle(snapshot, seed, setups)
     if (battle.winner === aSide) winsA += 1
     if (battle.reason === 'ELIMINATION') eliminations += 1
     rounds += battle.round

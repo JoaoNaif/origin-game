@@ -170,6 +170,8 @@ interface SkillSpec {
   target?: SkillTarget
   range?: SkillRange
   area?: SkillArea
+  /** Foge da referência do tipo (ex.: trocar campo tem tabela própria, 12.7). */
+  cooldown?: number
   effects: Effects
 }
 
@@ -265,7 +267,8 @@ export const CHARACTERS: CharacterSpec[] = [
         variant: 'antimateria',
         tier: STRONG,
         range: FLANK,
-        effects: damage(),
+        // golpeia pelo flanco e avança para uma célula adjacente
+        effects: damageWith(1, { type: 'REPOSITION', kind: 'DASH' }),
       },
       {
         key: 'aniquilacao-total',
@@ -906,7 +909,8 @@ export const CHARACTERS: CharacterSpec[] = [
         tier: STANDARD,
         slot: K.SIGNATURE,
         range: RANGED,
-        effects: damageWith(0.8, modifier(Stat.PRECISION, -10)),
+        // a ilusão troca o alvo de lugar com um inimigo adjacente (D111)
+        effects: damageWith(0.8, { type: 'REPOSITION', kind: 'SWAP' }),
       },
       {
         key: 'abrigo-ilusorio',
@@ -914,7 +918,8 @@ export const CHARACTERS: CharacterSpec[] = [
         variant: 'ilusao',
         tier: REINFORCED,
         target: ALLY,
-        effects: heal,
+        // skill de recuperação (9.4b, D120): cura e alivia 50% do Desgaste
+        effects: (power) => [{ type: 'HEAL', power }, { type: 'RECOVER' }],
       },
       {
         key: 'confianca',
@@ -990,20 +995,23 @@ export const CHARACTERS: CharacterSpec[] = [
         effects: damageWith(0.8, modifier(Stat.DEFENSE, 10, 'SELF')),
       },
       {
-        key: 'ordem-de-avanco',
-        name: 'Ordem de Avanço',
+        key: 'reposicionar-tropa',
+        name: 'Reposicionar Tropa',
         variant: 'resistencia',
         tier: REINFORCED,
         target: ALLY,
-        effects: only({ type: 'TURN_SHIFT', percent: 70 }),
+        // move um aliado para uma célula adjacente (ou troca com quem está lá), sem custar a ação dele (12.8)
+        effects: only({ type: 'REPOSITION', kind: 'MOVE_ALLY' }),
       },
       {
-        key: 'manobra',
-        name: 'Manobra',
+        key: 'ler-o-terreno',
+        name: 'Ler o Terreno',
         variant: 'resistencia',
         tier: STRONG,
-        range: RANGED,
-        effects: only({ type: 'TURN_SHIFT', percent: -55 }),
+        target: SELF,
+        // troca o campo (12.7): Forte = 2 rodadas, bônus ×1,5, cooldown 4
+        cooldown: 4,
+        effects: only({ type: 'CHANGE_FIELD', duration: 2, multiplier: 1.5 }),
       },
       {
         key: 'agora',
@@ -1216,7 +1224,7 @@ function buildSkill(
       target,
       range: enemy ? spec.range! : null,
       area,
-      cooldown: ref.cooldown,
+      cooldown: spec.cooldown ?? ref.cooldown,
       desgastePercent: ref.desgastePercent,
       baseHitChance: enemy ? 0.8 : null,
       minLevel: ref.minLevel,

@@ -991,3 +991,23 @@ reabrir quando houver mais personagens ou jogo humano.
 A eliminação subiu para **58% a 75%** (meta 60–70%). Os perfis seguem perto da meta. A escada de níveis desalinhou: o
 Avançado ficou forte demais contra o Intermediário e o Grão-mestre não ganha mais do Mestre. **Pendente:** reajustar as
 temperaturas (Intermediário e Mestre) com as regras novas.
+
+**Campos no simulador:** a calibração passa a girar o campo inicial pelos 6 do seed (um campo por par de batalhas, os
+dois lados no mesmo). Numa squad espelhada, **trocar o campo vale zero** para a IA (o bônus muda igual para os dois
+lados), então o Tyir não usa Ler o Terreno na calibração; isso é correto. Uso das mecânicas novas em 24 batalhas:
+recuperação 202 vezes, Vertigem (trocar inimigos) 365, Salto de Aniquilação 11, Interceptar 337.
+
+**Limite anotado:** a IA dá valor a empurrar/puxar mesmo quando o movimento vai ser barrado (240 barrados em 482);
+melhoria futura: zerar o valor quando a célula de destino está ocupada.
+
+**Temperatura com as regras novas (D119, D120, campos), 100 batalhas por confronto:**
+
+| Confronto | Atual (0,6 / 0,35 / 0,18 / 0,1 / 0) | T1 (Intermediário 0,28, Mestre 0,14) | Meta |
+|---|---|---|---|
+| Intermediário x Iniciante | 61% | 70% | ~65% |
+| Avançado x Intermediário | 71% | 66% | ~65% |
+| Mestre x Avançado | 61% | 61% | ~65% |
+| Grão-mestre x Mestre | 50% | 63% | ~65% |
+| Dois níveis acima | 73% a 82% | 73% a 82% | ~80% |
+| Grão-mestre x Iniciante | 92% | 92% | ≥95% |
+| Perfis (Mestre) | | 41% a 55% | 45–55% |

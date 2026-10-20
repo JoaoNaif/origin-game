@@ -1027,7 +1027,10 @@ outras 10 foram propostas e aprovadas (D116), placeholder de valor.
 **Skills (84):** 7 por personagem, todas com os números de `skillReference` (tipo + forma, D92, D108, D109) e acerto
 base 0,8. Kit básico (nível 0): Básica, Padrão, Função da classe, Assinatura (0,8 do Poder + efeito pequeno). Pool:
 Reforçada (nível 20), Forte (40) e Final (60). Juntas cobrem as 8 classes, as 7 linhagens (incluindo none), os 4
-alcances, as 4 áreas, os 6 status, cura, escudo, buff, debuff, adiantar/atrasar e empurrar/puxar.
+alcances, as 4 áreas, os 6 status, cura, escudo, buff, debuff, adiantar/atrasar, empurrar/puxar e as mecânicas mais
+raras: **avançar** (Salto de Aniquilação, Ecko), **trocar inimigos** (Vertigem, Kara), **recuperação** (Abrigo Ilusório,
+Kara, D120), **mover aliado** (Reposicionar Tropa, Tyir) e **trocar campo** (Ler o Terreno, Tyir, Forte: 2 rodadas,
+×1,5, cooldown 4).
 
 **Traços (9):** Nocthar (família, +3% Ataque e Velocidade, qualquer variante) e Hyperion (família da sombra, +5%
 Esquiva); conquistados: Berserker e Olho de Águia (+10% de dano corpo a corpo / à distância), Mira Firme, Muralha Viva,
