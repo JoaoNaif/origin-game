@@ -216,6 +216,10 @@ Cada ação vira quantos **% de HP** ela rende, dividido por **25** (≈ maior g
 - **Mestre e Grão-mestre** lembram as **skills já usadas** pelo jogador e o cooldown delas (só sabem depois do uso,
   como o jogador). Quando uma skill forte volta do cooldown, o risco do personagem exposto sobe **+0,10**.
 
+### 10.2b Detalhes (D114)
+
+Detalhes da IA que o 10.1/10.2 não fixavam: (1) "HP baixo" do Risco começa abaixo de **50%** e sobe em linha até 1 com HP zero; (2) Intermediário lê só a **última ação** (um ataque já é indício), bônus ×**0,25**; (3) **trocar o campo** vale a mudança do bônus dos aliados − a dos inimigos, **0,3 por ponto %**; (4) empurrar, puxar e trocar inimigo valem **2** × chance contra a Vontade; (5) o bônus do log entra **depois** da normalização, antes do corte de 0,2; (6) o +0,10 da skill forte vale para Forte, Final ou despertada **já vista e pronta**, no personagem da frente da linha ou Exposto, só em ação de skill; (7) a **Ameaça** é multiplicada pela chance de acerto. A IA usa **Rng própria** derivada da seed (o replay não roda a IA). Implementação em `engine.md` 3.13.
+
 ### 10.3 Nível dos NPCs (sem bônus de stat)
 
 | Dificuldade | Nível dos NPCs |

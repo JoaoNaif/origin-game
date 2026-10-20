@@ -31,7 +31,7 @@
 | 10 | Resolução do turno (juntar as peças num motor que executa a batalha) | **feito** |
 | 10b | Passivas dos personagens (executar os gatilhos e efeitos do D83) | **feito** |
 | 10c | Campo de batalha no snapshot e no motor (D98) | **feito** |
-| 11 | IA da máquina | a fazer |
+| 11 | IA da máquina (D90, D103, D114) | **feito** |
 | 12 | Simulador IA contra IA (calibração) | a fazer |
 
 ---
@@ -785,3 +785,56 @@ inicial) e `untilRound` (última rodada da troca). O primeiro evento da batalha 
 
 **Fica para depois:** a fraqueza de luz da família Hyperion (campo "iluminado" reduz o bônus de Origem, D101) é dado do
 admin e entra quando houver campos iluminados no catálogo.
+
+### 3.13 IA da máquina
+
+Código: `src/domain/ai/` (`machine-ai.ts`, `ai-values.ts`, `services/`). Regras em `pvp_brief.md` 8 e 10 (D90, D103).
+
+**Uso:** `new MachineAi({ side, profile, difficulty }, aiRng(seed, side))`; a cada vez da máquina,
+`ai.decide(engine, ref)` devolve a ação (e, para o simulador, a nota de cada candidata).
+
+**Sorte própria.** A IA usa uma `Rng` **separada** da do motor, derivada da mesma seed (`aiRng`). O replay só reaplica
+as ações gravadas e não roda a IA; se ela usasse a `Rng` do motor, consumiria números que o replay não consome e a
+batalha reproduzida sairia diferente. Continua determinística (D90): mesma seed, mesmas decisões.
+
+**Passo a passo de cada decisão:**
+
+1. **Gerar as ações legais** (`generateCandidates`): cada skill pronta em cada célula que dá um conjunto diferente de
+   alvos, com as escolhas extras (com quem trocar o inimigo, para onde avançar ou mover o aliado, qual campo); mover para
+   célula adjacente vazia; trocar com um aliado; Defender (sempre existe).
+2. **Prévia** (`engine.previewSkill`): o motor calcula o que a skill faria em cada alvo (chance de acerto, dano, cura,
+   escudo, chance de status, buff, atraso), **sem mudar nada e sem usar a Rng**. É a mesma conta da ação de verdade.
+   Não prevê o Interceptar.
+3. **Fatores** (`scoreFactors`, 10.1), em "% de HP equivalente ÷ 25", teto 1:
+   - **Dano:** chance × dano (limitado à vida + escudo do alvo) em % do HP máximo, somando os alvos.
+   - **Abate:** (dano esperado ÷ vida + escudo)², somando os alvos, teto 1.
+   - **Ameaça:** (Ataque × Velocidade) do alvo ÷ o maior entre os inimigos, × chance de acerto; o maior entre os alvos.
+   - **Risco** (subtrai): 50% × (custo do Desgaste ÷ folga, teto 1) + 50% × "HP baixo e ação ofensiva", + 0,10 da skill
+     forte (abaixo).
+   - **Defesa/cura/status:** tabela do 10.1 (cura e escudo × (1 + o que falta de vida); status × chance; buff/debuff 0,3
+     por ponto; adiantar/atrasar X% × 11; Defender 4; mover/trocar 2).
+   - **Situação:** `s × abate − s × defesa`, com `s` = HP% aliado − HP% inimigo.
+4. **Nota** = soma ponderada pelo perfil, **só dos fatores que o nível enxerga** (os outros valem 0).
+5. **Normaliza** (min-max), soma o **bônus de proteção** do log, **corta** abaixo de 0,2 e **sorteia** com
+   `p ∝ exp(nota' / T)` (Grão-mestre: sempre a melhor, desempate pela Rng). O sorteio usa sempre um número só da Rng.
+
+**Log do jogador** (`PlayerLog`, 10.2): lê os eventos do motor (só o que aconteceu à vista): alvo atingido por dano,
+skill usada, Defender e movimento. O personagem focado é o mais atacado na janela (pesos 1,0 a 0,2); o bônus sai dos
+ataques **seguidos** nele (2 = +0,15, 3 = +0,30), × escala do nível. Ações que protegem o focado: cura, escudo ou buff
+nele, ele Defender, se mover ou trocar de lugar. Mestre e Grão-mestre lembram as skills **já vistas** do jogador.
+
+**Exemplo:** o jogador atacou a Tanque da máquina 3 vezes seguidas. No turno da Tanque, Grão-mestre: Defender tinha
+nota' 0,08; com o padrão confirmado, +0,30 × 1,0 = 0,38, e passa do corte. No Iniciante (não lê o log), continua 0,08 e
+nunca é sorteado.
+
+**Pontos que o `pvp_brief.md` não fixava (D114):**
+
+| # | Ponto | Proposta |
+|---|---|---|
+| 1 | "HP baixo" do Risco | Começa abaixo de **50%** do HP e sobe em linha até 1 com HP zero |
+| 2 | Leitura do Intermediário ("última ação") | Janela de **1**: o último ataque já é indício; escala **×0,25** (+0,04) |
+| 3 | Valor de **trocar o campo** | Mudança do bônus (pontos %) dos aliados − a dos inimigos, × **0,3** por ponto (como buff) |
+| 4 | Empurrar, puxar e trocar inimigo | Valor de mover (**2**) × chance contra a Vontade |
+| 5 | Onde entra o bônus do log | **Depois** da normalização (soma na nota', antes do corte) |
+| 6 | "Skill forte" e "exposto" do +0,10 | Forte, Final ou despertada, já vista e pronta; exposto = frente da linha ou com Exposto; vale só para ação de skill (mover, trocar e Defender tiram o risco) |
+| 7 | Ameaça | Multiplicada pela chance de acerto no alvo |
