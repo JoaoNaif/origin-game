@@ -972,3 +972,20 @@ Com 100 batalhas, a margem de ruído é de ~±5 pontos: o P2 fica todo dentro de
 **Confirmação com D115 a D118 no código (2026-10-19):** escada de níveis igual à da tabela do D117 (o Equilibrado não
 mudou) e perfis entre 43% e 58%, iguais ao P2. Relatório sem erro de timeout. **Calibração da IA fechada para o MVP**;
 reabrir quando houver mais personagens ou jogo humano.
+
+**Calibração depois do D119 (Exaustão na 16, piso de potência 70%; 100 batalhas por confronto):**
+
+| Confronto | A vence | Meta | Eliminação |
+|---|---|---|---|
+| Espelho (Mestre) | 55% | ~50% | 61% |
+| Intermediário x Iniciante | 68% | ~65% | 61% |
+| Avançado x Intermediário | **86%** | ~65% | 71% |
+| Mestre x Avançado | 71% | ~65% | 66% |
+| Grão-mestre x Mestre | **51%** | ~65% | 67% |
+| Dois níveis acima | 83% a 94% | ~80% | 63% a 72% |
+| Grão-mestre x Iniciante | 100% | ≥95% | 71% |
+| Perfis (Mestre) | 41% a 57% | 45–55% | 58% a 75% |
+
+A eliminação subiu para **58% a 75%** (meta 60–70%). Os perfis seguem perto da meta. A escada de níveis desalinhou: o
+Avançado ficou forte demais contra o Intermediário e o Grão-mestre não ganha mais do Mestre. **Pendente:** reajustar as
+temperaturas (Intermediário e Mestre) com as regras novas.
