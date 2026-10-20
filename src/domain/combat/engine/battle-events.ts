@@ -48,7 +48,16 @@ export type BattleEvent =
   | { type: 'TURN_SHIFT'; targetRef: string; percent: number }
   | { type: 'DESGASTE'; ref: string; selfDamage: number }
   | { type: 'DEFEND'; ref: string }
-  | { type: 'FIELD_IGNORED'; ref: string }
+  | { type: 'PASSIVE'; ref: string; name: string; trigger: string }
+  | {
+      type: 'FIELD'
+      /** Campo que passou a valer; nulo = sem campo. */
+      fieldKey: string | null
+      /** Quem trocou; nulo = voltou ao campo inicial. */
+      ref: string | null
+      /** Última rodada da troca; nulo = é o campo inicial. */
+      untilRound: number | null
+    }
   | { type: 'DEFEATED'; ref: string }
   | { type: 'ROUND_END'; round: number }
   | {

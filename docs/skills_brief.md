@@ -641,8 +641,9 @@ conhecer o que cada número pesa). **[PLACEHOLDER aprovado]**.
 | Forte | 2 rodadas | ×1,5 | 4 | 5% |
 
   Há **uma troca ativa por vez** (a nova substitui a anterior). Ao fim, volta ao campo inicial.
-- **Sorteio inicial justo:** só entram os campos em que a diferença de personagens qualificados entre os lados é de
-  **no máximo 2** (de 4). Se nenhum cumprir, a batalha começa **sem campo**. Vale para todos os modos, inclusive PvE.
+- **Sorteio do campo inicial (D112, substitui o "sorteio justo" do D98):** pela seed, entre **todos** os campos do
+  catálogo, **antes** de os jogadores escolherem a squad. O campo é a primeira coisa mostrada, para cada um montar a
+  squad em cima dele (`pvp_brief.md` 3). Planejar em volta do campo é parte da estratégia. Vale para todos os modos.
 
 ### 12.8 Fila, Tático e Guardião (D102)
 

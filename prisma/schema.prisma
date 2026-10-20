@@ -89,6 +89,7 @@ model Trait {
   familyTemplates CharacterTemplate[]
   characters      CharacterTrait[]
   npcMembers      NpcSquadMemberTrait[]
+  battleFields    BattleFieldTrait[]
 
   @@index([variantId])
   @@map("traits")
@@ -554,4 +555,47 @@ model BattleAction {
 
   @@id([battleId, sequence])
   @@map("battle_actions")
+}
+
+// Os 7 stats (D45).
+enum Stat {
+  HP
+  ATTACK
+  DEFENSE
+  SPEED
+  PRECISION
+  EVASION
+  WILL
+}
+
+// Campo de batalha (catálogo do admin; no MVP vem do seed.ts). D28, D40, D98: bônus de status,
+// nos dois lados, para quem tem qualquer um dos traços pedidos. Regras no domínio.
+model BattleField {
+  id               String   @id @default(uuid())
+  key              String   @unique
+  name             String
+  description      String?
+  primaryStat      Stat     @map("primary_stat")
+  secondaryStat    Stat     @map("secondary_stat")
+  primaryPercent   Float    @default(6) @map("primary_percent")
+  secondaryPercent Float    @default(4) @map("secondary_percent")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  requiredTraits BattleFieldTrait[]
+
+  @@map("battle_fields")
+}
+
+// Traços pedidos pelo campo (2 a 4, de pelo menos 2 categorias).
+model BattleFieldTrait {
+  fieldId String @map("field_id")
+  traitId String @map("trait_id")
+
+  field BattleField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  trait Trait       @relation(fields: [traitId], references: [id], onDelete: Restrict)
+
+  @@id([fieldId, traitId])
+  @@index([traitId])
+  @@map("battle_field_traits")
 }

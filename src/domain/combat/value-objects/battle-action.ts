@@ -16,6 +16,8 @@ export type BattleActionPayload =
       swapWith?: GridPosition
       /** Avançar/recuar (DASH) e mover aliado (MOVE_ALLY): a célula de destino. */
       moveTo?: GridPosition
+      /** Trocar campo (D98): o campo escolhido, do catálogo da batalha. */
+      fieldKey?: string
     }
   /** Move para uma célula adjacente (custa o turno, D42). */
   | { type: 'MOVE'; to: GridPosition }

@@ -51,6 +51,7 @@
 | 9 | `NpcSquad` (+ `NpcSquadMember`, `NpcSquadMemberSkill`, `NpcSquadMemberTrait`, enums `AiProfile`, `AiDifficulty`) | Batalha | CharacterTemplate, Skill, Trait, Variant | **feito** |
 | 10 | `Battle` (+ enums `BattleMode`, `BattleStatus`, `BattleSide`, `BattleEndReason`) | Batalha | Account, Squad, NpcSquad | **feito** |
 | 11 | `BattleAction` (+ enum `BattleActionType`) | Batalha | Battle | **feito** |
+| 12 | `BattleField` (+ `BattleFieldTrait` e enum `Stat`) | Catálogo | Trait | **feito** |
 
 **Fora do MVP** (cada um vira migração própria quando a camada chegar): inventário, equipamento vivo, bestas, DOM,
 despertar, economia, mercado, baús, materiais e organizações.
@@ -898,7 +899,7 @@ replay.
 
 | `type` | Campos | Regra |
 |---|---|---|
-| `SKILL` | `skillKey`, `targetSide`, `target` (célula), `swapWith` e `moveTo` (opcionais) | célula dentro da grade; `swapWith` = o inimigo com quem o alvo troca (D111); `moveTo` = destino de avançar (DASH) ou mover aliado (MOVE_ALLY) |
+| `SKILL` | `skillKey`, `targetSide`, `target` (célula), `swapWith`, `moveTo` e `fieldKey` (opcionais) | célula dentro da grade; `swapWith` = o inimigo com quem o alvo troca (D111); `moveTo` = destino de avançar (DASH) ou mover aliado (MOVE_ALLY); `fieldKey` = o campo escolhido para trocar (D98) |
 | `MOVE` | `to` (célula) | dentro da grade (adjacência é regra do motor, D42) |
 | `SWAP` | `withRef` | só com aliado |
 | `DEFEND` | | sem skill possível ou tempo esgotado (D38) |
@@ -944,11 +945,61 @@ battle.recordAction({ round: 1, side: BattleSide.PLAYER, actorRef: 'OPPONENT:0',
 **Domínio:** `src/domain/combat/entities/battle.ts`; snapshot e ações em `src/domain/combat/value-objects/`.
 Fábricas de teste em `test/factories/make-battle-snapshot.ts` e `test/factories/make-npc-squad.ts`.
 
+
+### 3.12 BattleField (catálogo)
+
+O **campo de batalha** (D28, D40, D98). Catálogo do admin; no MVP vem do `seed.ts`. Dá um bônus de status, **nos dois
+lados**, a quem tem **qualquer um** dos traços pedidos. Nunca é bônus por variante.
+
+**Enum `Stat`** (Prisma): os 7 stats (`HP`, `ATTACK`, `DEFENSE`, `SPEED`, `PRECISION`, `EVASION`, `WILL`).
+
+| Campo | Tipo | Regra |
+|---|---|---|
+| `id`, `key` (único), `name`, `description` | | `key` ex.: `arena` |
+| `primaryStat`, `secondaryStat` | `Stat` | diferentes entre si |
+| `primaryPercent`, `secondaryPercent` | decimais | padrão **6** e **4** (D98); maiores que zero; o admin pode ajustar |
+| `createdAt`, `updatedAt` | data | |
+
+**Ligação `BattleFieldTrait`** (chave composta `fieldId` + `traitId`): os traços pedidos, **2 a 4**, de **pelo menos 2
+categorias** (D98 pede "categorias diferentes"; com 3 categorias, 4 traços não podem ser todos de categorias distintas,
+então a regra é não serem todos da mesma).
+
+**Regras (domínio, `InvalidBattleFieldError`):** 2 a 4 traços sem repetir, de pelo menos 2 categorias; stats diferentes;
+bônus maior que zero.
+
+**No snapshot** (3.10): o campo entra como valor (`SnapshotField`, com as `key` dos traços) em
+`field.initial` (o sorteado) e `field.catalog` (para onde uma skill pode trocar). Cada unidade guarda `traitKeys`, para
+o motor saber quem recebe o bônus.
+
+**Exemplo** (fictício):
+
+| `key` | Traços pedidos | Bônus |
+|---|---|---|
+| `arena` | `warrior` (Combate), `berserker` (Combate), `veteran` (Origem) | +6% Ataque, +4% Velocidade |
+| `forest` | `stealthy` (Postura), `tamer` (Origem) | +6% Esquiva, +4% Precisão |
+
+```ts
+BattleField.create({
+  key: 'forest',
+  name: 'Floresta',
+  primaryStat: Stat.EVASION,
+  secondaryStat: Stat.PRECISION,
+  requiredTraits: [stealthy, tamer],
+})
+// right(BattleField): +6% e +4% (padrão)
+
+BattleField.create({ ...forest, requiredTraits: [warrior, berserker] })
+// left(InvalidBattleFieldError): traços de pelo menos 2 categorias diferentes
+```
+
+**Domínio:** `src/domain/combat/entities/battle-field.ts`.
+
 ---
+
 
 ## 4. Próximos passos
 
-Os **11 modelos do MVP estão feitos**. Falta:
+Os **12 modelos do MVP estão feitos** (o 12º, o campo de batalha, entrou com o motor). Falta:
 
 1. **Primeira migração** (`npm run services:up` e `npm run prisma:migrate`), quando o Postgres estiver rodando.
 2. **Montar o snapshot** a partir de `Character` + `Squad` (jogador) e `NpcSquad` (máquina): serviço de domínio, junto

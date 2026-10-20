@@ -13,8 +13,11 @@ import { NpcSquad } from '@/domain/squads/entities/npc-squad'
 import { Squad, SQUAD_SIZE } from '@/domain/squads/entities/squad'
 import { BattleSide } from '../enums/battle-enums'
 import { BuildSnapshotError } from '../errors/build-snapshot-error'
+import { BattleField } from '../entities/battle-field'
 import {
   BattleSnapshot,
+  SnapshotField,
+  SnapshotFieldSetup,
   SnapshotSide,
   SnapshotSkill,
   SnapshotUnit,
@@ -96,6 +99,34 @@ function lineageCostPercent(
   }
 
   return result
+}
+
+/** Campo de batalha como valor, com os traços pedidos pela `key` (D98). */
+export function toSnapshotField(
+  field: BattleField,
+  traits: ReadonlyMap<string, Trait>
+): Either<BuildSnapshotError, SnapshotField> {
+  const requiredTraitKeys: string[] = []
+
+  for (const traitId of field.requiredTraitIds) {
+    const trait = traits.get(traitId.toValue())
+    if (!trait) {
+      return left(
+        new BuildSnapshotError(`traço ${traitId} do campo não carregado`)
+      )
+    }
+    requiredTraitKeys.push(trait.key)
+  }
+
+  return right({
+    key: field.key,
+    name: field.name,
+    requiredTraitKeys,
+    primaryStat: field.primaryStat,
+    secondaryStat: field.secondaryStat,
+    primaryPercent: field.primaryPercent,
+    secondaryPercent: field.secondaryPercent,
+  })
 }
 
 /** Linhagens das variantes do modelo, principal primeiro (vazio = sem variante). */
@@ -183,6 +214,7 @@ export function buildPlayerSide(
       profile: { ...template.value.stats },
       freePoints: { ...character.freePoints },
       traitEffects: character.traits.flatMap((t) => [...t.effects]),
+      traitKeys: character.traits.map((t) => t.key),
       lineageCostPercent: lineageCostPercent(
         character.traits,
         lineages.value,
@@ -240,6 +272,7 @@ export function buildNpcSide(
       profile: { ...template.value.stats },
       freePoints: defaultFreePoints(template.value.stats, member.level),
       traitEffects: traits.flatMap((t) => [...t.effects]),
+      traitKeys: traits.map((t) => t.key),
       lineageCostPercent: lineageCostPercent(traits, lineages.value, catalog),
       passive: template.value.passive,
       skills,
@@ -254,7 +287,8 @@ export function buildNpcSide(
 /** Foto completa de uma batalha PvE: o squad do jogador contra o squad da máquina. */
 export function buildPveSnapshot(
   player: PlayerSideInput,
-  opponent: NpcSideInput
+  opponent: NpcSideInput,
+  field: SnapshotFieldSetup = { initial: null, catalog: [] }
 ): Either<BuildSnapshotError, BattleSnapshot> {
   const playerSide = buildPlayerSide(player)
   if (playerSide.isLeft()) return left(playerSide.value)
@@ -262,5 +296,9 @@ export function buildPveSnapshot(
   const opponentSide = buildNpcSide(opponent)
   if (opponentSide.isLeft()) return left(opponentSide.value)
 
-  return right({ player: playerSide.value, opponent: opponentSide.value })
+  return right({
+    player: playerSide.value,
+    opponent: opponentSide.value,
+    field,
+  })
 }

@@ -29,8 +29,8 @@
 | 8 | Defender, Interceptar e reposicionamento | **feito** |
 | 9 | Exaustão e fim da batalha | **feito** |
 | 10 | Resolução do turno (juntar as peças num motor que executa a batalha) | **feito** |
-| 10b | Passivas dos personagens (executar os gatilhos e efeitos do D83) | a fazer |
-| 10c | Campo de batalha no snapshot e no motor (D98) | a fazer |
+| 10b | Passivas dos personagens (executar os gatilhos e efeitos do D83) | **feito** |
+| 10c | Campo de batalha no snapshot e no motor (D98) | **feito** |
 | 11 | IA da máquina | a fazer |
 | 12 | Simulador IA contra IA (calibração) | a fazer |
 
@@ -677,7 +677,7 @@ rodada 30 fecha, o **fim forçado** (3.9). Derrotado sai da fila e da grade (dei
 
 **Eventos (`BattleEvent`, `src/domain/combat/engine/battle-events.ts`):** `TURN`, `SKIP`, `DOT`, `SKILL`, `INTERCEPT`,
 `MISS`, `DAMAGE`, `HEAL`, `SHIELD`, `MODIFIER`, `STATUS`, `LOCK`, `MOVE`, `MOVE_BLOCKED`, `TURN_SHIFT`, `DESGASTE`,
-`DEFEND`, `FIELD_IGNORED`, `DEFEATED`, `BATTLE_END`. Não vão para o banco: o banco guarda só as ações (3.11 do
+`DEFEND`, `PASSIVE`, `FIELD`, `DEFEATED`, `BATTLE_END`. Não vão para o banco: o banco guarda só as ações (3.11 do
 `data_model.md`), e os eventos são reproduzidos.
 
 **Conferido** (squad de teste: 8 Vanguardas no nível 15, só a skill básica, seed 1): 8 turnos por rodada enquanto todos
@@ -686,8 +686,102 @@ Poder 0,8), 6 derrotados e fim forçado na rodada 30 com 1 contra 1. É o confro
 variados o dano de referência é o dobro (D68).
 
 **Ainda não entra no motor:**
-- **Passivas** dos personagens (peça 10b): o catálogo de gatilhos e efeitos existe (3.3 do `data_model.md`), falta
-  executar. Até lá o motor ignora a passiva.
-- **Campo de batalha** (peça 10c): o snapshot ainda não guarda o campo; a skill de trocar campo fica sem efeito
-  (`FIELD_IGNORED`).
 - Equipamento vivo, contratos, DOM e despertar com efeito próprio (camadas pós-MVP).
+
+
+### 3.11 Passivas dos personagens
+
+Cada personagem tem **uma passiva**, fixa no modelo (D78, D83, `data_model.md` 3.3), com **gatilho** e **efeitos**. O
+motor (3.10) executa as passivas durante a batalha. Elas ficam no `BattleEngine` (métodos `firePassive`,
+`applyPassiveEffect` e os de leitura contínua).
+
+**Dois tipos de gatilho:**
+
+| Tipo | Gatilhos | Como funciona |
+|---|---|---|
+| **Contínuo** | `ALWAYS` (permanente), `HP_BELOW` (condicional) | lido na hora de cada cálculo: enquanto vale, o efeito está ligado |
+| **Evento** | `TURN_START`, `PERIODIC`, `ON_ATTACK`, `ON_HIT`, `ON_KILL`, `ON_HEAL`, `ON_DESGASTE`, `ON_STATUS` | dispara uma vez quando o evento acontece |
+
+**Quando cada evento dispara:**
+
+| Gatilho | Momento |
+|---|---|
+| `TURN_START` | início de cada turno do dono (depois do dano contínuo; vale mesmo se ele estiver Atordoado) |
+| `PERIODIC` (N) | a cada N turnos começados do dono (o 3º, o 6º...) |
+| `ON_ATTACK` | o dono causou dano a pelo menos um inimigo com a skill (uma vez por ação) |
+| `ON_HIT` | o dono levou dano de um inimigo e continua vivo |
+| `ON_KILL` | o dono derrotou um inimigo com a skill |
+| `ON_HEAL` | o dono curou alguém (cura maior que zero) |
+| `ON_DESGASTE` | o dono pagou Desgaste |
+| `ON_STATUS` (status) | o dono recebeu aquele status (aplicado ou renovado) |
+| `ON_FIELD_CHANGE` | o campo mudou (troca por skill ou volta ao inicial), para todas as unidades vivas (3.12) |
+
+**Efeitos:**
+
+| Efeito | No contínuo | No evento |
+|---|---|---|
+| `IGNORE_SHIELD` | o dano do dono ignora escudos (ex.: Ecko) | |
+| `REDUCE_DAMAGE` | o dono recebe X% menos dano (entra nos modificadores de dano, antes do escudo) | |
+| `STAT_MODIFIER` | só no `HP_BELOW`: multiplica o stat enquanto o HP estiver baixo | buff no dono até o fim do próximo turno dele |
+| `REDUCE_COOLDOWN` | | tira N das recargas em andamento do dono (ex.: Lucky) |
+| `HEAL` | | cura X% do HP máximo do dono (com a Exaustão) |
+| `ADVANCE_TURN` | | adianta a vez do dono em X% |
+| `APPLY_STATUS` | | aplica o status no dono, no atacante ou no alvo, com a duração padrão (12.4) |
+
+**Regras de funcionamento (D113):** o D83 define o formato; o D113 fixa o momento de cada efeito:
+
+1. **Status de passiva em inimigo passa pela Vontade:** a `chance` da passiva vira a base da disputa
+   `chance × 2 × Precisão / (Precisão + Vontade)` (teto de 90%), como qualquer status hostil (11.9). Em aliado ou em si
+   mesmo, vale a chance direta.
+2. **`ON_ATTACK` dispara uma vez por ação**, mesmo numa skill de área; o "alvo" é o primeiro inimigo que levou dano.
+3. **Buff de passiva num evento** dura **até o fim do próximo turno do dono** (senão um buff ganho no próprio turno
+   acabaria antes de ele agir de novo). Conta no limite de 2 fontes, com a fonte `PASSIVE:<unidade>` (a mesma passiva
+   renova, não soma).
+4. **Stat de passiva condicional (`HP_BELOW`)** é um multiplicador à parte, ligado enquanto o HP estiver baixo, **fora**
+   do limite de fontes.
+5. **`ALWAYS` com `STAT_MODIFIER` não faz nada:** o D83 proíbe aumento de status puro e permanente.
+6. **Passiva não dispara passiva:** efeito vindo de uma passiva nunca aciona outra (evita cadeias infinitas, como dois
+   personagens que respondem a status um do outro).
+
+**Exemplos** (os do `progression_brief.md` 2.2 e do `data_model.md` 3.3):
+
+| Personagem | Passiva | No motor |
+|---|---|---|
+| Ecko | `ALWAYS` → `IGNORE_SHIELD` | todo dano dele ignora escudo |
+| Lucky | `PERIODIC` 3 → `REDUCE_COOLDOWN` 1 | no 3º, 6º, 9º... turno dele, as recargas em andamento baixam 1 |
+| Kael (Brasa interna) | `ON_HIT` → `APPLY_STATUS` DOT no atacante, 20% | ao levar dano, chance de queimar quem bateu (contra a Vontade dele) |
+| Recruta (Firmeza) | `HP_BELOW` 30 → `REDUCE_DAMAGE` 10 | abaixo de 30% do HP, recebe 10% menos dano |
+
+### 3.12 Campo de batalha
+
+O campo dá um bônus de status, **nos dois lados**, a quem tem **qualquer um** dos traços pedidos (D28, D40, D98). O
+catálogo é do admin (`data_model.md` 3.12); no motor, o campo vem no snapshot como valor.
+
+**Sorteio do campo inicial (D112)** (`drawInitialField`, `src/domain/combat/services/field-draw.ts`): pela seed, entre
+**todos** os campos do catálogo, **antes** de os jogadores escolherem a squad. O campo é a primeira coisa mostrada, para
+cada um planejar a squad em cima dele (`pvp_brief.md` 3). Catálogo vazio: batalha sem campo.
+
+O D98 previa um "sorteio justo" (diferença de no máximo 2 qualificados entre as squads), mas ele só funciona depois de
+escolhidas as squads. Como o campo vem antes, essa regra saiu (D112): adaptar a squad ao campo é parte do jogo.
+
+**Bônus** (no cálculo de cada stat): `+6%` no stat principal e `+4%` no secundário (padrão do D98), **fora do limite de 2
+fontes** (é ambiental). Só para quem qualifica, nos dois lados.
+
+**Troca por skill** (efeito `CHANGE_FIELD`, com `duration` e `multiplier` da skill, 12.7 do `skills_brief.md`):
+
+- Quem usa **escolhe o campo** do catálogo da batalha (`fieldKey` na ação). Campo fora do catálogo: ação inválida.
+- O bônus vem **multiplicado** (×1,0, ×1,25 ou ×1,5 pelo tipo da skill): na Forte, +9% e +6%.
+- **Duração em rodadas:** vale até o fim da rodada atual **mais N rodadas**. Usada na rodada 5 com N = 2, vale no resto da
+  5, na 6 e na 7; volta ao inicial na 8.
+- **Uma troca ativa por vez:** a nova substitui a anterior. Ao fim, volta ao **campo inicial**.
+- Toda mudança de campo dispara as passivas `ON_FIELD_CHANGE` (3.11) e gera o evento `FIELD`.
+
+**Evento `FIELD`:** `fieldKey` (o campo que passou a valer, ou nulo), `ref` (quem trocou; nulo = início ou volta ao
+inicial) e `untilRound` (última rodada da troca). O primeiro evento da batalha é sempre o campo inicial (D28).
+
+**Exemplo:** campo inicial **Arena** (+6% Ataque, +4% Velocidade para guerreiros). Na rodada 5, o Tático usa uma troca
+**Forte** para a **Floresta** (+6% Esquiva, +4% Precisão para furtivos): nas rodadas 5 a 7 os furtivos dos dois lados têm
++9% de Esquiva e +6% de Precisão, e os guerreiros perdem o bônus da Arena. Na rodada 8 volta a Arena.
+
+**Fica para depois:** a fraqueza de luz da família Hyperion (campo "iluminado" reduz o bônus de Origem, D101) é dado do
+admin e entra quando houver campos iluminados no catálogo.

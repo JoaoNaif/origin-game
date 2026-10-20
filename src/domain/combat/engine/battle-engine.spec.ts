@@ -189,4 +189,32 @@ describe('Battle Engine', () => {
       expect(sut.outcome?.reason).toBe(BattleEndReason.ROUND_LIMIT)
     }
   })
+  it('should be able to preview a skill without changing the battle or using the rng', () => {
+    const sut = new BattleEngine(makeBattleSnapshot(), new FixedRng([0]))
+    const turn = sut.nextTurn()!
+    const payload: BattleActionPayload = {
+      type: 'SKILL',
+      skillKey: sut.unit(turn.ref).readySkills[0],
+      targetSide: BattleSide.OPPONENT,
+      target: { row: 0, column: 0 },
+    }
+    const before = sut.events.length
+
+    const preview = sut.previewSkill(turn.ref, payload)
+    expect(preview.isRight()).toBe(true)
+    if (preview.isLeft()) return
+    expect(sut.events.length).toBe(before)
+
+    const [hit] = preview.value.hits
+    const done = sut.act(payload)
+    const damage = done.isRight()
+      ? done.value.find((e) => e.type === 'DAMAGE')
+      : undefined
+
+    expect(hit.ref).toBe('OPPONENT:0')
+    expect(hit.effects[0]).toEqual({
+      type: 'DAMAGE',
+      amount: damage && 'amount' in damage ? damage.amount : -1,
+    })
+  })
 })

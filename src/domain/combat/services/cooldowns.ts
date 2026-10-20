@@ -56,6 +56,13 @@ export class SkillCooldowns {
     this.usedThisTurn.add(key)
   }
 
+  /** Reduz a recarga das skills que estão recarregando (passiva, ex.: Lucky, D83). Nunca abaixo de 0. */
+  reduce(amount: number) {
+    for (const [key, turns] of this.remaining) {
+      if (turns > 0) this.remaining.set(key, Math.max(0, turns - amount))
+    }
+  }
+
   /** Fim do turno da unidade: baixa 1 de todas, menos as usadas agora. */
   endTurn() {
     for (const [key, turns] of this.remaining) {

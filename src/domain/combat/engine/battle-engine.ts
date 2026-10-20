@@ -7,15 +7,18 @@ import { SkillRange } from '@/domain/skills/enums/skill-range'
 import { SkillTarget } from '@/domain/skills/enums/skill-target'
 import { StatusType } from '@/domain/skills/enums/status-type'
 import { SkillEffect } from '@/domain/skills/value-objects/skill-effect'
+import { PassiveEffect } from '@/domain/characters/value-objects/passive'
 import { GridPosition } from '@/domain/squads/value-objects/grid-position'
 import { BattleSide, MAX_ROUNDS } from '../enums/battle-enums'
 import { InvalidActionError } from '../errors/invalid-action-error'
 import { BattleActionPayload } from '../value-objects/battle-action'
 import {
   BattleSnapshot,
+  SnapshotField,
   SnapshotSkill,
   SnapshotUnit,
 } from '../value-objects/battle-snapshot'
+import { qualifies } from '../services/field-draw'
 import {
   BattleOutcome,
   checkElimination,
@@ -60,7 +63,28 @@ interface EngineUnit {
   skipNext: boolean
   /** Já foi atrasado: imune a novo atraso até agir (D102). */
   delayImmune: boolean
+  /** Turnos começados (para a passiva periódica). */
+  turnsStarted: number
 }
+
+/** Contexto de um gatilho de passiva. */
+interface PassiveContext {
+  attacker?: EngineUnit
+  target?: EngineUnit
+  status?: StatusType
+}
+
+/** Gatilhos que disparam num evento (os contínuos, ALWAYS e HP_BELOW, são lidos na hora do cálculo). */
+type PassiveEvent =
+  | 'TURN_START'
+  | 'PERIODIC'
+  | 'ON_ATTACK'
+  | 'ON_HIT'
+  | 'ON_KILL'
+  | 'ON_HEAL'
+  | 'ON_DESGASTE'
+  | 'ON_STATUS'
+  | 'ON_FIELD_CHANGE'
 
 /** Vez de agir devolvida por `nextTurn`. */
 export interface ActorTurn {
@@ -68,6 +92,36 @@ export interface ActorTurn {
   side: BattleSide
   round: number
   tick: number
+}
+
+/** O que um efeito faria num alvo, na prévia (`previewSkill`). Chances são probabilidades, não sorteios. */
+export type PreviewEffect =
+  | { type: 'DAMAGE'; amount: number }
+  | { type: 'HEAL' | 'SHIELD'; amount: number }
+  | { type: 'STAT_MODIFIER'; stat: Stat; percent: number }
+  | { type: 'APPLY_STATUS'; status: StatusType; chance: number }
+  | {
+      type: 'REPOSITION'
+      kind: Extract<SkillEffect, { type: 'REPOSITION' }>['kind']
+      chance: number
+    }
+  | { type: 'TURN_SHIFT'; percent: number }
+  | { type: 'CHANGE_FIELD' }
+
+export interface PreviewHit {
+  ref: string
+  falloff: number
+  /** 1 em skill sem teste de acerto (aliado, si mesmo). */
+  hitChance: number
+  effects: PreviewEffect[]
+}
+
+export interface SkillPreview {
+  skill: SnapshotSkill
+  potency: number
+  /** Custo do Desgaste na linhagem da própria skill e a folga que sobra até o piso. */
+  desgaste: { cost: number; slack: number }
+  hits: PreviewHit[]
 }
 
 const other = (side: BattleSide) =>
@@ -94,6 +148,23 @@ export class BattleEngine {
   private current: Turn | null = null
   private result: BattleOutcome | null = null
   private readonly log: BattleEvent[] = []
+  /** O que a skill em resolução fez (para os gatilhos de passiva depois dela). */
+  private action = {
+    damaged: [] as EngineUnit[],
+    killed: [] as EngineUnit[],
+    healed: false,
+  }
+  /** Efeito de passiva não dispara outra passiva (evita cadeias). */
+  private inPassive = false
+  /** Campo sorteado no início (D28) e catálogo para as trocas por skill (D98). */
+  private readonly initialField: SnapshotField | null
+  private readonly fieldCatalog: readonly SnapshotField[]
+  /** Campo valendo agora: o inicial ou uma troca, com o multiplicador e a última rodada dela. */
+  private field: {
+    current: SnapshotField | null
+    multiplier: number
+    untilRound: number | null
+  }
 
   constructor(
     snapshot: BattleSnapshot,
@@ -104,6 +175,10 @@ export class BattleEngine {
         this.units.set(unit.ref, createUnit(unit, side.side))
       }
     }
+
+    this.initialField = snapshot.field.initial
+    this.fieldCatalog = snapshot.field.catalog
+    this.field = { current: this.initialField, multiplier: 1, untilRound: null }
 
     this.grids = {
       PLAYER: new BattleGrid(snapshot.player.units),
@@ -123,6 +198,14 @@ export class BattleEngine {
       PLAYER: this.shuffledGuardians(BattleSide.PLAYER),
       OPPONENT: this.shuffledGuardians(BattleSide.OPPONENT),
     }
+
+    // o campo inicial é a primeira coisa mostrada (D28)
+    this.log.push({
+      type: 'FIELD',
+      fieldKey: this.initialField?.key ?? null,
+      ref: null,
+      untilRound: null,
+    })
   }
 
   /** Resultado, quando a batalha acabou. */
@@ -154,6 +237,149 @@ export class BattleEngine {
         Object.values(Stat).map((s) => [s, this.stat(unit, s)])
       ) as StatBlock,
       readySkills: unit.cooldowns.ready().map((s) => s.key),
+      canBeMoved: unit.conditions.canBeMoved,
+      isExposed: unit.conditions.isExposed,
+      traitKeys: unit.snapshot.traitKeys,
+    }
+  }
+
+  /** Skills da build da unidade (a IA filtra o que pode saber do outro lado, `engine.md` 3.13). */
+  skillsOf(ref: string): readonly SnapshotSkill[] {
+    return this.get(ref).snapshot.skills
+  }
+
+  /** Campos para onde uma skill pode trocar. */
+  get fields(): readonly SnapshotField[] {
+    return this.fieldCatalog
+  }
+
+  /**
+   * Prévia de uma skill para a IA (`engine.md` 3.13): valida e calcula o que ela faria em cada alvo, **sem mudar nada
+   * e sem usar a Rng** (chances viram números, não sorteios). Não prevê o Interceptar.
+   */
+  previewSkill(
+    actorRef: string,
+    payload: Extract<BattleActionPayload, { type: 'SKILL' }>
+  ): Either<InvalidActionError, SkillPreview> {
+    const actor = this.get(actorRef)
+    const resolved = this.resolveSkill(actor, payload)
+    if (resolved.isLeft()) return left(resolved.value)
+
+    const { skill, hits } = resolved.value
+    const potency = actor.desgaste.potencyFor(skill, actor.hp)
+    const round = this.current?.round ?? this.queue.currentRound
+    const own = actor.desgaste.costOf(skill)[0]
+
+    return right({
+      skill,
+      potency,
+      desgaste: {
+        cost: own.requested,
+        slack: actor.desgaste.slack(own.target, actor.hp),
+      },
+      hits: hits
+        .filter((hit) => this.get(hit.ref).alive)
+        .map((hit) =>
+          this.previewHit(actor, this.get(hit.ref), skill, potency, hit, round)
+        ),
+    })
+  }
+
+  private previewHit(
+    actor: EngineUnit,
+    target: EngineUnit,
+    skill: SnapshotSkill,
+    potency: number,
+    hit: TargetHit,
+    round: number
+  ): PreviewHit {
+    const hostile = target.side !== actor.side
+    const chanceAgainstWill = (base: number) =>
+      hostile
+        ? statusChance(
+            base,
+            this.stat(actor, Stat.PRECISION),
+            this.stat(target, Stat.WILL)
+          )
+        : 1
+
+    const effects = skill.effects
+      .filter((e) => e.appliesTo !== 'SELF')
+      .map((effect): PreviewEffect => {
+        switch (effect.type) {
+          case 'DAMAGE':
+            return {
+              type: 'DAMAGE',
+              amount: this.damageOf(
+                actor,
+                target,
+                skill,
+                effect.power,
+                potency,
+                hit.falloff,
+                round
+              ),
+            }
+          case 'HEAL':
+          case 'SHIELD':
+            return {
+              type: effect.type,
+              amount: this.restoreOf(
+                target,
+                skill,
+                effect.power,
+                potency,
+                round
+              ),
+            }
+          case 'STAT_MODIFIER':
+            return {
+              type: 'STAT_MODIFIER',
+              stat: effect.stat,
+              percent: effect.percent * potency,
+            }
+          case 'APPLY_STATUS':
+            return {
+              type: 'APPLY_STATUS',
+              status: effect.status,
+              chance:
+                effect.status === StatusType.STUN &&
+                target.conditions.isStunImmune
+                  ? 0
+                  : chanceAgainstWill(effect.baseChance),
+            }
+          case 'REPOSITION':
+            return {
+              type: 'REPOSITION',
+              kind: effect.kind,
+              chance:
+                effect.kind === 'DASH' || effect.kind === 'MOVE_ALLY'
+                  ? 1
+                  : chanceAgainstWill(FORCED_MOVE_BASE_CHANCE),
+            }
+          case 'TURN_SHIFT':
+            return {
+              type: 'TURN_SHIFT',
+              percent:
+                effect.percent < 0 && target.delayImmune ? 0 : effect.percent,
+            }
+          case 'CHANGE_FIELD':
+            return { type: 'CHANGE_FIELD' }
+        }
+      })
+
+    return {
+      ref: target.ref,
+      falloff: hit.falloff,
+      hitChance:
+        skill.baseHitChance === null
+          ? 1
+          : hitChance(
+              skill.baseHitChance,
+              this.stat(actor, Stat.PRECISION),
+              this.stat(target, Stat.EVASION)
+            ),
+      effects,
     }
   }
 
@@ -181,6 +407,7 @@ export class BattleEngine {
       }
 
       const turn = this.queue.next()
+      this.expireField(turn.round)
       const unit = this.get(turn.ref)
       this.log.push({
         type: 'TURN',
@@ -200,6 +427,10 @@ export class BattleEngine {
         this.afterAction()
         continue
       }
+
+      unit.turnsStarted += 1
+      this.firePassive(unit, 'TURN_START')
+      this.firePassive(unit, 'PERIODIC')
 
       if (start.skipAction || unit.skipNext) {
         this.log.push({
@@ -298,12 +529,21 @@ export class BattleEngine {
     }
   }
 
-  private useSkill(
+  /** Valida a skill e resolve os alvos (sem mudar nada). Usado pela ação e pela prévia da IA. */
+  private resolveSkill(
     actor: EngineUnit,
     payload: Extract<BattleActionPayload, { type: 'SKILL' }>
-  ): Either<InvalidActionError, void> {
+  ): Either<InvalidActionError, { skill: SnapshotSkill; hits: TargetHit[] }> {
     const skill = actor.snapshot.skills.find((s) => s.key === payload.skillKey)
     if (!skill) return left(new InvalidActionError('skill fora da build'))
+    if (
+      skill.effects.some((e) => e.type === 'CHANGE_FIELD') &&
+      !this.fieldCatalog.some((f) => f.key === payload.fieldKey)
+    ) {
+      return left(
+        new InvalidActionError('escolha um campo do catálogo da batalha')
+      )
+    }
     if (!actor.cooldowns.isReady(skill.key)) {
       return left(new InvalidActionError('skill em recarga'))
     }
@@ -337,6 +577,17 @@ export class BattleEngine {
     if (targets.isLeft())
       return left(new InvalidActionError(targets.value.message))
 
+    return right({ skill, hits: targets.value })
+  }
+
+  private useSkill(
+    actor: EngineUnit,
+    payload: Extract<BattleActionPayload, { type: 'SKILL' }>
+  ): Either<InvalidActionError, void> {
+    const resolved = this.resolveSkill(actor, payload)
+    if (resolved.isLeft()) return left(resolved.value)
+    const { skill } = resolved.value
+
     const potency = actor.desgaste.potencyFor(skill, actor.hp)
     this.log.push({
       type: 'SKILL',
@@ -345,8 +596,9 @@ export class BattleEngine {
       potency,
     })
 
-    const hits = this.applyIntercept(skill, targets.value, payload.target)
+    const hits = this.applyIntercept(skill, resolved.value.hits, payload.target)
     let producedEffect = false
+    this.action = { damaged: [], killed: [], healed: false }
 
     for (const hit of hits) {
       const target = this.get(hit.ref)
@@ -396,6 +648,18 @@ export class BattleEngine {
         ref: actor.ref,
         selfDamage: charge.selfDamage,
       })
+
+      const { damaged, killed, healed } = this.action
+      if (damaged.length > 0) {
+        this.firePassive(actor, 'ON_ATTACK', { target: damaged[0] })
+      }
+      if (killed.length > 0) {
+        this.firePassive(actor, 'ON_KILL', { target: killed[0] })
+      }
+      if (healed) this.firePassive(actor, 'ON_HEAL')
+      if (charge.charges.some((c) => c.applied > 0)) {
+        this.firePassive(actor, 'ON_DESGASTE')
+      }
     }
 
     // recarga vale mesmo errando (errar já custou turno e recarga, 9.4b)
@@ -455,19 +719,20 @@ export class BattleEngine {
 
     switch (effect.type) {
       case 'DAMAGE': {
-        const power = effectivePower(effect.power, skill.isEnhanced) * potency
-        const raw =
-          baseDamage(
-            power,
-            this.stat(actor, Stat.ATTACK),
-            this.stat(target, Stat.DEFENSE)
-          ) *
-          falloff *
-          damageMultiplier(round) *
-          target.conditions.damageTakenMultiplier *
-          traitDamageMultiplier(actor, skill.range)
-        const amount = finalDamage(raw)
-        const result = applyDamage(amount, target)
+        const amount = this.damageOf(
+          actor,
+          target,
+          skill,
+          effect.power,
+          potency,
+          falloff,
+          round
+        )
+        const result = applyDamage(
+          amount,
+          target,
+          this.passiveIgnoresShield(actor)
+        )
         this.setHp(target, result.hpLeft, result.shieldLeft)
         this.log.push({
           type: 'DAMAGE',
@@ -476,17 +741,26 @@ export class BattleEngine {
           amount: result.hpLost,
           shieldAbsorbed: result.shieldAbsorbed,
         })
+        if (target.side !== actor.side) {
+          this.action.damaged.push(target)
+          if (!target.alive) this.action.killed.push(target)
+          else this.firePassive(target, 'ON_HIT', { attacker: actor })
+        }
         return
       }
 
       case 'HEAL': {
-        const power = effectivePower(effect.power, skill.isEnhanced) * potency
-        const amount = Math.round(
-          healAmount(power, target.desgaste.maxHp) * healMultiplier(round)
+        const amount = this.restoreOf(
+          target,
+          skill,
+          effect.power,
+          potency,
+          round
         )
         const healed = Math.min(amount, target.desgaste.maxHp - target.hp)
         target.hp += healed
         if (amount > 0) target.desgaste.relieve(RELIEF.HEAL)
+        if (healed > 0) this.action.healed = true
         this.log.push({
           type: 'HEAL',
           ref: actor.ref,
@@ -497,9 +771,12 @@ export class BattleEngine {
       }
 
       case 'SHIELD': {
-        const power = effectivePower(effect.power, skill.isEnhanced) * potency
-        const amount = Math.round(
-          healAmount(power, target.desgaste.maxHp) * healMultiplier(round)
+        const amount = this.restoreOf(
+          target,
+          skill,
+          effect.power,
+          potency,
+          round
         )
         target.shield += amount
         this.log.push({
@@ -572,6 +849,12 @@ export class BattleEngine {
           status: effect.status,
           result,
         })
+        if (result !== 'IMMUNE') {
+          this.firePassive(target, 'ON_STATUS', {
+            attacker: actor,
+            status: effect.status,
+          })
+        }
         return
       }
 
@@ -594,10 +877,55 @@ export class BattleEngine {
       }
 
       case 'CHANGE_FIELD':
-        // campo de batalha ainda não está no snapshot (D98): sem efeito por enquanto
-        this.log.push({ type: 'FIELD_IGNORED', ref: actor.ref })
+        this.changeField(
+          actor,
+          payload.fieldKey!,
+          effect.duration,
+          effect.multiplier
+        )
         return
     }
+  }
+
+  /** Dano de um efeito DAMAGE num alvo, antes do escudo (ordem do D68). */
+  private damageOf(
+    actor: EngineUnit,
+    target: EngineUnit,
+    skill: SnapshotSkill,
+    effectPower: number,
+    potency: number,
+    falloff: number,
+    round: number
+  ): number {
+    const power = effectivePower(effectPower, skill.isEnhanced) * potency
+    const raw =
+      baseDamage(
+        power,
+        this.stat(actor, Stat.ATTACK),
+        this.stat(target, Stat.DEFENSE)
+      ) *
+      falloff *
+      damageMultiplier(round) *
+      target.conditions.damageTakenMultiplier *
+      traitDamageMultiplier(actor, skill.range) *
+      (1 - this.passiveDamageReduction(target) / 100)
+
+    return finalDamage(raw)
+  }
+
+  /** Quanto uma cura ou escudo renderia no alvo. */
+  private restoreOf(
+    target: EngineUnit,
+    skill: SnapshotSkill,
+    effectPower: number,
+    potency: number,
+    round: number
+  ): number {
+    const power = effectivePower(effectPower, skill.isEnhanced) * potency
+
+    return Math.round(
+      healAmount(power, target.desgaste.maxHp) * healMultiplier(round)
+    )
   }
 
   private reposition(
@@ -737,7 +1065,267 @@ export class BattleEngine {
 
   /** Stat efetivo: base com Desgaste × buffs e debuffs. */
   private stat(unit: EngineUnit, stat: Stat): number {
-    return unit.conditions.effectiveStat(stat, unit.desgaste.stat(stat))
+    return (
+      unit.conditions.effectiveStat(stat, unit.desgaste.stat(stat)) *
+      this.passiveStatMultiplier(unit, stat) *
+      this.fieldMultiplier(unit, stat)
+    )
+  }
+
+  // ---------------------------------------------------------------------------
+  // Campo de batalha (D28, D40, D98, `engine.md` 3.12)
+  // ---------------------------------------------------------------------------
+
+  /** Campo valendo agora (o inicial ou a troca em andamento). */
+  get activeField(): { key: string | null; untilRound: number | null } {
+    return {
+      key: this.field.current?.key ?? null,
+      untilRound: this.field.untilRound,
+    }
+  }
+
+  /** Bônus do campo: só para quem tem um dos traços pedidos, nos dois lados; fora do limite de fontes (D98). */
+  private fieldMultiplier(unit: EngineUnit, stat: Stat): number {
+    const field = this.field.current
+    if (!field || !qualifies(field, unit.snapshot.traitKeys)) return 1
+
+    const percent =
+      stat === field.primaryStat
+        ? field.primaryPercent
+        : stat === field.secondaryStat
+          ? field.secondaryPercent
+          : 0
+
+    return 1 + (percent * this.field.multiplier) / 100
+  }
+
+  /**
+   * Troca o campo por skill (D98): vale até o fim da rodada atual + N rodadas, com o bônus multiplicado; uma troca
+   * ativa por vez (a nova substitui a anterior). Na mesma ação, troca uma vez só.
+   */
+  private changeField(
+    actor: EngineUnit,
+    fieldKey: string,
+    duration: number,
+    multiplier: number
+  ) {
+    const round = this.current?.round ?? this.queue.currentRound
+    const untilRound = round + duration
+    if (
+      this.field.untilRound === untilRound &&
+      this.field.current?.key === fieldKey
+    )
+      return
+
+    this.field = {
+      current: this.fieldCatalog.find((f) => f.key === fieldKey) ?? null,
+      multiplier,
+      untilRound,
+    }
+    this.log.push({ type: 'FIELD', fieldKey, ref: actor.ref, untilRound })
+    this.afterFieldChange()
+  }
+
+  /** Volta ao campo inicial quando a troca acaba. */
+  private expireField(round: number) {
+    if (this.field.untilRound === null || round <= this.field.untilRound) return
+
+    this.field = { current: this.initialField, multiplier: 1, untilRound: null }
+    this.log.push({
+      type: 'FIELD',
+      fieldKey: this.initialField?.key ?? null,
+      ref: null,
+      untilRound: null,
+    })
+    this.afterFieldChange()
+  }
+
+  private afterFieldChange() {
+    this.refreshSpeeds()
+    for (const unit of this.units.values()) {
+      this.firePassive(unit, 'ON_FIELD_CHANGE')
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Passivas (D78, D83, `engine.md` 3.11)
+  // ---------------------------------------------------------------------------
+
+  /** Passiva contínua ativa agora: ALWAYS sempre; HP_BELOW com o HP abaixo do limite. */
+  private passiveActive(unit: EngineUnit): boolean {
+    const trigger = unit.snapshot.passive.trigger
+    if (trigger.type === 'ALWAYS') return true
+    if (trigger.type === 'HP_BELOW') {
+      return (unit.hp / unit.desgaste.maxHp) * 100 < trigger.percent
+    }
+
+    return false
+  }
+
+  private passiveEffects(unit: EngineUnit): readonly PassiveEffect[] {
+    return this.passiveActive(unit) ? unit.snapshot.passive.effects : []
+  }
+
+  /** Ignora escudos (ex.: Ecko). */
+  private passiveIgnoresShield(unit: EngineUnit): boolean {
+    return this.passiveEffects(unit).some((e) => e.type === 'IGNORE_SHIELD')
+  }
+
+  /** % de dano recebido a menos. */
+  private passiveDamageReduction(unit: EngineUnit): number {
+    return this.passiveEffects(unit).reduce(
+      (sum, e) => sum + (e.type === 'REDUCE_DAMAGE' ? e.percent : 0),
+      0
+    )
+  }
+
+  /**
+   * Stat da passiva **condicional** (HP_BELOW). Aumento permanente não existe (D83), então ALWAYS não mexe em stat.
+   */
+  private passiveStatMultiplier(unit: EngineUnit, stat: Stat): number {
+    if (unit.snapshot.passive.trigger.type !== 'HP_BELOW') return 1
+
+    return this.passiveEffects(unit).reduce(
+      (total, e) =>
+        e.type === 'STAT_MODIFIER' && e.stat === stat
+          ? total * (1 + e.percent / 100)
+          : total,
+      1
+    )
+  }
+
+  /** Dispara a passiva da unidade se o gatilho bate com o evento. */
+  private firePassive(
+    unit: EngineUnit,
+    event: PassiveEvent,
+    context: PassiveContext = {}
+  ) {
+    if (this.inPassive || !unit.alive) return
+
+    const passive = unit.snapshot.passive
+    const trigger = passive.trigger
+    if (trigger.type !== event) return
+    if (
+      trigger.type === 'PERIODIC' &&
+      unit.turnsStarted % trigger.everyTurns !== 0
+    ) {
+      return
+    }
+    if (trigger.type === 'ON_STATUS' && trigger.status !== context.status) {
+      return
+    }
+
+    this.inPassive = true
+    this.log.push({
+      type: 'PASSIVE',
+      ref: unit.ref,
+      name: passive.name,
+      trigger: trigger.type,
+    })
+    for (const effect of passive.effects) {
+      this.applyPassiveEffect(unit, effect, context)
+    }
+    this.inPassive = false
+  }
+
+  private applyPassiveEffect(
+    owner: EngineUnit,
+    effect: PassiveEffect,
+    context: PassiveContext
+  ) {
+    switch (effect.type) {
+      case 'REDUCE_COOLDOWN':
+        owner.cooldowns.reduce(effect.amount)
+        return
+
+      case 'HEAL': {
+        const round = this.current?.round ?? this.queue.currentRound
+        const amount = Math.round(
+          ((owner.desgaste.maxHp * effect.percentOfMaxHp) / 100) *
+            healMultiplier(round)
+        )
+        const healed = Math.min(amount, owner.desgaste.maxHp - owner.hp)
+        owner.hp += healed
+        this.log.push({
+          type: 'HEAL',
+          ref: owner.ref,
+          targetRef: owner.ref,
+          amount: healed,
+        })
+        return
+      }
+
+      case 'ADVANCE_TURN':
+        this.queue.shift(owner.ref, effect.percent)
+        this.log.push({
+          type: 'TURN_SHIFT',
+          targetRef: owner.ref,
+          percent: effect.percent,
+        })
+        return
+
+      case 'STAT_MODIFIER':
+        // num evento: vale até o fim do próximo turno do dono
+        owner.conditions.addModifier({
+          source: `PASSIVE:${owner.ref}`,
+          stat: effect.stat,
+          percent: effect.percent,
+          turnsLeft: 2,
+        })
+        this.refreshSpeeds()
+        return
+
+      case 'APPLY_STATUS': {
+        const target =
+          effect.target === 'SELF'
+            ? owner
+            : effect.target === 'ATTACKER'
+              ? context.attacker
+              : context.target
+        if (!target?.alive) return
+
+        const chance =
+          target.side === owner.side
+            ? effect.chance
+            : statusChance(
+                effect.chance,
+                this.stat(owner, Stat.PRECISION),
+                this.stat(target, Stat.WILL)
+              )
+        if (!roll(this.rng, chance)) {
+          this.log.push({
+            type: 'STATUS',
+            targetRef: target.ref,
+            status: effect.status,
+            result: 'RESISTED',
+          })
+          return
+        }
+
+        if (effect.status === StatusType.LOCK) {
+          this.log.push({
+            type: 'LOCK',
+            targetRef: target.ref,
+            skillKey: target.cooldowns.lock(),
+          })
+          return
+        }
+
+        const result = target.conditions.applyDefaultStatus(effect.status)
+        this.log.push({
+          type: 'STATUS',
+          targetRef: target.ref,
+          status: effect.status,
+          result,
+        })
+        return
+      }
+
+      case 'IGNORE_SHIELD':
+      case 'REDUCE_DAMAGE':
+        // contínuos: lidos na hora do dano (passiveIgnoresShield, passiveDamageReduction)
+        return
+    }
   }
 
   private setHp(unit: EngineUnit, hp: number, shield: number) {
@@ -814,6 +1402,7 @@ function createUnit(snapshot: SnapshotUnit, side: BattleSide): EngineUnit {
     cooldowns: new SkillCooldowns(snapshot.skills),
     skipNext: false,
     delayImmune: false,
+    turnsStarted: 0,
   }
 }
 

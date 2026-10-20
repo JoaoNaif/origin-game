@@ -53,6 +53,7 @@ export function makeSnapshotUnit(
     profile: VANGUARD_STATS,
     freePoints: { ...EMPTY_FREE_POINTS },
     traitEffects: [],
+    traitKeys: [],
     lineageCostPercent: {},
     passive: {
       name: 'Firmeza',
@@ -79,5 +80,6 @@ export function makeBattleSnapshot(): BattleSnapshot {
       name: 'Muralha de recrutas',
       units: [0, 1, 2, 3].map((i) => makeSnapshotUnit(`OPPONENT:${i}`, i)),
     },
+    field: { initial: null, catalog: [] },
   }
 }

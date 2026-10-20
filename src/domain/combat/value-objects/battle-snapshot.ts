@@ -1,6 +1,7 @@
 import { CharacterClass } from '@/domain/characters/enums/character-class'
 import { Lineage } from '@/domain/characters/enums/lineage'
 import { Passive } from '@/domain/characters/value-objects/passive'
+import { Stat } from '@/domain/characters/enums/stat'
 import { StatBlock } from '@/domain/characters/value-objects/stat-block'
 import { TraitEffect } from '@/domain/characters/value-objects/trait-effect'
 import { SkillArea } from '@/domain/skills/enums/skill-area'
@@ -43,6 +44,8 @@ export interface SnapshotUnit extends GridPosition {
   /** Pontos livres (HP em pontos); NPC usa a distribuição padrão. */
   freePoints: StatBlock
   traitEffects: TraitEffect[]
+  /** `key` dos traços (o campo de batalha pede traços pelo nome, D98). */
+  traitKeys: string[]
   /**
    * Modificador de custo do Desgaste por linhagem, em % (ex.: sangue puro −10% na linhagem da família, D88). Já
    * resolvido pela variante do traço, porque `traitEffects` não guarda de qual variante o efeito é.
@@ -60,6 +63,25 @@ export interface SnapshotSide {
   units: SnapshotUnit[]
 }
 
+/** Campo de batalha como valor (D98). */
+export interface SnapshotField {
+  key: string
+  name: string
+  /** Quem tem qualquer um destes traços recebe o bônus. */
+  requiredTraitKeys: string[]
+  primaryStat: Stat
+  secondaryStat: Stat
+  primaryPercent: number
+  secondaryPercent: number
+}
+
+export interface SnapshotFieldSetup {
+  /** O campo sorteado no início (D28); nulo = sem campo (nenhum passou no sorteio justo, D98). */
+  initial: SnapshotField | null
+  /** Campos para onde uma skill pode trocar (o catálogo da batalha). */
+  catalog: SnapshotField[]
+}
+
 /**
  * Foto dos dois lados no início da batalha (D8, `data_model.md` 3.10). Com a seed e o log de ações, reproduz a
  * batalha inteira (replay), mesmo que o personagem ou o catálogo mudem depois.
@@ -67,4 +89,5 @@ export interface SnapshotSide {
 export interface BattleSnapshot {
   player: SnapshotSide
   opponent: SnapshotSide
+  field: SnapshotFieldSetup
 }
