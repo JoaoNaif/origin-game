@@ -27,21 +27,22 @@ const side = (
 
 describe('Battle End', () => {
   describe('Exhaustion', () => {
-    it('should be able to stay normal until round 20', () => {
-      expect(healMultiplier(20)).toBe(1)
-      expect(damageMultiplier(20)).toBe(1)
+    it('should be able to stay normal until round 15', () => {
+      expect(healMultiplier(15)).toBe(1)
+      expect(damageMultiplier(15)).toBe(1)
     })
 
-    it('should be able to cut healing 10% and add 5% damage per round from 21', () => {
-      expect(healMultiplier(21)).toBeCloseTo(0.9)
-      expect(damageMultiplier(21)).toBeCloseTo(1.05)
-      expect(healMultiplier(25)).toBeCloseTo(0.5)
-      expect(damageMultiplier(25)).toBeCloseTo(1.25)
+    it('should be able to cut healing 10% and add 5% damage per round from 16', () => {
+      expect(healMultiplier(16)).toBeCloseTo(0.9)
+      expect(damageMultiplier(16)).toBeCloseTo(1.05)
+      expect(healMultiplier(20)).toBeCloseTo(0.5)
+      expect(damageMultiplier(20)).toBeCloseTo(1.25)
     })
 
-    it('should be able to reach zero healing and +50% damage on round 30', () => {
+    it('should be able to reach zero healing on round 25 and +75% damage on round 30', () => {
+      expect(healMultiplier(25)).toBeCloseTo(0)
       expect(healMultiplier(30)).toBe(0)
-      expect(damageMultiplier(30)).toBeCloseTo(1.5)
+      expect(damageMultiplier(30)).toBeCloseTo(1.75)
     })
 
     it('should be able to force the end when round 30 closes', () => {

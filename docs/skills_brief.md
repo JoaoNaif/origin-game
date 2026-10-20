@@ -317,7 +317,7 @@ alcance, área), não só o número.
 
 - A skill **continua utilizável**, mas com **potência reduzida drasticamente**: dano, buff, debuff e cura rendem
   menos. Nada é gratuito, e nenhuma skill sai do personagem.
-- Regra proposta [PLACEHOLDER]: com folga ≥ custo, 100%; com folga parcial, interpola; sem folga, **50%** da magnitude.
+- Regra proposta [PLACEHOLDER]: com folga ≥ custo, 100%; com folga parcial, interpola; sem folga, **70%** da magnitude (D119; era 50%).
   Duração e acerto não mudam.
 
 **Como alivia**
@@ -506,7 +506,7 @@ queda 100/60/30, Desgaste, Defender menor que dano, perfurante e flanco. Somam-s
 | Rodada | Regra [PLACEHOLDER] |
 |---|---|
 | Até a 20 | Normal (a meta de duração é 10 a 15, podendo passar) |
-| A partir da 21 | **Exaustão:** a cada rodada a **cura rende menos** (~-10%) e o **dano rende mais** (~+5%) |
+| A partir da 16 (D119) | **Exaustão:** a cada rodada a **cura rende menos** (~-10%) e o **dano rende mais** (~+5%) |
 | 30 | **Fim forçado:** vence quem tem **mais % de HP total** |
 
 Só aparece depois do tempo normal: não pesa para o iniciante, só para quem tenta travar o jogo.
@@ -609,7 +609,7 @@ Chance = `base × 2 × Precisão / (Precisão + Vontade)`, piso 30%, **teto 90%*
 - **Fontes por stat: 2 buffs e 2 debuffs** (era 3). Magnitudes **10% / 15% / 20%**. Máximo ~+44% e ~−36%.
 - **Defender:** +50% de Defesa efetiva até o próximo turno do personagem, fora do limite de fontes, mais ~10% de alívio
   de Desgaste. Reduz 13% (Executor) a 19% (Vanguarda) do dano recebido.
-- **Exaustão:** mantida (rodada 21, cura −10% e dano +5% por rodada, fim forçado na 30).
+- **Exaustão:** a partir da **rodada 16** (D119; era 21), cura −10% e dano +5% por rodada (cura zera na 25, dano +75% na 30), fim forçado na 30.
 
 ### 12.6 Kit básico e marcos
 

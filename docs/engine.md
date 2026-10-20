@@ -186,7 +186,7 @@ a sua ação. Aí começa a próxima. Quem é mais rápido pode agir **mais de u
 - Uma unidade que entra no meio (besta invocada) precisa agir antes de a rodada fechar.
 - A duração de uma rodada depende do mais lento em campo (um squad com Artilharia tem rodadas mais longas), mas vale
   igual para os dois lados, porque conta todas as unidades da batalha.
-- A rodada conta para a **Exaustão** (a partir da 21), o **fim forçado** (30) e o **Interceptar** (1 vez por rodada).
+- A rodada conta para a **Exaustão** (a partir da 16, D119), o **fim forçado** (30) e o **Interceptar** (1 vez por rodada).
 
 **Exemplo** (Executor 115 contra Artilharia 65):
 
@@ -315,10 +315,10 @@ HP atual abaixo de 80% do máximo. O que passa do piso simplesmente não é cobr
 **Potência (9.4b):** depende da **folga na linhagem da própria skill** antes de cobrar:
 
 ```
-potência = 0,5 + 0,5 × min(1, folga / custo pedido)
+potência = 0,7 + 0,3 × min(1, folga / custo pedido)      (D119; era 0,5 + 0,5)
 ```
 
-Com folga suficiente, 100%; parcial, interpola; sem folga, **50%**. Multiplica dano, cura, buff e debuff; **duração e
+Com folga suficiente, 100%; parcial, interpola; sem folga, **70%** (D119). Multiplica dano, cura, buff e debuff; **duração e
 acerto não mudam**. A skill nunca deixa de poder ser usada.
 
 **Alívio (`relieve`, 9.4b, placeholders):** remove uma fração do Desgaste acumulado: cura **20%**, Defender **10%**, skill
@@ -581,16 +581,20 @@ Funções em `src/domain/combat/services/battle-end.ts` (11.8, 12.5, D31, D72, `
 **Exaustão** (pressão contra o turtling, só depois do tempo normal; não pesa para o iniciante):
 
 ```
-passo = rodada − 20   (0 até a rodada 20)
+passo = rodada − 15   (0 até a rodada 15; D119, era 20)
 cura × (1 − 0,10 × passo)      dano × (1 + 0,05 × passo)
 ```
 
 | Rodada | Cura (e escudo concedido) | Dano |
 |---|---|---|
-| até 20 | 100% | 100% |
-| 21 | 90% | 105% |
-| 25 | 50% | 125% |
-| 30 | **0%** | **150%** |
+| até 15 | 100% | 100% |
+| 16 | 90% | 105% |
+| 20 | 50% | 125% |
+| 25 | **0%** | 150% |
+| 30 | 0% | **175%** |
+
+**Por que a 16 (D119):** com a Exaustão na 21, só 27% das batalhas acabavam por eliminação (simulação, 3.14); a
+batalha virava tanque contra tanque com o Desgaste no piso. Junto com o piso de potência de 70% (3.5), sobe para ~68%.
 
 O multiplicador de dano entra nos "modificadores de dano" da ordem do D68 (3.4); o de cura multiplica o `healAmount`.
 

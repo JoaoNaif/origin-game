@@ -5,8 +5,8 @@ import { StatBlock } from '@/domain/characters/value-objects/stat-block'
 /** O Desgaste nunca leva o stat abaixo de 80% do base (D91): perde no máximo 20%. */
 export const DESGASTE_FLOOR = 0.8
 
-/** Potência da skill quando não há folga nenhuma (9.4b, placeholder aprovado). */
-export const POTENCY_AT_FLOOR = 0.5
+/** Potência da skill quando não há folga nenhuma (9.4b; 70% desde o D119, era 50%). */
+export const POTENCY_AT_FLOOR = 0.7
 
 /** Ressonância (D97): fração do custo que cai nas outras linhagens, pelo número de variantes. */
 export const RESONANCE_BY_VARIANTS: Record<number, number> = {
@@ -74,7 +74,7 @@ export interface DesgasteCharge {
 }
 
 export interface ChargeResult {
-  /** Multiplicador da potência (dano, cura, buff, debuff): 1 com folga, 0,5 sem folga. Duração e acerto não mudam. */
+  /** Multiplicador da potência (dano, cura, buff, debuff): 1 com folga, 0,7 sem folga (D119). Duração e acerto não mudam. */
   potency: number
   charges: DesgasteCharge[]
   /** Dano em si (Elemental): o chamador tira do HP atual. */
@@ -175,7 +175,7 @@ export class DesgasteState {
 
   /**
    * Potência da skill agora, sem cobrar (o motor calcula o efeito antes de saber se a skill acertou alguém):
-   * `0,5 + 0,5 × min(1, folga / custo)` na linhagem da própria skill.
+   * `0,7 + 0,3 × min(1, folga / custo)` na linhagem da própria skill (D119).
    */
   potencyFor(skill: DesgasteSkill, currentHp: number): number {
     const own = this.costOf(skill)[0]
@@ -188,7 +188,7 @@ export class DesgasteState {
   /**
    * Cobra o Desgaste da skill (chamar só se ela produziu efeito em pelo menos 1 alvo; errar não cobra). Devolve a
    * potência, que depende da folga na linhagem da própria skill: com folga ≥ custo, 100%; parcial, interpola;
-   * sem folga, 50%.
+   * sem folga, 70% (D119).
    */
   charge(skill: DesgasteSkill, currentHp: number): ChargeResult {
     const requests = this.costOf(skill)

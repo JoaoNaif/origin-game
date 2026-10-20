@@ -50,12 +50,12 @@ describe('Desgaste', () => {
       expect(sut.stat(Stat.DEFENSE)).toBe(96)
     })
 
-    it('should be able to halve the potency with no slack left', () => {
+    it('should be able to drop the potency to 70% with no slack left', () => {
       for (let i = 0; i < 4; i++) sut.charge(skill(), BASE.HP) // 24 de 24
 
       const result = sut.charge(skill(), BASE.HP)
 
-      expect(result.potency).toBe(0.5)
+      expect(result.potency).toBe(0.7)
       expect(result.charges[0].applied).toBe(0)
     })
 
@@ -63,8 +63,8 @@ describe('Desgaste', () => {
       for (let i = 0; i < 3; i++) sut.charge(skill(), BASE.HP) // 18 de 24
       sut.charge(skill({ desgastePercent: 2.5 }), BASE.HP) // 21 de 24: sobram 3
 
-      // pede 6 com 3 de folga → metade da folga → potência 0,75
-      expect(sut.charge(skill(), BASE.HP).potency).toBeCloseTo(0.75)
+      // pede 6 com 3 de folga → metade da folga → potência 0,7 + 0,3 × 0,5 = 0,85
+      expect(sut.charge(skill(), BASE.HP).potency).toBeCloseTo(0.85)
     })
 
     it('should be able to hurt the current HP for Elemental, down to 80% of max', () => {
@@ -79,7 +79,7 @@ describe('Desgaste', () => {
 
       // pede 8% de 700 = 56, mas só há 600 − 560 = 40 de folga
       expect(result.selfDamage).toBe(40)
-      expect(result.potency).toBeCloseTo(0.5 + 0.5 * (40 / 56))
+      expect(result.potency).toBeCloseTo(0.7 + 0.3 * (40 / 56))
     })
 
     it('should be able to lower the max HP for Fundamental', () => {
