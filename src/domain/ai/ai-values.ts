@@ -69,7 +69,7 @@ export interface DifficultyRules {
 const BASIC: AiFactor[] = [AiFactor.DAMAGE, AiFactor.KILL, AiFactor.SUPPORT]
 const ALL: AiFactor[] = Object.values(AiFactor)
 
-/** Dificuldade (D90, D103, `pvp_brief.md` 8.1 e 10.2; temperaturas do D117, calibradas por simulação). Nunca dá bônus de stat. */
+/** Dificuldade (D90, D103, `pvp_brief.md` 8.1 e 10.2; temperaturas do D117 e D121, calibradas por simulação). Nunca dá bônus de stat. */
 export const DIFFICULTY_RULES: Record<AiDifficulty, DifficultyRules> = {
   BEGINNER: {
     temperature: 0.6,
@@ -79,7 +79,7 @@ export const DIFFICULTY_RULES: Record<AiDifficulty, DifficultyRules> = {
     remembersSkills: false,
   },
   INTERMEDIATE: {
-    temperature: 0.35,
+    temperature: 0.28,
     factors: [...BASIC, AiFactor.THREAT],
     logWindow: 1,
     protectionScale: 0.25,
@@ -93,7 +93,7 @@ export const DIFFICULTY_RULES: Record<AiDifficulty, DifficultyRules> = {
     remembersSkills: false,
   },
   MASTER: {
-    temperature: 0.1,
+    temperature: 0.14,
     factors: ALL,
     logWindow: 5,
     protectionScale: 0.75,

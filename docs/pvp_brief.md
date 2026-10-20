@@ -107,9 +107,9 @@ da ação é a soma ponderada pelo perfil, dividida pela maior nota do turno.
 | Nível | T | Fatores que enxerga | Leitura do jogador |
 |---|---|---|---|
 | Iniciante | 0.6 (D117) | dano esperado, abate, defesa/cura/status (D115) | nenhuma |
-| Intermediário | 0.35 (D117) | + ameaça do alvo | última ação |
+| Intermediário | 0.28 (D121) | + ameaça do alvo | última ação |
 | Avançado | 0.18 (D117) | + risco próprio | padrões simples |
-| Mestre | 0.1 | + situação geral | padrões e uso de skills |
+| Mestre | 0.14 (D121) | + situação geral | padrões e uso de skills |
 | Grão-mestre | 0 (sempre a melhor) | todos | tudo, reage ao estilo |
 
 **Pesos dos perfis** (placeholder; fatores que o nível não enxerga valem 0; Risco pela metade no D115; ajustes do D118):
