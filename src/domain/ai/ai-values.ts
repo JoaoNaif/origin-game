@@ -16,37 +16,37 @@ export type AiFactor = (typeof AiFactor)[keyof typeof AiFactor]
 
 export type FactorWeights = Record<AiFactor, number>
 
-/** Pesos dos perfis (D90, `pvp_brief.md` 8.1, placeholder). Risco subtrai. */
+/** Pesos dos perfis (D90, `pvp_brief.md` 8.1, placeholder). Risco subtrai; pela metade desde o D115; defesa/cura/status e dano ajustados no D118. */
 export const PROFILE_WEIGHTS: Record<AiProfile, FactorWeights> = {
   AGGRESSIVE: {
     DAMAGE: 1.0,
     KILL: 0.8,
     THREAT: 0.5,
-    RISK: 0.2,
-    SUPPORT: 0.2,
+    RISK: 0.1,
+    SUPPORT: 0.35,
     SITUATION: 0.3,
   },
   CAUTIOUS: {
     DAMAGE: 0.5,
     KILL: 0.5,
     THREAT: 0.5,
-    RISK: 1.0,
-    SUPPORT: 1.0,
+    RISK: 0.5,
+    SUPPORT: 0.7,
     SITUATION: 0.6,
   },
   FINISHER: {
-    DAMAGE: 0.6,
+    DAMAGE: 0.8,
     KILL: 1.0,
     THREAT: 0.7,
-    RISK: 0.4,
-    SUPPORT: 0.3,
+    RISK: 0.2,
+    SUPPORT: 0.5,
     SITUATION: 0.4,
   },
   BALANCED: {
     DAMAGE: 0.7,
     KILL: 0.7,
     THREAT: 0.6,
-    RISK: 0.6,
+    RISK: 0.3,
     SUPPORT: 0.6,
     SITUATION: 0.6,
   },
@@ -65,27 +65,28 @@ export interface DifficultyRules {
   remembersSkills: boolean
 }
 
-const BASIC: AiFactor[] = [AiFactor.DAMAGE, AiFactor.KILL]
+/** Todos os níveis enxergam dano, abate e defesa/cura/status (D115). */
+const BASIC: AiFactor[] = [AiFactor.DAMAGE, AiFactor.KILL, AiFactor.SUPPORT]
 const ALL: AiFactor[] = Object.values(AiFactor)
 
-/** Dificuldade (D90, D103, `pvp_brief.md` 8.1 e 10.2, placeholder). Nunca dá bônus de stat. */
+/** Dificuldade (D90, D103, `pvp_brief.md` 8.1 e 10.2; temperaturas do D117, calibradas por simulação). Nunca dá bônus de stat. */
 export const DIFFICULTY_RULES: Record<AiDifficulty, DifficultyRules> = {
   BEGINNER: {
-    temperature: 1.0,
+    temperature: 0.6,
     factors: BASIC,
     logWindow: 0,
     protectionScale: 0,
     remembersSkills: false,
   },
   INTERMEDIATE: {
-    temperature: 0.5,
+    temperature: 0.35,
     factors: [...BASIC, AiFactor.THREAT],
     logWindow: 1,
     protectionScale: 0.25,
     remembersSkills: false,
   },
   ADVANCED: {
-    temperature: 0.25,
+    temperature: 0.18,
     factors: [...BASIC, AiFactor.THREAT, AiFactor.RISK],
     logWindow: 5,
     protectionScale: 0.5,

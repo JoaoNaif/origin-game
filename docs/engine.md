@@ -855,3 +855,116 @@ Código: `src/domain/ai/simulation/` (`simulateBattle`, `runMatchup`), script `s
 **Rodar:** `npm run simulate` (fora do `npm test`, leva alguns minutos). Variáveis: `SIM_BATTLES` (padrão 100),
 `SIM_LEVEL` (padrão 50), `SIM_SECTIONS` (`mirror,gap1,gap2,gap4,profiles`) e `SIM_OVERRIDES` (JSON com pesos ou regras
 de nível, para testar valores sem mudar o código).
+
+
+**Primeira rodada (2026-10-19, 100 batalhas por confronto, valores do D90/D103/D114):**
+
+| Confronto (A x B) | A vence | Meta |
+|---|---|---|
+| Equilibrado Mestre x ele mesmo | 48% | ~50% |
+| Intermediário x Iniciante | 82% | ~65% |
+| Avançado x Intermediário | 89% | ~65% |
+| Mestre x Avançado | 100% | ~65% |
+| Grão-mestre x Mestre | 73% | ~65% |
+| Dois e quatro níveis acima | 98% a 100% | ~80% / ≥95% |
+| Agressivo x Cauteloso (Mestre) | 1% | 45–55% |
+| Agressivo x Focado em abater | 38% | 45–55% |
+| Agressivo x Equilibrado | 9% | 45–55% |
+| Cauteloso x Focado em abater | 99% | 45–55% |
+| Cauteloso x Equilibrado | 75% | 45–55% |
+| Focado em abater x Equilibrado | 14% | 45–55% |
+
+Leitura: o lado e o sorteio estão neutros (espelho 48%). A escada de níveis está **íngreme demais**, e o maior salto é
+Avançado → Mestre, o primeiro nível que enxerga **defesa/cura/status**. Entre os perfis, **quem cura mais vence**
+(Cauteloso, peso 1,0 em defesa/cura/status).
+
+**Experimentos (não aplicados, aguardam decisão):**
+- **E1:** todos os níveis enxergam defesa/cura/status. Avançado x Intermediário caiu para 68% (na meta), mas Mestre x
+  Avançado continua 97% e o Intermediário passou a **perder** do Iniciante (26%): com a cura visível, o fator **Ameaça**
+  (que só o Intermediário em diante enxerga) parece atrapalhar.
+- **E2:** pesos de defesa/cura/status mais próximos (Agressivo 0,4, Cauteloso 0,8, Focado 0,45). Melhora (Cauteloso x
+  Equilibrado 57%), mas Agressivo e Focado ainda perdem muito (11% a 42%).
+
+**Ressalva:** é uma squad só (com Suporte e Guardião, então cura e escudo pesam muito). A calibração final precisa das
+squads do `seed.ts`, senão os pesos ficam ajustados para essa composição.
+
+**Segunda rodada: squads do seed (2026-10-19, 4 composições espelhadas no nível 58, 100 batalhas por confronto):**
+
+| Confronto (A x B) | Valores atuais | E1 | E1 + Risco pela metade | Meta |
+|---|---|---|---|---|
+| Espelho (Mestre) | 47% | | 51% | ~50% |
+| Intermediário x Iniciante | 48% | 63% | 63% | ~65% |
+| Avançado x Intermediário | 51% | 44% | 58% | ~65% |
+| Mestre x Avançado | 93% | 87% | 89% | ~65% |
+| Grão-mestre x Mestre | 71% | 71% | 65% | ~65% |
+| Avançado x Iniciante | 64% | 49% | 70% | ~80% |
+| Mestre x Intermediário | 95% | 68% | 94% | ~80% |
+| Grão-mestre x Avançado | 94% | 95% | 91% | ~80% |
+| Perfis (Mestre), faixa | 37% a 59% | | 30% a 75% | 45–55% |
+
+Leitura:
+- Com squads variadas, os **perfis ficam quase na meta** (na squad de calibração, quem curava vencia por 99%).
+- **Cura/escudo/status invisível até o Avançado** achata os três primeiros níveis. Com E1, o Intermediário vence o
+  Iniciante em 63%.
+- O **Risco** como está piora a IA: o Avançado só com E1 (vendo Risco) perde do Intermediário (44%); **sem Risco**, vence
+  com 76%. Pela metade, 58%.
+- O salto que sobra é **Avançado → Mestre** (~90%): o Mestre ganha a Situação e a temperatura cai de 0,25 para 0,1.
+  Próximo experimento.
+
+**Aplicado (D115):** E1 (todos os níveis enxergam defesa/cura/status) e Risco pela metade. Os valores atuais do código
+são os da coluna "E1 + Risco pela metade".
+
+**Terceira rodada: o salto do Mestre (com o D115 aplicado, squads do seed, 100 batalhas por confronto):**
+
+- **X1, Mestre com T = 0,25 (a do Avançado):** Mestre x Avançado cai de 89% para **45%**; Grão-mestre x Mestre sobe para 92%.
+- **X2, Mestre sem a Situação:** Mestre x Avançado continua 89%.
+- Conclusão: **a temperatura é o que separa os níveis**; os fatores a mais quase não pesam.
+
+**Escada de temperatura aplicada (D117):** 0,6 / 0,35 / 0,18 / 0,1 / 0.
+
+| Confronto | A vence | Meta |
+|---|---|---|
+| Espelho (Mestre) | 51% | ~50% |
+| Intermediário x Iniciante | 63% | ~65% |
+| Avançado x Intermediário | 70% | ~65% |
+| Mestre x Avançado | 72% | ~65% |
+| Grão-mestre x Mestre | 65% | ~65% |
+| Avançado x Iniciante | 68% | ~80% |
+| Mestre x Intermediário | 93% | ~80% |
+| Grão-mestre x Avançado | 82% | ~80% |
+| Grão-mestre x Iniciante | 91% | ≥95% |
+
+**Calibração completa com o D117 (100 batalhas por confronto):** a escada de níveis é a da tabela acima (sem erro de
+timeout). Perfis no Mestre (não mudam com o D117, a temperatura do Mestre é a mesma):
+
+| Confronto (Mestre) | A vence | Meta |
+|---|---|---|
+| Agressivo x Cauteloso | 36% | 45–55% |
+| Agressivo x Focado em abater | 52% | 45–55% |
+| Agressivo x Equilibrado | 41% | 45–55% |
+| Cauteloso x Focado em abater | 75% | 45–55% |
+| Cauteloso x Equilibrado | 63% | 45–55% |
+| Focado em abater x Equilibrado | 30% | 45–55% |
+
+Pendente: o **Cauteloso** está forte demais e o **Focado em abater** fraco demais (pesos dos perfis). Sinal de design:
+só **~30% das batalhas acabam por eliminação**; o resto vai ao fim forçado da rodada 30.
+
+**Pesos dos perfis, experimentos (Mestre, 100 batalhas por confronto):**
+
+| Confronto | Atual | P1 | P2 | Meta |
+|---|---|---|---|---|
+| Agressivo x Cauteloso | 36% | 40% | 58% | 45–55% |
+| Agressivo x Focado em abater | 52% | 38% | 47% | 45–55% |
+| Agressivo x Equilibrado | 41% | 41% | 43% | 45–55% |
+| Cauteloso x Focado em abater | 75% | 64% | 48% | 45–55% |
+| Cauteloso x Equilibrado | 63% | 52% | 50% | 45–55% |
+| Focado em abater x Equilibrado | 30% | 45% | 50% | 45–55% |
+
+- **P1:** defesa/cura/status do Cauteloso 0,8 e do Focado 0,45.
+- **P2:** defesa/cura/status do Cauteloso 0,7, do Focado 0,5 e do Agressivo 0,35; dano do Focado 0,8.
+
+Com 100 batalhas, a margem de ruído é de ~±5 pontos: o P2 fica todo dentro de 43% a 58%. **Aplicado (D118).**
+
+**Confirmação com D115 a D118 no código (2026-10-19):** escada de níveis igual à da tabela do D117 (o Equilibrado não
+mudou) e perfis entre 43% e 58%, iguais ao P2. Relatório sem erro de timeout. **Calibração da IA fechada para o MVP**;
+reabrir quando houver mais personagens ou jogo humano.

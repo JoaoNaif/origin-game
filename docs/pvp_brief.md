@@ -106,20 +106,20 @@ da ação é a soma ponderada pelo perfil, dividida pela maior nota do turno.
 
 | Nível | T | Fatores que enxerga | Leitura do jogador |
 |---|---|---|---|
-| Iniciante | 1.0 | dano esperado, abate | nenhuma |
-| Intermediário | 0.5 | + ameaça do alvo | última ação |
-| Avançado | 0.25 | + risco próprio | padrões simples |
-| Mestre | 0.1 | + defesa/cura/status, situação geral | padrões e uso de skills |
+| Iniciante | 0.6 (D117) | dano esperado, abate, defesa/cura/status (D115) | nenhuma |
+| Intermediário | 0.35 (D117) | + ameaça do alvo | última ação |
+| Avançado | 0.18 (D117) | + risco próprio | padrões simples |
+| Mestre | 0.1 | + situação geral | padrões e uso de skills |
 | Grão-mestre | 0 (sempre a melhor) | todos | tudo, reage ao estilo |
 
-**Pesos dos perfis** (placeholder; fatores que o nível não enxerga valem 0):
+**Pesos dos perfis** (placeholder; fatores que o nível não enxerga valem 0; Risco pela metade no D115; ajustes do D118):
 
 | Perfil | Dano | Abate | Ameaça | Risco | Defesa/cura/status | Situação |
 |---|---|---|---|---|---|---|
-| Agressivo | 1.0 | 0.8 | 0.5 | 0.2 | 0.2 | 0.3 |
-| Cauteloso | 0.5 | 0.5 | 0.5 | 1.0 | 1.0 | 0.6 |
-| Focado em abater | 0.6 | 1.0 | 0.7 | 0.4 | 0.3 | 0.4 |
-| Equilibrado | 0.7 | 0.7 | 0.6 | 0.6 | 0.6 | 0.6 |
+| Agressivo | 1.0 | 0.8 | 0.5 | 0.1 | 0.35 | 0.3 |
+| Cauteloso | 0.5 | 0.5 | 0.5 | 0.5 | 0.7 | 0.6 |
+| Focado em abater | 0.8 | 1.0 | 0.7 | 0.2 | 0.5 | 0.4 |
+| Equilibrado | 0.7 | 0.7 | 0.6 | 0.3 | 0.6 | 0.6 |
 
 **Log do jogador (dentro da batalha):**
 - **Registra:** alvo escolhido, skill usada, troca de posição, defesa, e o contexto na hora (vida, Desgaste).
