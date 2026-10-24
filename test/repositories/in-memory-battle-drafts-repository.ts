@@ -12,7 +12,10 @@ export class InMemoryBattleDraftsRepository implements BattleDraftsRepository {
     this.items.push(draft)
   }
 
-  async delete(draft: BattleDraft): Promise<void> {
+  async delete(draft: BattleDraft): Promise<boolean> {
+    const before = this.items.length
     this.items = this.items.filter((item) => !item.id.equals(draft.id))
+
+    return this.items.length < before
   }
 }

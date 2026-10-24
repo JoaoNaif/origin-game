@@ -63,6 +63,25 @@ describe('Start Pve Battle', () => {
     }
   })
 
+  it('should be able to start only one battle from a draft (double submit)', async () => {
+    const request = {
+      accountId: world.account.id.toString(),
+      draftId,
+      squadId: world.squad.id.toString(),
+    }
+
+    const results = await Promise.all([
+      sut.execute(request),
+      sut.execute(request),
+    ])
+
+    expect(results.filter((r) => r.isRight())).toHaveLength(1)
+    expect(results.find((r) => r.isLeft())?.value).toBeInstanceOf(
+      ResourceNotFoundError
+    )
+    expect(world.battles.items).toHaveLength(1)
+  })
+
   it('should not be able to start with a squad of another account', async () => {
     const other = makeAccount({ username: 'outra_conta' })
     await world.accounts.create(other)

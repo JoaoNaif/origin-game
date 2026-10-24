@@ -4,5 +4,6 @@ import { BattleDraft } from '../../entities/battle-draft'
 export abstract class BattleDraftsRepository {
   abstract findById(id: string): Promise<BattleDraft | null>
   abstract create(draft: BattleDraft): Promise<void>
-  abstract delete(draft: BattleDraft): Promise<void>
+  /** Tira a pré-batalha. `false` se ela já não estava (outra requisição já a usou): só uma batalha nasce dela. */
+  abstract delete(draft: BattleDraft): Promise<boolean>
 }

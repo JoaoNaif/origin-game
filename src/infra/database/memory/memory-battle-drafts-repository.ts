@@ -25,8 +25,9 @@ export class MemoryBattleDraftsRepository implements BattleDraftsRepository {
     this.drafts.set(draft.id.toString(), draft)
   }
 
-  async delete(draft: BattleDraft): Promise<void> {
-    this.drafts.delete(draft.id.toString())
+  async delete(draft: BattleDraft): Promise<boolean> {
+    // Map.delete é síncrono: entre duas requisições ao mesmo tempo, só uma recebe true
+    return this.drafts.delete(draft.id.toString())
   }
 
   private dropExpired() {

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common'
+import { Prisma } from '@prisma/client'
 import { BattlesRepository } from '@/domain/combat/applications/repositories/battles-repository'
 import { Battle } from '@/domain/combat/entities/battle'
 import {
@@ -43,20 +44,35 @@ export class PrismaBattlesRepository implements BattlesRepository {
     ])
   }
 
-  /** O log só cresce: grava as ações que ainda não estão no banco e o fim da batalha. */
-  async save(battle: Battle): Promise<void> {
+  /**
+   * O log só cresce: grava as ações a partir de `knownActions` e o fim, numa transação. A chave (batalha + sequência)
+   * garante que só uma de duas jogadas enviadas ao mesmo tempo entra: a outra bate na chave e nada dela fica.
+   */
+  async save(battle: Battle, knownActions: number): Promise<boolean> {
     const { id, status, winner, endReason, rounds, finishedAt } =
       PrismaBattleMapper.toPrisma(battle)
+    const newActions = PrismaBattleMapper.toPrismaActions(battle).filter(
+      (a) => a.sequence >= knownActions
+    )
 
-    await this.prisma.$transaction([
-      this.prisma.battleAction.createMany({
-        data: PrismaBattleMapper.toPrismaActions(battle),
-        skipDuplicates: true,
-      }),
-      this.prisma.battle.update({
-        where: { id },
-        data: { status, winner, endReason, rounds, finishedAt },
-      }),
-    ])
+    try {
+      await this.prisma.$transaction([
+        this.prisma.battleAction.createMany({ data: newActions }),
+        this.prisma.battle.update({
+          where: { id },
+          data: { status, winner, endReason, rounds, finishedAt },
+        }),
+      ])
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        return false
+      }
+      throw error
+    }
+
+    return true
   }
 }

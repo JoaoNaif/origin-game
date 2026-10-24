@@ -92,6 +92,31 @@ describe('Submit Battle Action', () => {
     }
   })
 
+  it('should not be able to record the same turn twice (double submit)', async () => {
+    const request = {
+      battleId: battle.id.toString(),
+      accountId: world.account.id.toString(),
+      payload: playerMove(battle),
+    }
+
+    // duas requisições ao mesmo tempo, lendo o mesmo log
+    const results = await Promise.all([
+      sut.execute(request),
+      sut.execute(request),
+    ])
+
+    const won = results.filter((r) => r.isRight())
+    const lost = results.filter((r) => r.isLeft())
+    expect(won).toHaveLength(1)
+    expect(lost).toHaveLength(1)
+    expect(lost[0].value).toBeInstanceOf(InvalidBattleError)
+
+    const saved = await world.battles.findById(battle.id.toString())
+    if (won[0].isRight()) {
+      expect(saved!.actions).toEqual(won[0].value.battle.actions)
+    }
+  })
+
   it('should not be able to play an invalid action and keep the battle as it was', async () => {
     const before = battle.actions.length
 

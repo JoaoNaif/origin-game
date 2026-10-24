@@ -73,6 +73,7 @@ export class SubmitBattleActionUseCase {
 
     const engine = replayed.value
     const from = engine.events.length
+    const knownActions = battle.actions.length
 
     const played = playPlayerTurn(battle, engine, payload)
     if (played.isLeft()) return left(played.value)
@@ -83,7 +84,13 @@ export class SubmitBattleActionUseCase {
     const finished = finishIfOver(battle, engine, this.clock.now())
     if (finished.isLeft()) return left(finished.value)
 
-    await this.battlesRepository.save(battle)
+    // outra requisição gravou primeiro (jogada enviada duas vezes): esta não grava nem entrega XP de novo
+    const saved = await this.battlesRepository.save(battle, knownActions)
+    if (!saved) {
+      return left(
+        new InvalidBattleError('a batalha já recebeu outra jogada: recarregue')
+      )
+    }
 
     const rewards = await grantBattleXp(
       battle,

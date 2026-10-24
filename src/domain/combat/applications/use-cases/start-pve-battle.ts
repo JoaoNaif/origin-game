@@ -121,8 +121,11 @@ export class StartPveBattleUseCase {
     const finished = finishIfOver(battle, engine, this.clock.now())
     if (finished.isLeft()) return left(finished.value)
 
+    // a pré-batalha só serve uma vez: se outra requisição já a usou (clique duplo), esta não cria outra batalha
+    const claimed = await this.battleDraftsRepository.delete(draft)
+    if (!claimed) return left(new ResourceNotFoundError('pré-batalha'))
+
     await this.battlesRepository.create(battle)
-    await this.battleDraftsRepository.delete(draft)
 
     const rewards = await grantBattleXp(
       battle,
