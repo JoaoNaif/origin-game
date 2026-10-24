@@ -34,6 +34,7 @@ describe('Start Pve Battle', () => {
       world.catalogRepository,
       world.drafts,
       world.battles,
+      world.skillOffers,
       world.clock
     )
   })

@@ -4,6 +4,7 @@ import { ResourceNotFoundError } from '@/core/errors/err/resource-not-found-erro
 import { AccountsRepository } from '@/domain/accounts/applications/repositories/accounts-repository'
 import { CatalogRepository } from '@/domain/catalog/applications/repositories/catalog-repository'
 import { CharactersRepository } from '@/domain/characters/applications/repositories/characters-repository'
+import { SkillOffersRepository } from '@/domain/characters/applications/repositories/skill-offers-repository'
 import { SquadsRepository } from '@/domain/squads/applications/repositories/squads-repository'
 import { BattleEngine } from '../../engine/battle-engine'
 import { BattleEvent } from '../../engine/battle-events'
@@ -56,6 +57,7 @@ export class StartPveBattleUseCase {
     private catalogRepository: CatalogRepository,
     private battleDraftsRepository: BattleDraftsRepository,
     private battlesRepository: BattlesRepository,
+    private skillOffersRepository: SkillOffersRepository,
     private clock: Clock
   ) {}
 
@@ -127,12 +129,13 @@ export class StartPveBattleUseCase {
 
     await this.battlesRepository.create(battle)
 
-    const rewards = await grantBattleXp(
-      battle,
-      engine,
-      this.charactersRepository,
-      this.battlesRepository
-    )
+    const rewards = await grantBattleXp(battle, engine, {
+      charactersRepository: this.charactersRepository,
+      battlesRepository: this.battlesRepository,
+      skillOffersRepository: this.skillOffersRepository,
+      catalog,
+      now: this.clock.now(),
+    })
 
     return right({ battle, engine, events: engine.events, rewards })
   }

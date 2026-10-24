@@ -5,6 +5,7 @@ import { CatalogRepository } from '@/domain/catalog/applications/repositories/ca
 import { BattleDraftsRepository } from '@/domain/combat/applications/repositories/battle-drafts-repository'
 import { BattlesRepository } from '@/domain/combat/applications/repositories/battles-repository'
 import { CharactersRepository } from '@/domain/characters/applications/repositories/characters-repository'
+import { SkillOffersRepository } from '@/domain/characters/applications/repositories/skill-offers-repository'
 import { SquadsRepository } from '@/domain/squads/applications/repositories/squads-repository'
 import { MemoryBattleDraftsRepository } from './memory/memory-battle-drafts-repository'
 import { PrismaService } from './prisma/prisma.service'
@@ -13,6 +14,7 @@ import { PrismaBattlesRepository } from './prisma/repositories/prisma-battles-re
 import { PrismaCatalogRepository } from './prisma/repositories/prisma-catalog-repository'
 import { PrismaCharactersRepository } from './prisma/repositories/prisma-characters-repository'
 import { PrismaSessionsRepository } from './prisma/repositories/prisma-sessions-repository'
+import { PrismaSkillOffersRepository } from './prisma/repositories/prisma-skill-offers-repository'
 import { PrismaSquadsRepository } from './prisma/repositories/prisma-squads-repository'
 
 @Module({
@@ -22,6 +24,7 @@ import { PrismaSquadsRepository } from './prisma/repositories/prisma-squads-repo
     { provide: SessionsRepository, useClass: PrismaSessionsRepository },
     { provide: CatalogRepository, useClass: PrismaCatalogRepository },
     { provide: CharactersRepository, useClass: PrismaCharactersRepository },
+    { provide: SkillOffersRepository, useClass: PrismaSkillOffersRepository },
     { provide: SquadsRepository, useClass: PrismaSquadsRepository },
     { provide: BattlesRepository, useClass: PrismaBattlesRepository },
     // pré-batalha dura minutos: fica em memória no MVP (memory-battle-drafts-repository.ts)
@@ -33,6 +36,7 @@ import { PrismaSquadsRepository } from './prisma/repositories/prisma-squads-repo
     SessionsRepository,
     CatalogRepository,
     CharactersRepository,
+    SkillOffersRepository,
     SquadsRepository,
     BattlesRepository,
     BattleDraftsRepository,

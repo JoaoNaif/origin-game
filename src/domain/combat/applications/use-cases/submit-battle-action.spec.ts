@@ -56,6 +56,7 @@ describe('Submit Battle Action', () => {
       world.catalogRepository,
       world.drafts,
       world.battles,
+      world.skillOffers,
       world.clock
     ).execute({
       accountId: world.account.id.toString(),
@@ -68,6 +69,8 @@ describe('Submit Battle Action', () => {
     sut = new SubmitBattleActionUseCase(
       world.battles,
       world.characters,
+      world.skillOffers,
+      world.catalogRepository,
       world.clock
     )
   })

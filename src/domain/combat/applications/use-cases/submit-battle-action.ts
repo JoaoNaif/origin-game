@@ -1,7 +1,9 @@
 import { Either, left, right } from '@/core/either'
 import { NotAllowedError } from '@/core/errors/err/not-allowed-error'
 import { ResourceNotFoundError } from '@/core/errors/err/resource-not-found-error'
+import { CatalogRepository } from '@/domain/catalog/applications/repositories/catalog-repository'
 import { CharactersRepository } from '@/domain/characters/applications/repositories/characters-repository'
+import { SkillOffersRepository } from '@/domain/characters/applications/repositories/skill-offers-repository'
 import { BattleEngine } from '../../engine/battle-engine'
 import { BattleEvent } from '../../engine/battle-events'
 import { Battle } from '../../entities/battle'
@@ -48,6 +50,8 @@ export class SubmitBattleActionUseCase {
   constructor(
     private battlesRepository: BattlesRepository,
     private charactersRepository: CharactersRepository,
+    private skillOffersRepository: SkillOffersRepository,
+    private catalogRepository: CatalogRepository,
     private clock: Clock
   ) {}
 
@@ -92,12 +96,13 @@ export class SubmitBattleActionUseCase {
       )
     }
 
-    const rewards = await grantBattleXp(
-      battle,
-      engine,
-      this.charactersRepository,
-      this.battlesRepository
-    )
+    const rewards = await grantBattleXp(battle, engine, {
+      charactersRepository: this.charactersRepository,
+      battlesRepository: this.battlesRepository,
+      skillOffersRepository: this.skillOffersRepository,
+      catalog: await this.catalogRepository.load(),
+      now: this.clock.now(),
+    })
 
     return right({
       battle,

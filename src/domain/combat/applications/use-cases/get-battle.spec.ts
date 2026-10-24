@@ -39,6 +39,7 @@ describe('Get Battle', () => {
       world.catalogRepository,
       world.drafts,
       world.battles,
+      world.skillOffers,
       world.clock
     ).execute({
       accountId: world.account.id.toString(),

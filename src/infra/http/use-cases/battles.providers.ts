@@ -2,6 +2,7 @@ import { Provider } from '@nestjs/common'
 import { AccountsRepository } from '@/domain/accounts/applications/repositories/accounts-repository'
 import { CatalogRepository } from '@/domain/catalog/applications/repositories/catalog-repository'
 import { CharactersRepository } from '@/domain/characters/applications/repositories/characters-repository'
+import { SkillOffersRepository } from '@/domain/characters/applications/repositories/skill-offers-repository'
 import { Clock } from '@/core/gateways/clock'
 import { SeedGenerator } from '@/domain/combat/applications/gateways/seed-generator'
 import { BattleDraftsRepository } from '@/domain/combat/applications/repositories/battle-drafts-repository'
@@ -41,6 +42,7 @@ export const battlesUseCases: Provider[] = [
       CatalogRepository,
       BattleDraftsRepository,
       BattlesRepository,
+      SkillOffersRepository,
       Clock,
     ],
     useFactory: (
@@ -50,6 +52,7 @@ export const battlesUseCases: Provider[] = [
       catalog: CatalogRepository,
       drafts: BattleDraftsRepository,
       battles: BattlesRepository,
+      offers: SkillOffersRepository,
       clock: Clock
     ) =>
       new StartPveBattleUseCase(
@@ -59,17 +62,33 @@ export const battlesUseCases: Provider[] = [
         catalog,
         drafts,
         battles,
+        offers,
         clock
       ),
   },
   {
     provide: SubmitBattleActionUseCase,
-    inject: [BattlesRepository, CharactersRepository, Clock],
+    inject: [
+      BattlesRepository,
+      CharactersRepository,
+      SkillOffersRepository,
+      CatalogRepository,
+      Clock,
+    ],
     useFactory: (
       battles: BattlesRepository,
       characters: CharactersRepository,
+      offers: SkillOffersRepository,
+      catalog: CatalogRepository,
       clock: Clock
-    ) => new SubmitBattleActionUseCase(battles, characters, clock),
+    ) =>
+      new SubmitBattleActionUseCase(
+        battles,
+        characters,
+        offers,
+        catalog,
+        clock
+      ),
   },
   {
     provide: GetBattleUseCase,

@@ -323,6 +323,7 @@ model Character {
   traits          CharacterTrait[]
   skills          CharacterSkill[]
   squadMembers    SquadMember[]
+  skillOffers     SkillOffer[]
 
   @@index([accountId])
   @@index([templateId])
@@ -369,6 +370,24 @@ model CharacterSkill {
 }
 
 // Formação salva da conta: 4 personagens dela na grade 3x3 (D11). Regras no domínio.
+// Bloco de skills a cada 5 níveis (D77, D135): até 3 sorteadas, o jogador escolhe 1. Pendente = sem escolha;
+// fica na fila sem prazo. As opções guardam os ids das skills (lidos junto do catálogo, como o JSON da batalha).
+model SkillOffer {
+  id            String    @id @default(uuid())
+  characterId   String    @map("character_id")
+  level         Int
+  skillIds      String[]  @map("skill_ids")
+  chosenSkillId String?   @map("chosen_skill_id")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  chosenAt      DateTime? @map("chosen_at")
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  // um bloco por nível: duas batalhas não abrem o mesmo bloco duas vezes
+  @@unique([characterId, level])
+  @@map("skill_offers")
+}
+
 model Squad {
   id        String   @id @default(uuid())
   accountId String   @map("account_id")
