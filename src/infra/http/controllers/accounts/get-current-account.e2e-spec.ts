@@ -4,10 +4,12 @@ import request from 'supertest'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 import { signUp } from 'test/e2e/accounts'
 import { AppModule } from '@/infra/app.module'
+import { PrismaService } from '@/infra/database/prisma/prisma.service'
 import { configureApp } from '@/infra/setup-app'
 
 describe('Get Current Account (e2e)', () => {
   let app: INestApplication
+  let prisma: PrismaService
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -16,6 +18,7 @@ describe('Get Current Account (e2e)', () => {
 
     app = moduleRef.createNestApplication()
     configureApp(app)
+    prisma = moduleRef.get(PrismaService)
 
     await app.init()
   })
@@ -35,8 +38,21 @@ describe('Get Current Account (e2e)', () => {
         id: expect.any(String),
         username: 'eu_mesmo',
         displayName: 'Jogador',
+        role: 'PLAYER',
       },
     })
+  })
+
+  test('[GET] /me shows the admin role', async () => {
+    const agent = await signUp(app, 'admin_me')
+    await prisma.account.update({
+      where: { username: 'admin_me' },
+      data: { role: 'ADMIN' },
+    })
+
+    const response = await agent.get('/me')
+
+    expect(response.body.account.role).toBe('ADMIN')
   })
 
   test('[GET] /me without being logged in fails', async () => {

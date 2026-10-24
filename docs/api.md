@@ -17,6 +17,7 @@ o servidor é a autoridade do combate (D9): o cliente só envia a jogada e exibe
   der 401, volta para o login.
 - **CSRF:** além do `SameSite=Strict`, POST/PUT/DELETE vindos de uma origem fora de `CORS_ORIGINS` dão 403. O front
   precisa ficar no mesmo *site* da API (ex.: `app.dominio` e `api.dominio`).
+- **Admin:** as rotas de admin (ainda nenhuma) exigem o papel `ADMIN` (403 sem ele). Ninguém vira admin pela API.
 - **Limite de requisições por IP:** 300/min no geral; cadastro e login 5/min; refresh 30/min (429 ao passar).
 - **A seed nunca sai do servidor** (D33).
 
@@ -39,7 +40,7 @@ o servidor é a autoridade do combate (D9): o cliente só envia a jogada e exibe
 6. Na vez do jogador: `GET /battles/:id/options` (o que dá para fazer, com a prévia) e `POST /battles/:id/actions`
    com uma das opções. Repete até `status: FINISHED`; no fim vem o XP (`rewards`, D134).
 
-Conta de teste do seed: `tester_01` / `origin123` (personagens no nível 18, com os blocos de skill do nível 5 do
+Contas de teste do seed: `admin` / `origin123` (papel de admin) e `tester_01` / `origin123` (personagens no nível 18, com os blocos de skill do nível 5 do
 Derik, da Gaia e do Tank).
 
 ## Saúde
@@ -69,7 +70,7 @@ A conta: `{ id, username, displayName }` (a senha nunca sai, nem como hash).
 | `POST /sessions` `{ username, password }` (pública) | 204 com os cookies; 401 username ou senha errados (mesma resposta para os dois) |
 | `POST /sessions/refresh` (pública, lê o cookie) | 204 com cookies novos (o refresh antigo deixa de valer); 401 sem cookie ou sessão inválida. Refresh já usado aparecendo de novo derruba **todas** as sessões da conta (token roubado) |
 | `DELETE /sessions` (pública) | 204: revoga a sessão e apaga os cookies (funciona mesmo com o token de acesso vencido) |
-| `GET /me` | 200 `{ account }` da conta logada |
+| `GET /me` | 200 `{ account }` da conta logada, com o `role` (`PLAYER` ou `ADMIN`): é por ele que o front mostra as telas de admin. Os outros jogadores nunca veem o papel |
 | `GET /accounts/:username` | 200 `{ account }`; 404 (busca exata, normalizada) |
 
 ## Personagens (`characters`)

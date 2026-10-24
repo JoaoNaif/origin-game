@@ -9,4 +9,9 @@ export class AccountPresenter {
       displayName: account.displayName,
     }
   }
+
+  /** A própria conta (GET /me): também o papel, para o front saber se mostra as telas de admin. */
+  static toCurrentHTTP(account: Account) {
+    return { ...AccountPresenter.toHTTP(account), role: account.role }
+  }
 }

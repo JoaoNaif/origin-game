@@ -40,6 +40,15 @@ describe('Fetch Account By Username (e2e)', () => {
     })
   })
 
+  test('[GET] /accounts/:username never shows the role of another account', async () => {
+    await signUp(app, 'papel_01')
+    const searcher = await signUp(app, 'procura_03')
+
+    const response = await searcher.get('/accounts/papel_01')
+
+    expect(response.body.account).not.toHaveProperty('role')
+  })
+
   test('[GET] /accounts/:username with an unknown username fails', async () => {
     const searcher = await signUp(app, 'procura_02')
 

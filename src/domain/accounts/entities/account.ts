@@ -1,6 +1,7 @@
 import { Either, left, right } from '@/core/either'
 import { Entity } from '@/core/entities/entity'
 import { UniqueEntityId } from '@/core/entities/unique-entity-id'
+import { AccountRole } from '../enums/account-role'
 import { InvalidAccountError } from '../errors/invalid-account-error'
 
 export interface AccountProps {
@@ -8,6 +9,8 @@ export interface AccountProps {
   displayName: string
   /** Hash da senha (nunca a senha). Quem gera é a porta `HashGenerator`. */
   passwordHash: string
+  /** Padrão: jogador. */
+  role: AccountRole
 }
 
 const USERNAME_PATTERN = /^[a-z0-9_]{3,20}$/
@@ -35,6 +38,14 @@ export class Account extends Entity<AccountProps> {
     return this.props.passwordHash
   }
 
+  get role() {
+    return this.props.role
+  }
+
+  get isAdmin() {
+    return this.props.role === AccountRole.ADMIN
+  }
+
   /** Normaliza o username (sem espaços nas pontas, minúsculo) antes de validar. */
   static normalizeUsername(username: string) {
     return username.trim().toLowerCase()
@@ -52,7 +63,7 @@ export class Account extends Entity<AccountProps> {
   }
 
   static create(
-    props: AccountProps,
+    props: Omit<AccountProps, 'role'> & { role?: AccountRole },
     id?: UniqueEntityId
   ): Either<InvalidAccountError, Account> {
     const username = Account.normalizeUsername(props.username)
@@ -83,7 +94,12 @@ export class Account extends Entity<AccountProps> {
 
     return right(
       new Account(
-        { username, displayName, passwordHash: props.passwordHash },
+        {
+          username,
+          displayName,
+          passwordHash: props.passwordHash,
+          role: props.role ?? AccountRole.PLAYER,
+        },
         id
       )
     )

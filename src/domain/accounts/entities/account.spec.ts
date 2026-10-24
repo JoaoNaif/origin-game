@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { AccountRole } from '../enums/account-role'
 import { InvalidAccountError } from '../errors/invalid-account-error'
 import { Account } from './account'
 
@@ -80,5 +81,27 @@ describe('Create Account', () => {
     expect(Account.passwordError('x'.repeat(73))).toBeInstanceOf(
       InvalidAccountError
     )
+  })
+
+  it('should be able to start every account as a player', () => {
+    const sut = Account.create({
+      username: 'joao_naif',
+      displayName: 'João',
+      passwordHash,
+    })
+
+    expect(sut.isRight() && sut.value.role).toBe(AccountRole.PLAYER)
+    expect(sut.isRight() && sut.value.isAdmin).toBe(false)
+  })
+
+  it('should be able to keep the admin role of an account', () => {
+    const sut = Account.create({
+      username: 'admin',
+      displayName: 'Admin',
+      passwordHash,
+      role: AccountRole.ADMIN,
+    })
+
+    expect(sut.isRight() && sut.value.isAdmin).toBe(true)
   })
 })

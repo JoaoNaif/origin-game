@@ -491,6 +491,7 @@ máquina **não é uma conta**: o adversário do PvE vem do `NpcSquad` (modelo n
 | `username` | texto, **único** | normalizado (sem espaços nas pontas, minúsculo); 3 a 20 caracteres: letras minúsculas, números e `_` |
 | `displayName` | texto | 2 a 30 caracteres (sem espaços nas pontas); nome exibido na batalha |
 | `passwordHash` | texto | hash bcrypt da senha (a senha em texto tem 8 a 72 caracteres e nunca é guardada) |
+| `role` | `AccountRole` | `PLAYER` (padrão) ou `ADMIN` |
 | `createdAt`, `updatedAt` | data | |
 
 **Regras (domínio, `InvalidAccountError`):** formato do `username`, tamanho do `displayName` e da senha.
@@ -512,6 +513,12 @@ dois só em cookies httpOnly.
 puro só existe na resposta), `expiresAt`, `revokedAt` e o `userAgent`. Cada refresh token serve uma vez: ao renovar,
 a sessão é revogada e outra é criada. Um token já usado aparecendo de novo é sinal de roubo e revoga **todas** as
 sessões da conta. Apagar a conta apaga as sessões. Domínio: `src/domain/accounts/entities/session.ts`.
+
+**Papel (`AccountRole`):** o admin cuida do conteúdo (catálogo). Por enquanto só o papel existe: nenhuma rota de
+admin ainda (o conteúdo segue pelo seed). Uma conta vira admin **pelo seed** (conta `admin` / `origin123`) ou **pelo
+banco** (`npm run admin:promote <username>`, e `-- --demote` para voltar a jogador); nenhuma rota dá o papel. As
+rotas de admin, quando vierem, usam o `@Admin()` (`src/infra/auth/admin.ts`), que lê o papel no banco a cada
+requisição: quem é rebaixado perde o acesso na hora.
 
 **Contas de antes do login:** a migração `auth_sessions` deixou o hash vazio nelas, e assim elas não entram. O seed
 dá à `tester_01` a senha de teste `origin123`.

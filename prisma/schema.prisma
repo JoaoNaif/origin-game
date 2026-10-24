@@ -260,16 +260,24 @@ model Skill {
 // Jogador
 // ---------------------------------------------------------------------------
 
+// Papel da conta: o admin cuida do conteúdo (catálogo). Vira admin pelo seed ou pelo banco
+// (npm run admin:promote), nunca por uma rota.
+enum AccountRole {
+  PLAYER
+  ADMIN
+}
+
 // Conta: dona dos personagens e dos squads. Entra por username + senha (só o hash
 // fica aqui). `username` já chega normalizado (minúsculo) pelo domínio. Moeda,
 // inventário, organização e ranking entram com as suas camadas.
 model Account {
-  id           String   @id @default(uuid())
-  username     String   @unique
-  displayName  String   @map("display_name")
-  passwordHash String   @map("password_hash")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id           String      @id @default(uuid())
+  username     String      @unique
+  displayName  String      @map("display_name")
+  passwordHash String      @map("password_hash")
+  role         AccountRole @default(PLAYER)
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
 
   characters Character[]
   squads     Squad[]

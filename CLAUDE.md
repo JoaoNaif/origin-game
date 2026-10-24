@@ -110,6 +110,7 @@ test/                         factories, in-memory repositories, fakes (incluind
   chega por `@CurrentUser()` (`sub` = id da conta); o que é dela fica em `/me/...`, e os casos de uso que recebem um
   id conferem o dono (`findOwned...`, outra conta = `NotAllowedError` → 403). Tokens só em cookies httpOnly
   (`http/auth-cookies.ts`); CSRF por `SameSite=Strict` + checagem de `Origin`. Chaves no `.env` (`npm run keys:generate`).
+  Rota de admin: `@Admin()` (papel `ADMIN`, lido no banco); admin só pelo seed ou `npm run admin:promote <username>`.
 - Catálogo público (`GET /templates`, `GET /npc-squads`): controller lê direto do `CatalogRepository`, sem caso de
   uso (dado público, como no help-invest).
 - Repositório Prisma em `infra/database/prisma/repositories/`, com mapper Prisma ↔ domínio em `prisma/mappers/`;

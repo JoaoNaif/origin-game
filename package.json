@@ -27,7 +27,8 @@
     "db:seed": "prisma db seed",
     "balance": "vitest run --config vitest.sim.config.ts scripts/balance.sim.ts",
     "test:e2e": "vitest run --config vitest.config.e2e.ts",
-    "keys:generate": "node scripts/generate-jwt-keys.mjs"
+    "keys:generate": "node scripts/generate-jwt-keys.mjs",
+    "admin:promote": "tsx scripts/promote-admin.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

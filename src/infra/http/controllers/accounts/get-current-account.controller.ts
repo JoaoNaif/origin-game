@@ -30,6 +30,6 @@ export class GetCurrentAccountController {
       }
     }
 
-    return { account: AccountPresenter.toHTTP(result.value.account) }
+    return { account: AccountPresenter.toCurrentHTTP(result.value.account) }
   }
 }

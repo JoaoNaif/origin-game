@@ -9,6 +9,7 @@ export class PrismaAccountMapper {
         username: raw.username,
         displayName: raw.displayName,
         passwordHash: raw.passwordHash,
+        role: raw.role,
       },
       new UniqueEntityId(raw.id)
     )
@@ -26,6 +27,7 @@ export class PrismaAccountMapper {
       username: account.username,
       displayName: account.displayName,
       passwordHash: account.passwordHash,
+      role: account.role,
     }
   }
 }
