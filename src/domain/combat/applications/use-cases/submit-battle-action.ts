@@ -7,7 +7,7 @@ import { Battle } from '../../entities/battle'
 import { InvalidActionError } from '../../errors/invalid-action-error'
 import { InvalidBattleError } from '../../errors/invalid-battle-error'
 import { BattleActionPayload } from '../../value-objects/battle-action'
-import { Clock } from '../gateways/clock'
+import { Clock } from '@/core/gateways/clock'
 import { BattlesRepository } from '../repositories/battles-repository'
 import { CharacterReward, grantBattleXp } from '../services/battle-rewards'
 import {

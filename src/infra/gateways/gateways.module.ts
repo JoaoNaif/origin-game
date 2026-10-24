@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common'
-import { Clock } from '@/domain/combat/applications/gateways/clock'
+import { Clock } from '@/core/gateways/clock'
 import { SeedGenerator } from '@/domain/combat/applications/gateways/seed-generator'
 import { CryptoSeedGenerator } from './crypto-seed-generator'
 import { SystemClock } from './system-clock'

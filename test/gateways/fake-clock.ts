@@ -1,4 +1,4 @@
-import { Clock } from '@/domain/combat/applications/gateways/clock'
+import { Clock } from '@/core/gateways/clock'
 
 /** Relógio de teste: começa numa data fixa e anda 1 segundo a cada leitura. */
 export class FakeClock implements Clock {
