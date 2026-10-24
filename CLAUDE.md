@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-> O **design de jogo está fechado até o D135** (regras e valores iniciais do MVP). **Feito:** motor de combate, IA e
+> O **design de jogo está fechado até o D136** (regras e valores iniciais do MVP). **Feito:** motor de combate, IA e
 > simulação (D122 a D132), schema do Prisma, seed e o **servidor do MVP** (contas, catálogo, personagens, squads e
 > batalha contra a máquina, com XP no fim e as ações possíveis da vez), com login (username + senha). Contrato da API em [`docs/api.md`](./docs/api.md).
 > Contexto permanente do projeto para o Claude. Leia antes de mexer em qualquer coisa.
@@ -16,7 +16,7 @@ e **escrever a resposta no doc**. Não inventar regra de combate.
 
 ## Estado atual
 
-**As regras e os valores iniciais estão fechados** (registro das decisões D1 a D135 em
+**As regras e os valores iniciais estão fechados** (registro das decisões D1 a D136 em
 [`docs/game_design.md`](./docs/game_design.md)). Combate: fila em barra de ação (0 a 1000, Velocidade soma por tick),
 grade 3x3, 4 personagens com 4 skills cada, 7 stats, fórmula de dano `Poder × Ataque² / (Ataque + Defesa) × 0,7` (D131), Desgaste
 como risco x retorno (piso de 80%), vitória por eliminação ou por dano causado na rodada 30 (D122). Os valores são **placeholders
@@ -146,8 +146,7 @@ test/                         factories, in-memory repositories, fakes (incluind
 - **Conflitos do `world_build.md`** (seção 13) que viram dado, só os que importam.
 - **Depois do MVP:** PvP (pontos do Elo, limites de pontos, temporada, reconexão, top 3, fila), perfil próprio para
   chefes, previsão de turnos da IA, memória entre batalhas, e os caminhos Enxerto, Rede e Selo.
-- **Servidor, a seguir:** desistir (W.O.), XP guardado na batalha (histórico e reconexão), nomes de traços e campos
-  para a tela, Defender por tempo esgotado (D38, falta o tempo em segundos), valor do buff/debuff no XP (D134) e o front.
+- **Servidor, a seguir:** confirmar o D136 (desistir sem XP), Defender por tempo esgotado (D38, falta o tempo em segundos), valor do buff/debuff no XP (D134) e o front.
 
 **Regra de trabalho:** valores numéricos novos, o Claude **propõe** e o usuário aprova; depois registra em uma nova
 linha D do `game_design.md` e no brief de origem.

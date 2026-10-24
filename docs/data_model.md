@@ -1095,6 +1095,10 @@ A API está em [`api.md`](./api.md). O que a infra acrescenta ao modelo:
 - **Estado da batalha não é guardado** (decisão geral nº 2): cada requisição refaz o motor pelo replay (foto + seed +
   ações). A IA monta a decisão com uma sorte própria por jogada (`aiDecisionRng`: seed, lado e posição no log), então
   a mesma batalha dá sempre as mesmas jogadas da máquina, mesmo depois de reiniciar o servidor.
+- **XP guardado na batalha:** a coluna `rewards` (JSON, `[]` até o fim) guarda o que cada personagem ganhou
+  (`Battle.recordRewards`, uma vez). Desistir (`Battle.forfeit`, D136) encerra com `ABANDON` e deixa vazio.
+- **Fim protegido:** o `save` só atualiza uma batalha que ainda está em andamento; quem chega depois (desistir
+  enquanto uma jogada termina a batalha) não grava e responde 409.
 - **Jogada enviada duas vezes:** o `save` da batalha recebe quantas ações havia na leitura e grava só as novas; a
   chave (batalha + sequência) faz a segunda requisição falhar, e ela responde 409 sem gravar nem dar XP. A pré-batalha
   só vira uma batalha: o `delete` diz se ela ainda estava lá.

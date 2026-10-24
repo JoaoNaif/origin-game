@@ -53,6 +53,7 @@ Derik, da Gaia e do Tank).
 | Rota | Resposta |
 |---|---|
 | `GET /templates` | 200 `{ templates }`: os 12 modelos com classe, raridade, variantes, traço de família, stats (perfil no nível 100), passiva e skills (kit primeiro, na ordem Básica, Padrão, Função, Assinatura) |
+| `GET /traits` | 200 `{ traits }`: os 9 traços com `key`, nome, descrição, categoria, origem (`TEMPLATE` família / `CONQUERED`), variante (família) e efeitos. É o que a tela mostra no lugar das `traitKeys` dos personagens, das unidades e do `requiredTraitKeys` dos campos |
 | `GET /npc-squads?difficulty=` | 200 `{ npcSquads }`: `{ key, name, description, profile, difficulty, level }`, do mais fácil ao mais difícil. `difficulty` opcional (`BEGINNER` a `GRANDMASTER`); outro valor dá 400 |
 
 O squad de NPC **não mostra personagens, formação nem skills**: a formação do rival só aparece quando a batalha
@@ -112,6 +113,7 @@ O squad: `{ id, name, members: [{ characterId, row, column }] }`. `row` 0 a 2 (l
 | `POST /battles` `{ draftId, squadId }` | 201 `{ battle, events, rewards }`; 403 pré-batalha ou squad de outra conta; 404 pré-batalha (já usada, inclusive por um clique duplo, ou expirada) ou squad; 400 squad incompleto ou personagem sem build |
 | `GET /me/battles?status=` | 200 `{ battles }`: as batalhas da conta, da mais recente para a mais antiga (até 50), sem a foto e sem o log: `{ id, mode, status, squadId, npcSquadId, opponent: { name, profile, difficulty }, winner, endReason, rounds, startedAt, finishedAt }`. `status=IN_PROGRESS` acha a batalha para retomar (aba fechada, outro aparelho); `FINISHED` é o histórico |
 | `GET /battles/:id` | 200 `{ battle, events }` com **todos** os eventos (retomar a tela ou rever); 403 de outra conta |
+| `POST /battles/:id/forfeit` | 200 `{ battle }`: desistir (W.O.). A máquina vence (`endReason: ABANDON`) e não há XP (D136, a confirmar); 403 de outra conta; 409 se a batalha já acabou (inclusive por uma jogada que terminou ao mesmo tempo) |
 | `GET /battles/:id/options` | 200 `{ turn, options }`: as jogadas legais da vez do jogador (abaixo); 403 de outra conta; 409 se não é a vez do jogador ou a batalha acabou |
 | `POST /battles/:id/actions` (jogada) | 200 `{ battle, events, rewards }` com os eventos **desta** jogada e das vezes da máquina que vieram depois; 400 jogada ilegal (nada muda); 403 de outra conta; 409 batalha encerrada ou outra jogada entrou antes (nada desta fica gravado) |
 
@@ -143,7 +145,7 @@ sai da seed. Em mover, trocar e defender, `preview` é nulo.
 | `round`, `turn`, `timeline` | rodada (até 30); de quem é a vez (`{ ref, side }`, nulo no fim); as próximas 8 vezes |
 | `field`, `fields` | o campo valendo (`key`, `untilRound`, `isInitial`) e o catálogo para as trocas |
 | `units` | as 8 unidades (`PLAYER:0..3`, `OPPONENT:0..3`): HP, escudo, posição, status, Provocado/Protegido, Engajado, classe, nível e traços |
-| `result` | no fim: `winner`, `endReason` (`ELIMINATION` ou `ROUND_LIMIT`), `rounds` |
+| `result` | no fim: `winner`, `endReason` (`ELIMINATION`, `ROUND_LIMIT` ou `ABANDON`), `rounds` e `rewards` (o XP entregue, o mesmo da resposta da última jogada; vazio na desistência) |
 
 **O que o jogador vê do inimigo** (`pvp_brief.md` 3): classe, nível, traços e o estado em campo. **Não** vê os
 `stats` (vêm nulos) nem as skills que ele ainda não usou: `skills` do inimigo só traz as já vistas. Das próprias
@@ -153,7 +155,8 @@ unidades vem tudo, com `ready` em cada skill (fora de recarga).
 `DAMAGE`, `HEAL`, `STATUS`, `MOVE`, `DEFEATED`, `BATTLE_END` e os demais. É o que a tela anima.
 
 **`rewards`** (só quando a batalha acaba): `[{ characterId, xp, levelsGained, level, newSkillOffers }]` dos 4 que
-entraram (D134); `newSkillOffers` = blocos de skill que a subida abriu (D135).
+entraram (D134); `newSkillOffers` = blocos de skill que a subida abriu (D135). Ficam guardados na batalha:
+`GET /battles/:id` traz os mesmos em `result.rewards`, para a tela de resultado depois de uma reconexão.
 
 **Jogada enviada duas vezes** (clique duplo, duas abas): só a primeira entra. A outra recebe 409 e nada dela fica
 gravado, nem o XP. O front deve recarregar com `GET /battles/:id`.
