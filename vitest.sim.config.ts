@@ -7,6 +7,7 @@ export default mergeConfig(
   defineConfig({
     test: {
       include: ['scripts/**/*.sim.ts'],
+      setupFiles: ['scripts/sim-setup.ts'],
       // cada confronto prende o processo por segundos; forks evita o timeout de RPC dos threads
       pool: 'forks',
     },

@@ -1,5 +1,4 @@
 import { SeededRng } from '@/core/rng/seeded-rng'
-import { CLASS_BUDGET } from '@/domain/characters/enums/character-class'
 import { AiDifficulty } from '@/domain/ai/enums/ai-difficulty'
 import { AiProfile } from '@/domain/ai/enums/ai-profile'
 import { aiRng, MachineAi } from '@/domain/ai/machine-ai'
@@ -19,82 +18,14 @@ import {
   makeDuelSnapshot,
   randomSquadKeys,
 } from 'test/factories/make-duel-snapshot'
-import { it, vi } from 'vitest'
+import { it } from 'vitest'
 import { generateCandidates } from '@/domain/ai/services/action-generator'
 
-// BAL_AI_VALUES: JSON que sobrescreve constantes de ai-values (ex.: {"TURN_SHIFT_VALUE": 22})
-vi.mock('@/domain/ai/ai-values', async (original) => {
-  const mod = await original<typeof import('@/domain/ai/ai-values')>()
-  return process.env.BAL_AI_VALUES
-    ? { ...mod, ...JSON.parse(process.env.BAL_AI_VALUES) }
-    : mod
-})
-
-// BAL_FLANK_POWER: multiplicador de Poder do flanco na referência (hoje 1,0, skills_brief.md 12.2)
-vi.mock('@/domain/skills/services/skill-reference', async (original) => {
-  const mod =
-    await original<typeof import('@/domain/skills/services/skill-reference')>()
-  const flank = Number(process.env.BAL_FLANK_POWER ?? 1)
-  return {
-    ...mod,
-    skillReference: (input: Parameters<typeof mod.skillReference>[0]) => {
-      const ref = mod.skillReference(input)
-      return input.range === 'FLANK' && input.target === 'ENEMY'
-        ? { ...ref, power: Math.round(ref.power * flank * 100) / 100 }
-        : ref
-    },
-  }
-})
-
-// BAL_END_BY_DAMAGE=1: no fim forçado, vence quem causou mais dano em % do HP total do inimigo
-vi.mock('@/domain/combat/services/battle-end', async (original) => {
-  const mod =
-    await original<typeof import('@/domain/combat/services/battle-end')>()
-  if (process.env.BAL_END_BY_DAMAGE !== '1') return mod
-  const share = (
-    dealer: { damageDealt?: number },
-    victim: { units: readonly { startingMaxHp: number }[] }
-  ) =>
-    (dealer.damageDealt ?? 0) /
-    victim.units.reduce((sum, u) => sum + u.startingMaxHp, 0)
-  return {
-    ...mod,
-    forcedEnd: (...args: Parameters<typeof mod.forcedEnd>) => {
-      const [player, opponent] = args
-      const difference = share(player, opponent) - share(opponent, player)
-      if (Math.abs(difference) > 1e-9) {
-        return {
-          winner: difference > 0 ? 'PLAYER' : 'OPPONENT',
-          reason: 'ROUND_LIMIT',
-        } as const
-      }
-      return mod.forcedEnd(...args)
-    },
-  }
-})
-
-// BAL_D38=1: Defender só sem skill possível (D38), na IA e na squad que só segura
-vi.mock('@/domain/ai/services/action-generator', async (original) => {
-  const mod =
-    await original<typeof import('@/domain/ai/services/action-generator')>()
-  if (process.env.BAL_D38 !== '1') return mod
-  return {
-    ...mod,
-    generateCandidates: (
-      ...args: Parameters<typeof mod.generateCandidates>
-    ) => {
-      const all = mod.generateCandidates(...args)
-      return all.some((c) => c.payload.type === 'SKILL')
-        ? all.filter((c) => c.payload.type !== 'DEFEND')
-        : all
-    },
-  }
-})
 import { loadSeedContent } from '../prisma/seed/content'
 
 /**
  * Balanceamento do combate (`engine.md` 3.15). Rodar com `npm run balance`. Variáveis:
- * - `BAL_MODE`: `random` (padrão; squads sorteadas, estatística por personagem e classe) ou `turtle` (squad que só cura,
+ * - `BAL_MODE`: `formations` (12 aberturas de cada squad do seed; `BAL_BATTLES` por abertura), `versus` (squad tática contra squad de força bruta, mesma IA), `random` (padrão; squads sorteadas, estatística por personagem e classe) ou `turtle` (squad que só cura,
  *   protege e Defende contra as composições do seed);
  * - `BAL_BATTLES` (padrão 200), `BAL_FIRST_SEED` (padrão 1), `BAL_LEVEL` (padrão 58);
  * - `BAL_DIFFICULTY` (padrão MASTER) e `BAL_PROFILE` (padrão BALANCED) da IA;
@@ -135,7 +66,8 @@ const turtlePolicy: Policy = (engine, ref) => {
     if (engine.previewSkill(ref, payload).isRight()) return payload
   }
 
-  if (process.env.BAL_D38 === '1') {
+  {
+    // D38: com skill possível, não pode Defender; usa a primeira que tiver
     const skill = generateCandidates(engine, ref).find(
       (c) => c.payload.type === 'SKILL'
     )
@@ -167,17 +99,20 @@ interface Totals {
   turtleWins: number
   /** Modo turtle: vitórias no fim forçado com menos dano causado (cairiam com o critério de dano). */
   turtleWinsByLessDamage: number
+  /** Modo versus: vitórias da squad tática sobre a de força bruta. */
+  tacticWins: number
+  /** Par de classes na mesma squad (`CLASSE+CLASSE`): vezes e vitórias (combinações dominantes, D128). */
+  pairs: Record<string, { picks: number; wins: number }>
+  /** Modo formations: por squad e formação, vezes e vitórias (aberturas dominantes, D128). */
+  formations: Record<string, { picks: number; wins: number }>
   characters: Record<string, CharacterStats>
+  /** Como a IA joga (`engine.md` 3.15): tipo de cada ação e quantos golpes foram no inimigo mais ferido. */
+  style: Record<string, number>
   /** Usos de cada skill (`modelo:skill`). */
   skills: Record<string, number>
 }
 
-const overrides = process.env.BAL_OVERRIDES
-  ? JSON.parse(process.env.BAL_OVERRIDES)
-  : {}
-// orçamento por classe (experimento): a validação do modelo usa CLASS_BUDGET
-Object.assign(CLASS_BUDGET, overrides.classBudgets ?? {})
-const content = loadSeedContent(overrides)
+const content = loadSeedContent()
 const fields: SnapshotField[] = content.fields.map((f) => {
   const field = toSnapshotField(f, content.catalog.traits)
   if (field.isLeft()) throw field.value
@@ -192,8 +127,12 @@ const totals: Totals = {
   timeoutWonByLessDamage: 0,
   turtleWins: 0,
   turtleWinsByLessDamage: 0,
+  tacticWins: 0,
+  pairs: {},
+  formations: {},
   characters: {},
   skills: {},
+  style: {},
 }
 
 const bump = (record: Record<string, number>, key: string, by = 1) =>
@@ -212,6 +151,45 @@ function statsOf(key: string): CharacterStats {
   })
 }
 
+/** Tipo da ação para o estilo da IA: dano, controle, apoio, posição ou Defender; e se o golpe foi no mais ferido. */
+function classify(
+  engine: BattleEngine,
+  ref: string,
+  payload: BattleActionPayload
+) {
+  if (payload.type !== 'SKILL') {
+    bump(totals.style, payload.type === 'DEFEND' ? 'defender' : 'posição')
+    return
+  }
+  const skill = engine.skillsOf(ref).find((s) => s.key === payload.skillKey)!
+  const effects = skill.effects
+  const hostile = skill.target === SkillTarget.ENEMY
+  const control = effects.some(
+    (e) =>
+      e.type === 'APPLY_STATUS' ||
+      e.type === 'REPOSITION' ||
+      (e.type === 'STAT_MODIFIER' && e.percent < 0) ||
+      (e.type === 'TURN_SHIFT' && e.percent < 0)
+  )
+  if (!hostile) bump(totals.style, 'apoio')
+  else if (control) bump(totals.style, 'controle')
+  else bump(totals.style, 'dano')
+
+  if (hostile && effects.some((e) => e.type === 'DAMAGE')) {
+    const preview = engine.previewSkill(ref, payload)
+    if (preview.isLeft() || preview.value.hits.length === 0) return
+    const enemies = engine.aliveRefs(
+      engine.unit(preview.value.hits[0].ref).side
+    )
+    const weakest = enemies
+      .map((r) => engine.unit(r))
+      .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0]
+    bump(totals.style, 'golpes')
+    if (preview.value.hits.some((h) => h.ref === weakest.ref))
+      bump(totals.style, 'no mais ferido')
+  }
+}
+
 function play(
   snapshot: BattleSnapshot,
   seed: number,
@@ -228,6 +206,7 @@ function play(
 
   for (let turn = engine.nextTurn(); turn; turn = engine.nextTurn()) {
     const payload = policies[turn.side](engine, turn.ref)
+    classify(engine, turn.ref, payload)
     const result = engine.act(payload)
     if (result.isLeft()) throw result.value
     bump(totals.actions, payload.type)
@@ -254,6 +233,21 @@ function play(
       statsOf(keyOf.get(event.ref)!).deaths += 1
       const killer = lastHitter.get(event.ref)
       if (killer) statsOf(keyOf.get(killer)!).kills += 1
+    }
+  }
+
+  for (const squadSide of [snapshot.player, snapshot.opponent]) {
+    const classes = squadSide.units.map((u) => u.characterClass).sort()
+    const won = squadSide.side === outcome.winner
+    for (let i = 0; i < classes.length; i++) {
+      for (let j = i + 1; j < classes.length; j++) {
+        const pair = (totals.pairs[`${classes[i]}+${classes[j]}`] ??= {
+          picks: 0,
+          wins: 0,
+        })
+        pair.picks += 1
+        if (won) pair.wins += 1
+      }
     }
   }
 
@@ -337,7 +331,115 @@ function report() {
 }
 
 it(`balance ${MODE}`, { timeout: 0 }, async () => {
-  if (MODE === 'turtle') {
+  if (MODE === 'formations') {
+    // aberturas (D128): 4 squads do seed, 12 formações sorteadas cada, contra squads aleatórias na formação automática
+    const squads = content.npcSquads
+      .filter((sq) => sq.difficulty === 'ADVANCED')
+      .map((sq) =>
+        sq.members.map(
+          (m) =>
+            content.characters.find((c) => c.template.id.equals(m.templateId))!
+              .spec.key
+        )
+      )
+    const cells = [0, 1, 2].flatMap((row) =>
+      [0, 1, 2].map((column) => ({ row, column }))
+    )
+    const onlySquad = process.env.BAL_SQUAD
+      ? Number(process.env.BAL_SQUAD)
+      : null
+    const melee = new Set(['GUARDIAN', 'VANGUARD', 'EXECUTOR'])
+    const classOf = (key: string) =>
+      content.characters.find((c) => c.spec.key === key)!.template
+        .characterClass
+    // formação que faz sentido: ninguém de corpo a corpo atrás de quem bate de longe na mesma linha
+    const sensible = (layout: DuelMember[]) =>
+      layout.every((a) =>
+        layout.every(
+          (b) =>
+            a.row !== b.row ||
+            b.column >= a.column ||
+            !melee.has(classOf(a.key)) ||
+            melee.has(classOf(b.key))
+        )
+      )
+    for (const [q, keys] of squads.entries()) {
+      if (onlySquad !== null && q !== onlySquad) continue
+      const draw = new SeededRng(4242 + q)
+      const layouts: DuelMember[][] = []
+      while (layouts.length < 12) {
+        const pool = [...cells]
+        for (let i = pool.length - 1; i > 0; i--) {
+          const j = draw.int(0, i)
+          ;[pool[i], pool[j]] = [pool[j], pool[i]]
+        }
+        const layout = keys.map((key, i) => ({ key, ...pool[i] }))
+        if (!sensible(layout)) continue
+        const id = layout.map((m) => `${m.row}${m.column}`).join('')
+        if (
+          !layouts.some(
+            (l) => l.map((m) => `${m.row}${m.column}`).join('') === id
+          )
+        )
+          layouts.push(layout)
+      }
+      for (const [n, layout] of layouts.entries()) {
+        const label = `squad${q}:${layout.map((m) => `${m.key.split('-')[0]}@${m.row}${m.column}`).join(' ')}`
+        for (let i = 0; i < BATTLES; i++) {
+          const seed = FIRST_SEED + q * 100_000 + n * 1000 + i
+          const rival = autoFormation(
+            content,
+            randomSquadKeys(content, new SeededRng(seed * 7919))
+          )
+          const mine = i % 2 === 0 ? BattleSide.PLAYER : BattleSide.OPPONENT
+          const [player, opponent] =
+            mine === BattleSide.PLAYER ? [layout, rival] : [rival, layout]
+          const outcome = play(
+            makeDuelSnapshot(content, player, opponent, LEVEL, fieldFor(seed)),
+            seed,
+            {
+              PLAYER: aiPolicy(BattleSide.PLAYER, seed),
+              OPPONENT: aiPolicy(BattleSide.OPPONENT, seed),
+            }
+          )
+          const row = (totals.formations[label] ??= { picks: 0, wins: 0 })
+          row.picks += 1
+          if (outcome.winner === mine) row.wins += 1
+          await new Promise((resolve) => setImmediate(resolve))
+        }
+      }
+    }
+  } else if (MODE === 'versus') {
+    // a ideia central (D122 a D126): tática bem jogada contra força bruta, mesmo nível, mesma IA
+    const tactic = autoFormation(content, [
+      'gaia',
+      'sunna',
+      'tyir-ossvald',
+      'kara',
+    ])
+    const brute = autoFormation(content, [
+      'ecko-nocthar',
+      'nox',
+      'isis-maccarthy',
+      'lucky',
+    ])
+    for (let i = 0; i < BATTLES; i++) {
+      const seed = FIRST_SEED + i
+      const tacticSide = i % 2 === 0 ? BattleSide.PLAYER : BattleSide.OPPONENT
+      const [player, opponent] =
+        tacticSide === BattleSide.PLAYER ? [tactic, brute] : [brute, tactic]
+      const outcome = play(
+        makeDuelSnapshot(content, player, opponent, LEVEL, fieldFor(seed)),
+        seed,
+        {
+          PLAYER: aiPolicy(BattleSide.PLAYER, seed),
+          OPPONENT: aiPolicy(BattleSide.OPPONENT, seed),
+        }
+      )
+      if (outcome.winner === tacticSide) totals.tacticWins += 1
+      await new Promise((resolve) => setImmediate(resolve))
+    }
+  } else if (MODE === 'turtle') {
     const turtle = autoFormation(content, [
       'gaia',
       'tank-valen',
