@@ -107,17 +107,19 @@ da ação é a soma ponderada pelo perfil, dividida pela maior nota do turno.
 | Nível | T | Fatores que enxerga | Leitura do jogador |
 |---|---|---|---|
 | Iniciante | 0.6 (D117) | dano esperado, abate, defesa/cura/status (D115) | nenhuma |
-| Intermediário | 0.28 (D121) | + ameaça do alvo | última ação |
-| Avançado | 0.18 (D117) | + risco próprio | padrões simples |
-| Mestre | 0.14 (D121) | + situação geral | padrões e uso de skills |
+| Intermediário | 0.32 (D122) | + ameaça do alvo | última ação |
+| Avançado | 0.2 (D122) | + risco próprio | padrões simples |
+| Mestre | 0.1 (D122) | + situação geral | padrões e uso de skills |
 | Grão-mestre | 0 (sempre a melhor) | todos | tudo, reage ao estilo |
+
+**Previsão (D132):** Mestre prevê 1 jogada (3 ações testadas, 1 simulação); Grão-mestre prevê 2 (6 ações, 3 simulações).
 
 **Pesos dos perfis** (placeholder; fatores que o nível não enxerga valem 0; Risco pela metade no D115; ajustes do D118):
 
 | Perfil | Dano | Abate | Ameaça | Risco | Defesa/cura/status | Situação |
 |---|---|---|---|---|---|---|
 | Agressivo | 1.0 | 0.8 | 0.5 | 0.1 | 0.35 | 0.3 |
-| Cauteloso | 0.5 | 0.5 | 0.5 | 0.5 | 0.7 | 0.6 |
+| Cauteloso | 0.5 | 0.5 | 0.5 | 0.3 | 0.8 | 0.6 |
 | Focado em abater | 0.8 | 1.0 | 0.7 | 0.2 | 0.5 | 0.4 |
 | Equilibrado | 0.7 | 0.7 | 0.6 | 0.3 | 0.6 | 0.6 |
 
@@ -199,7 +201,7 @@ Cada ação vira quantos **% de HP** ela rende, dividido por **25** (≈ maior g
 | Marcado | 5 |
 | Dano contínuo | 12 |
 | Buff / debuff 10 / 15 / 20% | 3 / 4,5 / 6 |
-| Adiantar / atrasar a vez | X% × 11 |
+| Adiantar / atrasar a vez | X% × 22 (D122; o efeito real, limitado pela barra de 0 a 1000) |
 | Defender | 4 |
 | Mover / trocar aliado | 2 |
 

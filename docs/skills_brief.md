@@ -30,7 +30,7 @@
 - **Vitória:** derrotar todos os inimigos.
 - **Bloqueio:** um personagem vivo bloqueia quem está atrás dele. Derrotado, deixa de bloquear.
 - **Corpo a corpo** (D22): atinge só a **célula-alvo selecionada**, e apenas se ela estiver **exposta** (primeira célula ocupada da **linha**; a linha vai da frente para o fundo, ver 9.3). Não passa por cima de ninguém. Exceções só por skills específicas.
-- **Troca de posição** (D19): permitida em combate e **custa a ação do turno**.
+- **Troca de posição** (D19, D123): permitida em combate e custa **meio turno** (500 da barra de ação).
 
 ```
 a - a - a      (a = célula; 3 linhas x 3 colunas por jogador; linha = frente → fundo, 1ª coluna = frente)
@@ -413,8 +413,8 @@ os **valores** dos stats. Bloqueiam: valores da tabela 9.4, queda de dano (9.3),
 
 ### 10.4 Reposicionamento [ENRAIZADO]
 
-- Mover só para **célula adjacente**, e custa a ação do turno.
-- **Trocar com um aliado:** só com aliado **adjacente** (D120), e os **dois perdem a ação**.
+- Mover só para **célula adjacente**, e custa **meio turno** (500 da barra, D123).
+- **Trocar com um aliado:** só com aliado **adjacente** (D120), e custa **meio turno para os dois** (D123).
 - **Skills que reposicionam** (empurrar, puxar, trocar) existem e são uma peça estratégica.
 - **Não pode** empurrar para célula ocupada nem para fora da grade: o movimento é barrado, mas **o resto da skill
   (dano etc.) acontece normalmente**.
@@ -457,7 +457,7 @@ Não confundir com o **aprimoramento de skill** (3.7, D80). Formas de aprimorar 
 | Tipo | Quem pode ser alvo |
 |---|---|
 | **Corpo a corpo** | Só a **primeira célula ocupada** da linha (a exposta) |
-| **À distância** | **Qualquer** célula, inclusive atrás de alguém |
+| **À distância** | **Qualquer** célula, inclusive atrás de alguém; mas quem **não é o primeiro da linha** tem **cobertura**: o golpe de alvo único causa ×0,7 (D123; não vale com Exposto) |
 | **Perfurante** | **Atravessa** os personagens da linha: sem bloqueio e **sem queda** (D36); custa mais |
 | **Flanco** | Ignora o bloqueio da frente: atinge a **última célula ocupada** da linha (por trás) |
 
@@ -507,7 +507,7 @@ queda 100/60/30, Desgaste, Defender menor que dano, perfurante e flanco. Somam-s
 |---|---|
 | Até a 20 | Normal (a meta de duração é 10 a 15, podendo passar) |
 | A partir da 16 (D119) | **Exaustão:** a cada rodada a **cura rende menos** (~-10%) e o **dano rende mais** (~+5%) |
-| 30 | **Fim forçado:** vence quem tem **mais % de HP total** |
+| 30 | **Fim forçado:** vence quem **causou mais dano** em % do HP total do inimigo (D122; era % de HP) |
 
 Só aparece depois do tempo normal: não pesa para o iniciante, só para quem tenta travar o jogo.
 
@@ -546,7 +546,7 @@ Substitui a soma direta de 9.5b (D37):
 
 ### 11.11 Reposicionamento [ENRAIZADO]
 
-- **Mover-se** custa a ação do turno; **trocar com aliado** faz os dois perderem a ação (D19, D42).
+- **Mover-se** custa **meio turno**; **trocar com aliado** custa meio turno para os dois (D123, altera D19 e D42).
 - **Skill que reposiciona** é uma skill normal (Desgaste e recarga). Ser empurrado **não** custa o turno do alvo.
 - Não há custo extra novo.
 
@@ -581,7 +581,7 @@ ações: é o efeito pretendido para o nível avançado.
 | Forma | Poder | Custo |
 |---|---|---|
 | À distância | ×0,9 | ×1,25 |
-| Flanco | ×1,0 | ×1,4 |
+| Flanco | ×0,85 (D122) | ×1,4 |
 | Linha (queda 100/60/30 pela profundidade) | ×0,85 | ×1,3 |
 | Coluna (sem queda, D108) | ×0,65 | ×1,5 (D109; mesmo formato do perfurante) |
 | Perfurante (sem queda) | ×0,65 | ×1,5 |
@@ -593,16 +593,27 @@ Poder 1,0 = **10% do HP máximo do alvo**, escalado pelo Poder da skill (não po
 
 ### 12.4 Status (duração em turnos do afetado)
 
-Chance = `base × 2 × Precisão / (Precisão + Vontade)`, piso 30%, **teto 90%**.
+Chance = `base × 2 × Precisão / (Precisão + Vontade)`, piso 30%, **teto 90%**. Para o **Controlador**, a Vontade do alvo
+conta 30% menos (marca de classe, D125).
 
 | Status | Efeito | Duração | Base |
 |---|---|---|---|
-| Atordoado | Perde a próxima ação (imunidade de 1 turno depois) | 1 | 70% |
+| Atordoado | Perde a próxima ação (imunidade de 1 turno depois); **indefeso**: golpes contra ele acertam sempre e não são interceptados nem protegidos (D125) | 1 | 70% |
 | Travado | +2 de recarga em uma skill | n/a | 80% |
-| Preso | Não move nem é movido | 2 | 80% |
+| Preso | Não move nem é movido; **isolado**: não pode ser protegido (D125) | 2 | 80% |
 | Exposto | Alvo de corpo a corpo | 2 | 85% |
 | Marcado | +20% de dano recebido | 3 | 80% |
-| Dano contínuo | 4% do HP máx. por turno (ignora Defesa) | 3 | 80% |
+| Dano contínuo | 4% do HP máx. por turno (ignora Defesa); **Ferida**: cura recebida rende metade (D125) | 3 | 80% |
+| **Provocado** (D124) | Golpes de alvo único só em quem provocou (área, apoio e movimento livres) | 1 | 80% |
+
+**Proteger (D124, D127):** efeito de skill (Guardião, Vanguarda). Custa **meio turno**. Até o próximo turno do protetor,
+todo golpe de alvo único contra o aliado adjacente escolhido cai no protetor (inclusive flanco), que tem **+50% de
+Defesa** e devolve um **contra-ataque** (Poder 0,4) em quem bateu.
+
+**Formação (D128):** auras de classe nos aliados adjacentes (Guardião +10% Defesa, Vanguarda ancora contra
+reposicionamento forçado, Suporte +15% cura recebida, Tático +5% Velocidade, Controlador +10% Vontade, Atirador +10%
+Precisão); Artilharia +10% de dano no fundo da linha; Executor +10% de Ataque sozinho. **Engajado (D129):** na frente
+da linha diante de um corpo a corpo (Vanguarda, Guardião, Executor), mover ou trocar custa o turno inteiro.
 
 ### 12.5 Empilhamento, Defender e Exaustão
 
@@ -653,11 +664,13 @@ conhecer o que cada número pesa). **[PLACEHOLDER aprovado]**.
 chegar a 1000 ele age e subtrai 1000. Começam em 0 e o empate segue o D30. O **adiantar** do Tático nunca leva a barra
 além de 1000 (impede empilhar ações extras); a sobra do tick depois de agir fica (D106).
 
-**Tático:**
+**Tático** (marca de classe **Coordenação**, D126: aliado que recebe skill do Tático ganha +10% de Ataque até agir; linha do
+tempo com os próximos 8 turnos visível para todos):
 
 | Skill | Padrão | Reforçada | Forte | Final |
 |---|---|---|---|---|
-| **Adiantar a vez de um aliado** | +50% | +70% | +90% | age agora (+100%) |
+| **Adiantar a vez de um aliado** | ~~+50%~~ | ~~+70%~~ | ~~+90%~~ | ~~age agora (+100%)~~ |
+| **Comando (D126): o aliado age logo depois do Tático** | recarga 3 | recarga 2 | recarga 2, +15% Ataque | |
 | **Atrasar a vez de um inimigo** | −25% | −40% | −55% | −70% |
 | Cooldown | 2 | 3 | 4 | 5 |
 | Desgaste | 1,5% | 3% | 5% | 8% |

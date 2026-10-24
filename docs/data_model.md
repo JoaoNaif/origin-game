@@ -1012,25 +1012,30 @@ outras 10 foram propostas e aprovadas (D116), placeholder de valor.
 | Personagem | Classe | Variantes | Raridade | Família | Passiva |
 |---|---|---|---|---|---|
 | Ecko Nocthar | Executor | antimatéria | SS | Nocthar | **Aniquilação:** todo dano ignora escudo |
-| Kael Vaz | Vanguarda | explosão + endurecimento | A | | **Disciplina de Guerra:** HP < 50%, +15% Defesa |
+| Kael Vaz | Vanguarda | explosão + endurecimento | A | | **Disciplina de Guerra:** quando um aliado cai, +20% Ataque por 2 turnos (D124, a implementar; era HP < 50%, +15% Defesa) |
 | Derik Okoro | Vanguarda | regeneração | A | | **Imortal:** início do turno, cura 3% do HP máx. |
 | Lucky | Atirador | relâmpago + tempo | SS | Nocthar | **Fluxo do Tempo:** a cada 3 turnos, recargas −1 |
 | Sunna | Controlador | gelo superiônico | S | | **Controle Absoluto:** ao causar dano, 20% de Prender |
 | Nox | Executor | sombra | A | Hyperion | **Visão Sombria:** ao derrubar, adianta a vez 30% |
 | Gaia | Guardião | terra | A | | **Coração da CORE:** ao ser atingida, +10% Defesa |
-| Rolf Eidvar | Atirador | alma | B | | **Primeiro a Cair:** HP < 30%, +15% Ataque |
+| Rolf Eidvar | Atirador | alma | B | | **Primeiro a Cair:** ao ser derrotado, os aliados adiantam a vez em 30% (D124, a implementar; era HP < 30%, +15% Ataque) |
 | Kara | Suporte | ilusão | B | | **Irmã Mais Velha:** ao curar, adianta a vez 15% |
 | Tyir Ossvald | Tático | resistência | A | | **Experiência:** sempre 5% menos dano |
 | Isis Maccarthy | Artilharia | telecinese | B | | **Explosiva:** ao pagar Desgaste, +10% Velocidade |
 | Tank Valen | Guardião | sem variante | C | | **Constância:** HP < 40%, 15% menos dano |
 
-**Skills (84):** 7 por personagem, todas com os números de `skillReference` (tipo + forma, D92, D108, D109) e acerto
+**Skills (90):** 7 ou 8 por personagem, todas com os números de `skillReference` (tipo + forma, D92, D108, D109) e acerto
 base 0,8. Kit básico (nível 0): Básica, Padrão, Função da classe, Assinatura (0,8 do Poder + efeito pequeno). Pool:
 Reforçada (nível 20), Forte (40) e Final (60). Juntas cobrem as 8 classes, as 7 linhagens (incluindo none), os 4
 alcances, as 4 áreas, os 6 status, cura, escudo, buff, debuff, adiantar/atrasar, empurrar/puxar e as mecânicas mais
 raras: **avançar** (Salto de Aniquilação, Ecko), **trocar inimigos** (Vertigem, Kara), **recuperação** (Abrigo Ilusório,
 Kara, D120), **mover aliado** (Reposicionar Tropa, Tyir) e **trocar campo** (Ler o Terreno, Tyir, Forte: 2 rodadas,
 ×1,5, cooldown 4).
+
+**Skills do combate tático (D124 a D126):** Desafio (Gaia, Provocar 1 inimigo), Grito de Guerra (Kael, Provocar uma
+linha), Escudo Vivo (Tank) e Corpo de Escudo (Derik), as duas de Proteger; Estilhaçar (Sunna, ×1,5 em alvo Preso e o Preso
+acaba) e Execução (Nox, ×1,5 em alvo Atordoado); o Comando do Tyir cede a vez (recarga 3) e o Agora! cede com +15% de
+Ataque (recarga 2). São 90 skills; a build dos NPCs sai de `npcPriority` (montada à mão por personagem).
 
 **Traços (9):** Nocthar (família, +3% Ataque e Velocidade, qualquer variante) e Hyperion (família da sombra, +5%
 Esquiva); conquistados: Berserker e Olho de Águia (+10% de dano corpo a corpo / à distância), Mira Firme, Muralha Viva,

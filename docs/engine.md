@@ -210,6 +210,18 @@ const turn = queue.next() // { ref: 'PLAYER:2', tick: 9, round: 1 }
 queue.shift('PLAYER:0', 50) // Tático adianta um aliado em 50%
 ```
 
+**Linha do tempo (D126):** `engine.timeline(8)` diz de quem são as próximas vezes (as ações cedidas pelo Comando
+primeiro), via `TurnQueue.project`: copia a fila e avança sem mudar nada e **sem usar a seed** (no empate exato, a
+projeção ordena pela `ref`; na hora quem decide é a seed). `engine.gauge(ref)` lê a barra de cada um.
+
+**Comando, ceder a vez (D126):** efeito `GRANT_TURN` em aliado (não em si mesmo, nem Atordoado). O aliado age **logo
+depois** de quem usou, antes de a fila andar, **sem mexer na barra dele**. É uma ação, não um turno novo: não há início
+de turno (dano contínuo, durações) e a recarga não anda; o evento `TURN` sai com `extra: true`. `attackPercent`
+(Forte) dá Ataque nessa ação.
+
+**Coordenação (marca do Tático, D126):** skill do Tático em aliado dá **+10% de Ataque** até o fim da próxima ação do
+aliado (modificador `untilAction`, fora do limite de 2 fontes).
+
 ### 3.4 Acerto e dano
 
 **Acerto** (`src/domain/combat/services/hit.ts`, D68, D91):
@@ -241,7 +253,7 @@ O teto de 90% garante que nenhum status é certo.
 **Dano** (`src/domain/combat/services/damage.ts`, D68):
 
 ```
-dano base = Poder × Ataque² / (Ataque + Defesa)
+dano base = Poder × Ataque² / (Ataque + Defesa) × 0,7      (escala do D131)
 ```
 
 - **Razão, não subtração:** o dano nunca zera e o equilíbrio é o mesmo em qualquer nível. Sem variação aleatória e sem
@@ -259,14 +271,15 @@ não fica negativo. A passiva "ignora escudos" (ex.: Ecko, D83) pula o escudo.
 **Cura e escudo concedidos (`healAmount`, D92):** Poder 1,0 = **10% do HP máximo do alvo** (cura 2,0 em quem tem 420 de
 HP = 84). A cura não passa do HP máximo (8.3 do `skills_brief.md`), regra aplicada quando a cura entrar na resolução.
 
-**Conferido com a tabela de `classes_brief.md` 4** (Poder 1,0, nível 100):
+**Conferido com a tabela de `classes_brief.md` 4** (Poder 1,0, nível 100, já com a escala de dano ×0,7 do D131; os perfis
+do Executor, Controlador e Tático mudaram no D122, a tabela usa os de antes):
 
 | Ataque → Alvo | Ataque | Defesa do alvo | HP do alvo | Dano | % do HP |
 |---|---|---|---|---|---|
-| Vanguarda → Vanguarda | 100 | 120 | 700 | 45 | 6,5% |
-| Executor → Atirador | 140 | 60 | 420 | 98 | 23,3% |
-| Atirador → Executor | 125 | 55 | 400 | 87 | 21,7% |
-| Guardião → Guardião | 60 | 140 | 780 | 18 | 2,3% |
+| Vanguarda → Vanguarda | 100 | 120 | 700 | 32 | 4,5% |
+| Executor → Atirador | 140 | 60 | 420 | 69 | 16,3% |
+| Atirador → Executor | 125 | 55 | 400 | 61 | 15,2% |
+| Guardião → Guardião | 60 | 140 | 780 | 13 | 1,6% |
 
 ```ts
 const chance = hitChance(skill.baseHitChance, attacker.PRECISION, target.EVASION)
@@ -354,6 +367,10 @@ const defense = desgaste.stat(Stat.DEFENSE) // entra no dano já com o Desgaste
 camadas entrarem.
 
 ### 3.6 Alcance, bloqueio, área e queda
+
+**Cobertura (D123):** golpe **à distância de alvo único** em quem tem alguém na frente da linha causa **×0,7**
+(`COVER_DAMAGE_MULTIPLIER`, aplicado no cálculo do dano, então a prévia da IA já mostra). Não vale para flanco,
+perfurante, área nem para quem está Exposto.
 
 Quem a skill atinge e com quanto da força (D21, D22, D34 a D36, `skills_brief.md` 11.1 a 11.4). Função
 `resolveTargets` em `src/domain/combat/services/targeting.ts`: recebe a skill, quem usa, as unidades **vivas** do lado
@@ -449,6 +466,20 @@ Os estados e os buffs/debuffs de cada unidade (`skills_brief.md` 11.9, 11.10, 12
 `UnitConditions`, um por unidade (`src/domain/combat/services/conditions.ts`). **Não sorteia:** a chance de aplicar
 já foi decidida antes (`statusChance` + `roll`, 3.4).
 
+**O que cada status abre (D125, no motor):**
+
+| Status | Efeito extra | Onde |
+|---|---|---|
+| Atordoado | **indefeso:** golpe contra ele acerta sempre e não é interceptado | `landChance`, `canBeProtected` |
+| Preso | **isolado:** não é interceptado (nem protegido, quando o Proteger existir) | `canBeProtected` |
+| Dano contínuo | **Ferida:** cura recebida ×0,5 (skill e passiva; escudo não) | `woundMultiplier` |
+
+**Executar (efeito `EXPLOIT`, D125):** numa skill de dano em inimigo, o dano sai × `multiplier` se o alvo tem o
+`status` (a prévia já mostra); `consume` tira o status depois do golpe (evento `EXPLOIT`).
+
+**Marca do Controlador:** nos status dele (skill e passiva), a Vontade do alvo entra ×0,7 na chance
+(`statusLandChance`, `CONTROLLER_WILL_FACTOR`). O reposicionamento forçado não usa a marca.
+
 **Status** (valores do 12.4; duração em **turnos do afetado**, D31):
 
 | Status | Efeito | Duração | Base |
@@ -535,8 +566,8 @@ const attack = conditions.effectiveStat(Stat.ATTACK, desgaste.stat(Stat.ATTACK))
 
 | Movimento | Regra |
 |---|---|
-| Mover (ação) | só para célula **adjacente e vazia**; custa o turno |
-| Trocar com aliado (ação) | só com aliado **adjacente** (D120); os dois perdem a ação (D42); pelo Tático, nenhum perde (D102) |
+| Mover (ação) | só para célula **adjacente e vazia**; custa **meio turno** (devolve 500 da barra, D123) e não conta para as recargas |
+| Trocar com aliado (ação) | só com aliado **adjacente** (D120); **meio turno para os dois** (quem troca recupera 500 da barra, o aliado perde 500, D123); pelo Tático, nenhum perde (D102) |
 | Empurrar (skill) | o alvo vai para o **fundo** (coluna +1), na mesma linha |
 | Puxar (skill) | o alvo vem para a **frente** (coluna −1), na mesma linha |
 | Avançar/recuar (DASH, skill) | quem usa vai para uma célula adjacente e vazia |
@@ -574,6 +605,20 @@ const attack = conditions.effectiveStat(Stat.ATTACK, desgaste.stat(Stat.ATTACK))
 | Guardião em 0:0, golpe à distância em B (0:1) | o Guardião recebe (1ª vez na rodada) |
 | Guardião em 0:0, golpe em linha na linha 0 | não intercepta (área) |
 
+**Provocar e Proteger (D124):**
+
+- **Provocado** (status `TAUNT`, base 80%, a Vontade resiste): na **próxima ação** do afetado, golpe de alvo único em
+  inimigo tem que mirar em quem provocou, se essa skill alcançar ele (`tauntError`, na validação da skill, então a IA e
+  a prévia já respeitam). Área, apoio e movimento ficam livres. Acaba no fim dessa ação (`afterAction`), por isso não
+  cai no início do turno como os outros status.
+- **Proteger** (efeito `PROTECT`, skill em aliado adjacente): até o próximo turno do protetor, todo golpe de alvo único
+  no protegido cai no protetor, **antes do Interceptar** e inclusive flanco. Atordoado e Preso não podem ser protegidos
+  (D125). Eventos `PROTECT` e `PROTECTED`.
+
+**Passivas de queda (D124):** gatilhos `ON_ALLY_DEFEATED` (um aliado caiu) e `ON_DEFEATED` (o dono caiu: dispara com
+ele já derrotado). Efeito novo `ADVANCE_ALLIES` (adianta a vez dos aliados vivos). No seed: Kael (+20% de Ataque quando
+um aliado cai) e Rolf (ao cair, aliados adiantam 30%).
+
 ### 3.9 Exaustão e fim da batalha
 
 Funções em `src/domain/combat/services/battle-end.ts` (11.8, 12.5, D31, D72, `pvp_brief.md` 6).
@@ -602,8 +647,9 @@ O multiplicador de dano entra nos "modificadores de dano" da ordem do D68 (3.4);
 
 - **Eliminação** (`checkElimination`): o lado sem ninguém vivo perde. Se os dois zerarem no mesmo evento (raro), desempata
   como o fim forçado.
-- **Fim forçado** (`isForcedEnd` e `forcedEnd`): quando a **rodada 30 fecha** (D106), vence quem tem **mais % de HP
-  total**; empate, o de **menor Desgaste** acumulado; empate ainda, a **seed**. Sempre há vencedor.
+- **Fim forçado** (`isForcedEnd` e `forcedEnd`): quando a **rodada 30 fecha** (D106), vence quem **causou mais dano em
+  % do HP total inicial do inimigo** (D122; curas não descontam, o motor soma HP + escudo tirados por lado em
+  `damageDealt`); empate, o de **menor Desgaste** acumulado; empate ainda, a **seed**. Sempre há vencedor.
 
 **Como cada critério é medido** (leitura do D72):
 - **% de HP total** = HP atual somado ÷ **HP máximo do início da batalha** somado (derrotado conta 0). Usar o máximo do
@@ -845,6 +891,32 @@ nunca é sorteado.
 | 6 | "Skill forte" e "exposto" do +0,10 | Forte, Final ou despertada, já vista e pronta; exposto = frente da linha ou com Exposto; vale só para ação de skill (mover, trocar e Defender tiram o risco) |
 | 7 | Ameaça | Multiplicada pela chance de acerto no alvo |
 
+**Previsão (etapa 6a do combate tático):**
+
+- **Cópia da batalha** (`engine.fork(rng)`): **cópia direta** do estado (personagens com status, recargas e Desgaste;
+  posições; fila; Interceptar; campo; ações cedidas) com uma sorte nova. A versão antiga, que reconstrói pela foto e pelas
+  ações (`forkByReplay`), ficou como referência: um teste confere que as duas dão exatamente a mesma batalha. A IA testa jogadas sem mexer na
+  batalha real e **sem ver os sorteios reais**; o replay continua igual (teste com Grão-mestre).
+- **Busca** (`MachineAi.plan`): o Mestre (`lookahead` 1, 3 ações, 1 simulação, D132) e o Grão-mestre (2; 6 ações, 3
+  simulações) testam as melhores ações do turno numa cópia; o inimigo responde com a melhor jogada imediata (modelo Grão-mestre sem previsão) até a próxima vez
+  da IA (no Grão-mestre, a IA joga mais uma vez e o inimigo responde de novo), no máximo 10 ações. Escolhe pela nota do
+  estado (`evaluateBattle`: cada peça viva vale `(1 + 0,5 × ameaça) × (0,5 + 0,5 × vida%)`, vitória ±100).
+- **Primeira medição (2026-10-20, 256 batalhas, squads do seed espelhadas):** o Mestre com previsão **perdeu** do Mestre
+  sem previsão (41%) e o Grão-mestre com previsão também (45%). Causas prováveis: uma única simulação por jogada, com
+  sorte nova (um erro de acerto sorteado descarta uma boa jogada); a nota do estado só vê vida e peças, e ignora status,
+  posição e o que o turno preparou; o horizonte é curto. Custo: ~1,3 s por batalha com um lado prevendo.
+
+**Previsão, 6b (o que corrigiu):** 3 simulações por jogada testada (média, sem loteria); a previsão **soma** à nota do
+turno (`nota + 1 × ganho previsto`, em "peças") em vez de substituir; nota do estado com status (Atordoado −30% do valor
+da peça, Provocado e Marcado −10%, Preso, Exposto e Dano contínuo −8%), proteção (+10%), cobertura (+5%), skills prontas
+(até +10%) e tempo (±0,1 por vez nas próximas 4 da linha do tempo); horizonte até depois da nossa próxima jogada (Mestre)
+ou das duas próximas (Grão-mestre), no máximo 16 ações.
+
+**Medição da 6b (2026-10-20, 128 batalhas por linha, squads do seed espelhadas):** Mestre com previsão x Mestre sem:
+**63%**; Grão-mestre com previsão x Mestre sem: **70%**. Custo com a cópia direta: ~1,6 s por batalha (Mestre) e ~2,9 s (Grão-mestre) num processo só (antes, reconstruindo a
+batalha a cada simulação, ~8 a 10 s). Para o jogador são ~0,1 a 0,2 s por
+vez da máquina; para a calibração em massa, é caro.
+
 ### 3.14 Simulador IA contra IA (calibração)
 
 Código: `src/domain/ai/simulation/` (`simulateBattle`, `runMatchup`), script `scripts/calibrate.sim.ts`, squad
@@ -1011,3 +1083,25 @@ melhoria futura: zerar o valor quando a célula de destino está ocupada.
 | Dois níveis acima | 73% a 82% | 73% a 82% | ~80% |
 | Grão-mestre x Iniciante | 92% | 92% | ≥95% |
 | Perfis (Mestre) | | 41% a 55% | 45–55% |
+
+### 3.15 Balanceamento (squads aleatórias)
+
+Script `scripts/balance.sim.ts` (`npm run balance`), com a fábrica `test/factories/make-duel-snapshot.ts` (duas squads
+quaisquer do seed, formação automática: tanques na frente). Ajustes experimentais em `scripts/sim-setup.ts` (desligados
+por padrão; testam valores sem mudar o código).
+
+- **`BAL_MODE=random`:** sorteia duas squads de 4 dos 12 personagens, joga as duas batalhas trocando de lado e mede, por
+  personagem: vitória, dano, cura/escudo, abates, mortes, uso de cada skill; e o **estilo da IA** (dano, controle, apoio,
+  posição, Defender e golpes no inimigo mais ferido).
+- **`BAL_MODE=turtle`:** a squad Gaia, Tank, Kara e Derik só cura, protege e (sem skill possível) Defende, contra as 4
+  composições do seed.
+
+**Correções que a ferramenta achou:** build dos NPCs feita à mão (`npcPriority`, a regra automática deixava o Tyir sem
+golpe e a Kara sem cura); prévia do adiantar/atrasar com a barra real (adiantar quem já está perto da vez era
+desperdício); D38 que o motor não aplicava.
+
+**Resultado com o D122 (2026-10-20, nível 58, IA Equilibrado Mestre, 1.600 batalhas):** eliminação **97%**, rodada média
+**18,1**, Defender 0%; os 12 personagens entre **43% e 58%** de vitória (antes 34% a 67%). Squad só de defesa: **0
+vitórias** em 400 (antes 35%, quase todas no fim forçado). IA: um nível acima vence 61% a 73%, perfis 42% a 54%.
+Detalhes e pontos fora da meta no relatório da conversa de 2026-10-20.
+

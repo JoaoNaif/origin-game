@@ -20,17 +20,19 @@
 
 ## 2. As 8 classes [ENRAIZADO a lista; valores PLACEHOLDER]
 
-Perfil padrão no **nível 100** (já com pontos livres na distribuição inicial):
+Perfil padrão no **nível 100** (já com pontos livres na distribuição inicial). **Orçamento por classe (D122):** Executor
+640, Controlador e Tático 700, Artilharia 640, os demais 670 (a simulação mostrou que a distribuição do Executor rende
+mais por ponto e a do Controlador e do Tático, menos):
 
 | Stat | Vanguarda | Atirador | Executor | Controlador | Suporte | Artilharia | Guardião | Tático |
 |---|---|---|---|---|---|---|---|---|
-| **HP** | 700 | 420 | 400 | 520 | 500 | 500 | 780 | 480 |
-| **Ataque** | 100 | 125 | **140** | 80 | 70 | **140** | 60 | 75 |
+| **HP** | 700 | 420 | 400 | **650** | 500 | 500 | 780 | **630** |
+| **Ataque** | 100 | 125 | **130** | **95** | 70 | **140** | 60 | **100** |
 | **Defesa** | **120** | 60 | 55 | 85 | 80 | 70 | **140** | 75 |
-| **Velocidade** | 75 | 95 | **115** | 90 | 105 | 65 | 70 | **110** |
-| **Precisão** | 85 | **125** | 110 | 115 | 85 | 110 | 70 | 105 |
-| **Esquiva** | 55 | 90 | **115** | 75 | 100 | 65 | 50 | 90 |
-| **Vontade** | 95 | 85 | 55 | **125** | **130** | 90 | **115** | 120 |
+| **Velocidade** | 75 | 95 | **110** | 90 | 105 | 65 | 70 | **110** |
+| **Precisão** | 85 | **125** | **105** | 115 | 85 | 110 | 70 | 105 |
+| **Esquiva** | 55 | 90 | **105** | 75 | 100 | 65 | 50 | 90 |
+| **Vontade** | 95 | 85 | 55 | **110** | **130** | 90 | **115** | **95** |
 
 | Classe | Função de guerra | No jogo |
 |---|---|---|
