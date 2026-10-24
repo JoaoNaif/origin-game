@@ -103,6 +103,9 @@ export class SubmitBattleActionUseCase {
       catalog: await this.catalogRepository.load(),
       now: this.clock.now(),
     })
+    if (rewards.length > 0 && battle.recordRewards(rewards).isRight()) {
+      await this.battlesRepository.saveRewards(battle)
+    }
 
     return right({
       battle,

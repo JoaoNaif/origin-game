@@ -138,6 +138,10 @@ describe('Submit Battle Action (e2e)', () => {
       await prisma.battle.findUnique({ where: { id: battleId } })
     ).toMatchObject({ status: 'FINISHED', winner: last.battle.result.winner })
 
+    // o XP fica na batalha: quem perdeu a resposta acha em GET /battles/:id
+    const view = await agent.get(`/battles/${battleId}`)
+    expect(view.body.battle.result.rewards).toEqual(last.rewards)
+
     // batalha encerrada não aceita jogada
     const after = await agent
       .post(`/battles/${battleId}/actions`)

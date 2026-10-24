@@ -20,6 +20,7 @@ import { FetchPendingSkillOffersController } from './controllers/characters/fetc
 import { FetchNpcSquadsController } from './controllers/catalog/fetch-npc-squads.controller'
 import { FetchTraitsController } from './controllers/catalog/fetch-traits.controller'
 import { FetchTemplatesController } from './controllers/catalog/fetch-templates.controller'
+import { ForfeitBattleController } from './controllers/battles/forfeit-battle.controller'
 import { FetchAccountBattlesController } from './controllers/battles/fetch-account-battles.controller'
 import { GetBattleController } from './controllers/battles/get-battle.controller'
 import { GetTurnOptionsController } from './controllers/battles/get-turn-options.controller'
@@ -68,6 +69,7 @@ import { squadsUseCases } from './use-cases/squads.providers'
     FetchAccountBattlesController,
     GetBattleController,
     GetTurnOptionsController,
+    ForfeitBattleController,
   ],
   providers: [
     ...accountsUseCases,

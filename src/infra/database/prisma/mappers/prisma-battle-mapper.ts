@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client'
 import { UniqueEntityId } from '@/core/entities/unique-entity-id'
 import { Battle } from '@/domain/combat/entities/battle'
 import { BattleActionPayload } from '@/domain/combat/value-objects/battle-action'
+import { BattleReward } from '@/domain/combat/value-objects/battle-reward'
 import { BattleSnapshot } from '@/domain/combat/value-objects/battle-snapshot'
 
 export const battleInclude = {
@@ -42,6 +43,7 @@ export class PrismaBattleMapper {
         rounds: raw.rounds,
         startedAt: raw.startedAt,
         finishedAt: raw.finishedAt,
+        rewards: raw.rewards as unknown as BattleReward[],
       },
       new UniqueEntityId(raw.id)
     )
@@ -67,6 +69,7 @@ export class PrismaBattleMapper {
       rounds: battle.rounds,
       startedAt: battle.startedAt,
       finishedAt: battle.finishedAt,
+      rewards: json(battle.rewards),
     }
   }
 

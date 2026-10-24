@@ -124,6 +124,8 @@ export class BattlePresenter {
             endReason: battle.endReason,
             rounds: battle.rounds,
             finishedAt: battle.finishedAt,
+            // o XP entregue no fim (D134, D135); vazio na desistência
+            rewards: battle.rewards,
           }
         : null,
       startedAt: battle.startedAt,

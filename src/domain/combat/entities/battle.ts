@@ -23,6 +23,7 @@ import {
   BattleActionPayload,
   BattleActionRecord,
 } from '../value-objects/battle-action'
+import { BattleReward } from '../value-objects/battle-reward'
 import { BattleSnapshot, SnapshotSide } from '../value-objects/battle-snapshot'
 
 /** Maior seed aceita (cabe num inteiro de 32 bits com sinal do Postgres). */
@@ -48,6 +49,8 @@ export interface BattleProps {
   rounds: number | null
   startedAt: Date
   finishedAt: Date | null
+  /** O XP entregue no fim (vazio até lá, e na desistência). */
+  rewards: BattleReward[]
 }
 
 export interface StartPveBattleInput {
@@ -142,6 +145,10 @@ export class Battle extends Entity<BattleProps> {
     return this.props.finishedAt
   }
 
+  get rewards(): readonly BattleReward[] {
+    return this.props.rewards
+  }
+
   get isFinished() {
     return this.props.status === BattleStatus.FINISHED
   }
@@ -188,6 +195,7 @@ export class Battle extends Entity<BattleProps> {
           rounds: null,
           startedAt: input.startedAt,
           finishedAt: null,
+          rewards: [],
         },
         id
       )
@@ -270,6 +278,34 @@ export class Battle extends Entity<BattleProps> {
     this.props.endReason = input.reason
     this.props.rounds = input.rounds
     this.props.finishedAt = input.finishedAt
+
+    return right(undefined)
+  }
+
+  /**
+   * Desistir (W.O.): a batalha acaba na rodada em que está, com vitória do adversário (`ABANDON`). Sem XP no PvE
+   * (D136, a confirmar): desistir logo depois de começar não pode render nada.
+   */
+  forfeit(finishedAt: Date): Either<InvalidBattleError, void> {
+    return this.finish({
+      winner: BattleSide.OPPONENT,
+      reason: BattleEndReason.ABANDON,
+      rounds: this.props.actions.at(-1)?.round ?? 1,
+      finishedAt,
+    })
+  }
+
+  /** Guarda o XP entregue no fim (só numa batalha encerrada, uma vez). */
+  recordRewards(rewards: BattleReward[]): Either<InvalidBattleError, void> {
+    if (!this.isFinished) {
+      return left(new InvalidBattleError('a batalha ainda não terminou'))
+    }
+
+    if (this.props.rewards.length > 0) {
+      return left(new InvalidBattleError('as recompensas já foram entregues'))
+    }
+
+    this.props.rewards = [...rewards]
 
     return right(undefined)
   }

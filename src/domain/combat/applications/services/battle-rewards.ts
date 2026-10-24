@@ -6,17 +6,12 @@ import { skillOffersOnLevelUp } from '@/domain/characters/applications/services/
 import { BattleEngine } from '../../engine/battle-engine'
 import { Battle } from '../../entities/battle'
 import { BattleSide, BattleStatus } from '../../enums/battle-enums'
+import { BattleReward } from '../../value-objects/battle-reward'
 import { battleMetrics, battleXp, SAME_NPC_XP } from '../../services/battle-xp'
 import { BattlesRepository } from '../repositories/battles-repository'
 
-export interface CharacterReward {
-  characterId: string
-  xp: number
-  levelsGained: number
-  level: number
-  /** Blocos de skill que a subida de nível abriu (D77): escolher em GET /me/skill-offers. */
-  newSkillOffers: number
-}
+/** O que cada personagem ganhou (`BattleReward`, guardado na batalha). */
+export type CharacterReward = BattleReward
 
 export interface BattleRewardsDeps {
   charactersRepository: CharactersRepository

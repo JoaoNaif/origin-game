@@ -27,6 +27,7 @@ function copy(battle: Battle): Battle {
       rounds: battle.rounds,
       startedAt: battle.startedAt,
       finishedAt: battle.finishedAt,
+      rewards: [...battle.rewards],
     },
     battle.id
   )
@@ -76,13 +77,22 @@ export class InMemoryBattlesRepository implements BattlesRepository {
     this.items.push(copy(battle))
   }
 
-  /** Como a chave do banco (batalha + sequência): quem leu um log que já cresceu não grava. */
+  /** Como no banco: quem leu um log que já cresceu, ou uma batalha que já acabou, não grava. */
   async save(battle: Battle, knownActions: number): Promise<boolean> {
     const index = this.items.findIndex((item) => item.id.equals(battle.id))
-    if (this.items[index].actions.length !== knownActions) return false
+    const stored = this.items[index]
+    if (stored.actions.length !== knownActions || stored.isFinished) {
+      return false
+    }
 
     this.items[index] = copy(battle)
 
     return true
+  }
+
+  async saveRewards(battle: Battle): Promise<void> {
+    const index = this.items.findIndex((item) => item.id.equals(battle.id))
+
+    this.items[index] = copy(battle)
   }
 }

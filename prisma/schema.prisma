@@ -563,6 +563,8 @@ model Battle {
   rounds         Int?
   startedAt      DateTime         @map("started_at")
   finishedAt     DateTime?        @map("finished_at")
+  // XP entregue no fim (D134, D135): [{ characterId, xp, levelsGained, level, newSkillOffers }]
+  rewards        Json             @default("[]")
   createdAt      DateTime         @default(now()) @map("created_at")
   updatedAt      DateTime         @updatedAt @map("updated_at")
 

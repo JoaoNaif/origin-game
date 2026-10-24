@@ -12,6 +12,9 @@ import {
 } from '../mappers/prisma-battle-mapper'
 import { PrismaService } from '../prisma.service'
 
+/** A batalha já tinha acabado quando esta gravação chegou (desfaz a transação). */
+class BattleAlreadyFinished extends Error {}
+
 @Injectable()
 export class PrismaBattlesRepository implements BattlesRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -72,7 +75,8 @@ export class PrismaBattlesRepository implements BattlesRepository {
 
   /**
    * O log só cresce: grava as ações a partir de `knownActions` e o fim, numa transação. A chave (batalha + sequência)
-   * garante que só uma de duas jogadas enviadas ao mesmo tempo entra: a outra bate na chave e nada dela fica.
+   * garante que só uma de duas jogadas enviadas ao mesmo tempo entra; e a batalha só é atualizada se ainda está em
+   * andamento (desistir enquanto uma jogada roda). Quem perde não grava nada.
    */
   async save(battle: Battle, knownActions: number): Promise<boolean> {
     const { id, status, winner, endReason, rounds, finishedAt } =
@@ -82,17 +86,19 @@ export class PrismaBattlesRepository implements BattlesRepository {
     )
 
     try {
-      await this.prisma.$transaction([
-        this.prisma.battleAction.createMany({ data: newActions }),
-        this.prisma.battle.update({
-          where: { id },
+      await this.prisma.$transaction(async (tx) => {
+        await tx.battleAction.createMany({ data: newActions })
+        const updated = await tx.battle.updateMany({
+          where: { id, status: 'IN_PROGRESS' },
           data: { status, winner, endReason, rounds, finishedAt },
-        }),
-      ])
+        })
+        if (updated.count === 0) throw new BattleAlreadyFinished()
+      })
     } catch (error) {
       if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
+        error instanceof BattleAlreadyFinished ||
+        (error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2002')
       ) {
         return false
       }
@@ -100,5 +106,12 @@ export class PrismaBattlesRepository implements BattlesRepository {
     }
 
     return true
+  }
+
+  async saveRewards(battle: Battle): Promise<void> {
+    await this.prisma.battle.update({
+      where: { id: battle.id.toString() },
+      data: { rewards: PrismaBattleMapper.toPrisma(battle).rewards },
+    })
   }
 }

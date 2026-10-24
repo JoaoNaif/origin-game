@@ -171,6 +171,9 @@ describe('Submit Battle Action', () => {
     expect(current.status).toBe(BattleStatus.FINISHED)
     expect(current.winner).not.toBeNull()
     expect(rewards).toHaveLength(4)
+    // o XP fica guardado na batalha (histórico e reconexão)
+    const saved = await world.battles.findById(current.id.toString())
+    expect(saved!.rewards).toEqual(rewards)
     expect(rewards.every((r) => r.xp > 0)).toBe(true)
 
     const squadIds = world.squad.members.map((m) => m.characterId.toString())

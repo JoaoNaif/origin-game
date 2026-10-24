@@ -136,6 +136,9 @@ export class StartPveBattleUseCase {
       catalog,
       now: this.clock.now(),
     })
+    if (rewards.length > 0 && battle.recordRewards(rewards).isRight()) {
+      await this.battlesRepository.saveRewards(battle)
+    }
 
     return right({ battle, engine, events: engine.events, rewards })
   }
