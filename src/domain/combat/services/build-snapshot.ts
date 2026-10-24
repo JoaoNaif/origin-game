@@ -206,6 +206,7 @@ export function buildPlayerSide(
 
     units.push({
       ref: unitRef(BattleSide.PLAYER, index),
+      characterId: character.id.toString(),
       name: template.value.name,
       templateKey: template.value.key,
       characterClass: template.value.characterClass,

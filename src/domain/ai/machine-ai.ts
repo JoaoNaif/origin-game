@@ -42,6 +42,21 @@ export function aiRng(seed: number, side: BattleSide): Rng {
   return new SeededRng((seed ^ AI_SEED_SALT[side]) >>> 0)
 }
 
+/**
+ * Rng da IA para **uma** decisão, derivada da seed e da posição da jogada no log. O servidor monta a IA de novo a cada
+ * requisição (a batalha é reconstruída pelo replay), então a sorte não pode depender das decisões anteriores.
+ * Continua determinística: mesma seed + mesmas ações = mesma decisão.
+ */
+export function aiDecisionRng(
+  seed: number,
+  side: BattleSide,
+  sequence: number
+): Rng {
+  return new SeededRng(
+    (Math.imul(seed ^ AI_SEED_SALT[side], 0x27d4eb2d) + sequence) >>> 0
+  )
+}
+
 export interface MachineAiConfig {
   side: BattleSide
   profile: AiProfile

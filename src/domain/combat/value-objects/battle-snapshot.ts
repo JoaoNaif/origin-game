@@ -33,6 +33,8 @@ export interface SnapshotSkill {
 export interface SnapshotUnit extends GridPosition {
   /** Identificador da unidade na batalha (ex.: `PLAYER:0`), usado pelas ações. */
   ref: string
+  /** Personagem da conta (lado do jogador; o NPC não tem): quem recebe o XP no fim. */
+  characterId?: string
   name: string
   templateKey: string
   characterClass: CharacterClass
