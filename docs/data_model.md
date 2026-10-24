@@ -506,6 +506,8 @@ máquina **não é uma conta**: o adversário do PvE vem do `NpcSquad` (modelo n
 **Autenticação depois (aprovado):** o MVP valida a batalha e usa uma conta de teste criada pelo seed. E-mail e senha
 entram junto com o login, numa migração própria.
 
+**API:** `POST /accounts` e `GET /accounts/:username`, em [`api.md`](./api.md).
+
 **Exemplo** (fictício):
 
 | `username` | `displayName` | Resultado |
@@ -1055,9 +1057,32 @@ conquistado.
 | Focado em abater | Caçada | Nox, Tyir | Lucky, Sunna |
 | Equilibrado | CORE | Gaia, Kael | Lucky, Kara |
 
-## 5. Próximos passos
+**Conta de teste:** o seed também cria a `tester_01` (D133) pelo mesmo caso de uso do servidor, com os 12 personagens
+no nível 18 e a distribuição padrão dos pontos livres. Se ela já existe, fica como está (o progresso não é apagado).
+A gravação do conteúdo está em `prisma/seed/seed-database.ts` (usada também pelos testes e2e, um schema por arquivo) e
+a conta em `prisma/seed/seed-test-account.ts`.
 
-1. **Migração** dos campos (`battle_fields`) e **seed** no banco: `npm run services:up`, `npm run prisma:migrate`,
-   `npm run db:seed` (Docker desligado na última sessão).
-2. **Mapeadores** do Prisma para o domínio (em `infra/`), validando os JSONs na borda.
-3. **Calibração** da IA com as squads do seed (`engine.md` 3.14).
+## 5. Servidor (infra)
+
+A API está em [`api.md`](./api.md). O que a infra acrescenta ao modelo:
+
+- **Catálogo em memória:** o `PrismaCatalogRepository` lê variantes, traços, modelos, skills, campos e squads de NPC uma
+  vez, remonta cada linha pelo `create` do domínio (que valida de novo) e guarda. Rodar o seed de novo pede reiniciar o
+  servidor. A **versão do conteúdo** gravada na batalha é um hash do catálogo sem as datas.
+- **Skills de um modelo:** a `key` da skill começa pela `key` do modelo (`kael-vaz:...`); é assim que o servidor acha o
+  kit e o pool de cada personagem (`src/domain/catalog/services/template-skills.ts`).
+- **Snapshot:** cada unidade do jogador guarda o `characterId` (quem recebe o XP no fim, D134). O NPC não tem.
+- **Pré-batalha (`BattleDraft`):** o adversário, a seed e o campo sorteado, mostrados antes de escolher o squad (D28,
+  D112). Fica **em memória** no servidor por até 30 minutos e some quando a batalha começa; não tem tabela.
+- **Estado da batalha não é guardado** (decisão geral nº 2): cada requisição refaz o motor pelo replay (foto + seed +
+  ações). A IA monta a decisão com uma sorte própria por jogada (`aiDecisionRng`: seed, lado e posição no log), então
+  a mesma batalha dá sempre as mesmas jogadas da máquina, mesmo depois de reiniciar o servidor.
+- **Versão do motor:** `ENGINE_VERSION` em `src/domain/combat/applications/services/pve-session.ts`. Mudou uma regra
+  que altera o resultado das mesmas ações? Sobe a versão.
+
+## 6. Próximos passos
+
+1. **Calibração** da IA com as squads do seed (`engine.md` 3.14).
+2. **Ofertas de skill a cada 5 níveis (D77):** com o XP, o personagem sobe de nível, mas ainda não ganha o bloco de 3
+   skills para escolher; até lá não há rota de aprender skill.
+3. **Tempo do turno (D38):** o Defender automático por tempo esgotado precisa do tempo limite em segundos.
