@@ -18,6 +18,7 @@ import { FetchAccountSquadsController } from './controllers/squads/fetch-account
 import { FetchNpcSquadsController } from './controllers/catalog/fetch-npc-squads.controller'
 import { FetchTemplatesController } from './controllers/catalog/fetch-templates.controller'
 import { GetBattleController } from './controllers/battles/get-battle.controller'
+import { GetTurnOptionsController } from './controllers/battles/get-turn-options.controller'
 import { GetCharacterController } from './controllers/characters/get-character.controller'
 import { HealthController } from './controllers/health.controller'
 import { StartPveBattleController } from './controllers/battles/start-pve-battle.controller'
@@ -58,6 +59,7 @@ import { squadsUseCases } from './use-cases/squads.providers'
     StartPveBattleController,
     SubmitBattleActionController,
     GetBattleController,
+    GetTurnOptionsController,
   ],
   providers: [
     ...accountsUseCases,

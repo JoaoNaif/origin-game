@@ -8,6 +8,7 @@ import { BattleDraftsRepository } from '@/domain/combat/applications/repositorie
 import { BattlesRepository } from '@/domain/combat/applications/repositories/battles-repository'
 import { DraftPveBattleUseCase } from '@/domain/combat/applications/use-cases/draft-pve-battle'
 import { GetBattleUseCase } from '@/domain/combat/applications/use-cases/get-battle'
+import { GetTurnOptionsUseCase } from '@/domain/combat/applications/use-cases/get-turn-options'
 import { StartPveBattleUseCase } from '@/domain/combat/applications/use-cases/start-pve-battle'
 import { SubmitBattleActionUseCase } from '@/domain/combat/applications/use-cases/submit-battle-action'
 import { SquadsRepository } from '@/domain/squads/applications/repositories/squads-repository'
@@ -73,5 +74,11 @@ export const battlesUseCases: Provider[] = [
     provide: GetBattleUseCase,
     inject: [BattlesRepository],
     useFactory: (battles: BattlesRepository) => new GetBattleUseCase(battles),
+  },
+  {
+    provide: GetTurnOptionsUseCase,
+    inject: [BattlesRepository],
+    useFactory: (battles: BattlesRepository) =>
+      new GetTurnOptionsUseCase(battles),
   },
 ]
