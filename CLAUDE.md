@@ -2,7 +2,7 @@
 
 > O **design de jogo está fechado até o D134** (regras e valores iniciais do MVP). **Feito:** motor de combate, IA e
 > simulação (D122 a D132), schema do Prisma, seed e o **servidor do MVP** (contas, catálogo, personagens, squads e
-> batalha contra a máquina, com XP no fim). Contrato da API em [`docs/api.md`](./docs/api.md).
+> batalha contra a máquina, com XP no fim e as ações possíveis da vez), com login (username + senha). Contrato da API em [`docs/api.md`](./docs/api.md).
 > Contexto permanente do projeto para o Claude. Leia antes de mexer em qualquer coisa.
 
 ## O que é Origin
@@ -70,7 +70,7 @@ ou `Math.random()`. Aleatoriedade entra por uma porta (`Rng`) alimentada pela se
 
 ```
 src/
-  core/                       Entity, Either, UniqueEntityId, Rng (porta) e SeededRng, RuleError
+  core/                       Entity, Either, UniqueEntityId, Rng (porta) e SeededRng, Clock (porta), RuleError
     errors/err/               erros genéricos de use-case: ResourceNotFound, ResourceAlreadyExists, NotAllowed
   domain/
     combat/                   motor: batalha, grade 3x3, fila de turnos, resolução de ações
@@ -78,13 +78,15 @@ src/
     skills/                   modelo de skill (ver `docs/skills_brief.md` seção 12)
     ai/                       IA da máquina: pontuação, sorteio com Rng, log do jogador
     squads/                   formação (4 personagens na grade 3x3)
-    accounts/                 conta do jogador
+    accounts/                 conta do jogador, login (sessões, portas de criptografia)
     catalog/                  porta do catálogo do admin (modelos, skills, traços, campos, squads de NPC)
   infra/
+    auth/                     JWT (estratégia, guard global, @Public, @CurrentUser)
+    cryptography/             bcrypt, JWT e refresh token (portas de accounts)
     env/                      validação do .env (Zod) e EnvService
     database/                 DatabaseModule, PrismaService, prisma/{mappers,repositories}, memory/ (pré-batalha)
     gateways/                 relógio e gerador de seed (portas do domínio)
-    http/                     HttpModule, controllers/, presenters/, pipes/, schemas/, use-cases/
+    http/                     HttpModule, controllers/, presenters/, pipes/, schemas/, use-cases/, middlewares/
 test/                         factories, in-memory repositories, fakes (incluindo Rng fixo), setup-e2e.ts
 ```
 
@@ -104,6 +106,10 @@ test/                         factories, in-memory repositories, fakes (incluind
 
 ### Infra
 
+- **Login** (modelo do help-invest): toda rota exige JWT (guard global), menos as com `@Public()`. A conta logada
+  chega por `@CurrentUser()` (`sub` = id da conta); o que é dela fica em `/me/...`, e os casos de uso que recebem um
+  id conferem o dono (`findOwned...`, outra conta = `NotAllowedError` → 403). Tokens só em cookies httpOnly
+  (`http/auth-cookies.ts`); CSRF por `SameSite=Strict` + checagem de `Origin`. Chaves no `.env` (`npm run keys:generate`).
 - Catálogo público (`GET /templates`, `GET /npc-squads`): controller lê direto do `CatalogRepository`, sem caso de
   uso (dado público, como no help-invest).
 - Repositório Prisma em `infra/database/prisma/repositories/`, com mapper Prisma ↔ domínio em `prisma/mappers/`;
@@ -116,7 +122,7 @@ test/                         factories, in-memory repositories, fakes (incluind
   sempre por presenter (`infra/http/presenters/`). Schemas reaproveitados em `infra/http/schemas/`.
 - e2e: `npm run test:e2e` (precisa do Postgres: `npm run services:up`); cada arquivo roda num schema próprio
   (`test/setup-e2e.ts`, que também grava o conteúdo do seed) e monta o app com `configureApp(app)`
-  (`infra/setup-app.ts`). Preparos repetidos (criar conta, squad, pré-batalha, jogada válida) em `test/e2e/`.
+  (`infra/setup-app.ts`). Preparos repetidos (cadastrar e entrar com o `agent` do supertest, squad, pré-batalha, jogada válida) em `test/e2e/`.
 
 ## Convenções (herdadas do ZapWave)
 
@@ -141,7 +147,7 @@ test/                         factories, in-memory repositories, fakes (incluind
 - **Depois do MVP:** PvP (pontos do Elo, limites de pontos, temporada, reconexão, top 3, fila), perfil próprio para
   chefes, previsão de turnos da IA, memória entre batalhas, e os caminhos Enxerto, Rede e Selo.
 - **Servidor, a seguir:** ofertas de skill a cada 5 níveis (D77; sem elas não há rota de aprender skill), Defender por
-  tempo esgotado (D38, falta o tempo em segundos), valor do buff/debuff no XP (D134), login e o front.
+  tempo esgotado (D38, falta o tempo em segundos), valor do buff/debuff no XP (D134), lista das batalhas da conta, desistir (W.O.), catálogo de traços e o front.
 
 **Regra de trabalho:** valores numéricos novos, o Claude **propõe** e o usuário aprova; depois registra em uma nova
 linha D do `game_design.md` e no brief de origem.

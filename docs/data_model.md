@@ -482,7 +482,7 @@ Fábrica de teste em `test/factories/make-skill.ts`.
 
 ### 3.5 Account (jogador)
 
-A conta do jogador. **Mínima no MVP:** só precisa ser dona dos personagens e dos squads e aparecer na batalha. A
+A conta do jogador: dona dos personagens e dos squads, aparece na batalha e **entra por username + senha**. A
 máquina **não é uma conta**: o adversário do PvE vem do `NpcSquad` (modelo nº 9).
 
 | Campo | Tipo | Regra |
@@ -490,23 +490,33 @@ máquina **não é uma conta**: o adversário do PvE vem do `NpcSquad` (modelo n
 | `id` | uuid | |
 | `username` | texto, **único** | normalizado (sem espaços nas pontas, minúsculo); 3 a 20 caracteres: letras minúsculas, números e `_` |
 | `displayName` | texto | 2 a 30 caracteres (sem espaços nas pontas); nome exibido na batalha |
+| `passwordHash` | texto | hash bcrypt da senha (a senha em texto tem 8 a 72 caracteres e nunca é guardada) |
 | `createdAt`, `updatedAt` | data | |
 
-**Regras (domínio, `InvalidAccountError`):** formato do `username` e tamanho do `displayName`.
+**Regras (domínio, `InvalidAccountError`):** formato do `username`, tamanho do `displayName` e da senha.
 
 **Fica para depois** (cada um com a sua migração):
 
 | Quando | Campos |
 |---|---|
-| Autenticação | `email` (único), `passwordHash` |
+| Recuperar a conta | `email` (único), se um dia houver "esqueci a senha" |
 | Economia (D100) | moeda, espaços de inventário |
 | Organizações (D101) | organização ativa, reputação por organização |
 | Ranqueado (D99) | pontos, faixa, histórico mínimo |
 
-**Autenticação depois (aprovado):** o MVP valida a batalha e usa uma conta de teste criada pelo seed. E-mail e senha
-entram junto com o login, numa migração própria.
+**Login por username + senha (aprovado):** sem e-mail por ora (o usuário escolheu; sem e-mail não há "esqueci a
+senha"). Modelo do help-invest: token de acesso JWT RS256 de 15 minutos e refresh token de 30 dias com rotação, os
+dois só em cookies httpOnly.
 
-**API:** `POST /accounts` e `GET /accounts/:username`, em [`api.md`](./api.md).
+**Sessão (`Session`, tabela `sessions`):** uma linha por login. Guarda o **hash** SHA-256 do refresh token (o token
+puro só existe na resposta), `expiresAt`, `revokedAt` e o `userAgent`. Cada refresh token serve uma vez: ao renovar,
+a sessão é revogada e outra é criada. Um token já usado aparecendo de novo é sinal de roubo e revoga **todas** as
+sessões da conta. Apagar a conta apaga as sessões. Domínio: `src/domain/accounts/entities/session.ts`.
+
+**Contas de antes do login:** a migração `auth_sessions` deixou o hash vazio nelas, e assim elas não entram. O seed
+dá à `tester_01` a senha de teste `origin123`.
+
+**API:** cadastro, login, refresh, logout, `GET /me` e `GET /accounts/:username`, em [`api.md`](./api.md).
 
 **Exemplo** (fictício):
 
@@ -519,10 +529,10 @@ entram junto com o login, numa migração própria.
 No `seed.ts`:
 
 ```ts
-Account.create({ username: 'tester_01', displayName: 'Tester' })
+Account.create({ username: 'tester_01', displayName: 'Tester', passwordHash: await hasher.hash('origin123') })
 // right(Account)
 
-Account.create({ username: 'Joao Naif!', displayName: 'João' })
+Account.create({ username: 'Joao Naif!', displayName: 'João', passwordHash })
 // left(InvalidAccountError): username com 3 a 20 caracteres: letras minúsculas, números e _
 ```
 
@@ -1072,6 +1082,8 @@ A API está em [`api.md`](./api.md). O que a infra acrescenta ao modelo:
 - **Skills de um modelo:** a `key` da skill começa pela `key` do modelo (`kael-vaz:...`); é assim que o servidor acha o
   kit e o pool de cada personagem (`src/domain/catalog/services/template-skills.ts`).
 - **Snapshot:** cada unidade do jogador guarda o `characterId` (quem recebe o XP no fim, D134). O NPC não tem.
+- **Dono:** personagem, squad, pré-batalha e batalha só servem à conta logada (`findOwned...` nos casos de uso;
+  outra conta = `NotAllowedError`, 403).
 - **Pré-batalha (`BattleDraft`):** o adversário, a seed e o campo sorteado, mostrados antes de escolher o squad (D28,
   D112). Fica **em memória** no servidor por até 30 minutos e some quando a batalha começa; não tem tabela.
 - **Estado da batalha não é guardado** (decisão geral nº 2): cada requisição refaz o motor pelo replay (foto + seed +
