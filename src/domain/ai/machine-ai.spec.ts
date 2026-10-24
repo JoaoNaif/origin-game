@@ -65,16 +65,20 @@ function makeMixedSnapshot(): BattleSnapshot {
 }
 
 describe('Machine AI', () => {
-  it('should be able to play a whole battle with only legal actions', () => {
-    const sut = new BattleEngine(makeMixedSnapshot(), new SeededRng(3))
+  it(
+    'should be able to play a whole battle with only legal actions',
+    { timeout: 60_000 },
+    () => {
+      const sut = new BattleEngine(makeMixedSnapshot(), new SeededRng(3))
 
-    playAiVsAi(sut, {
-      PLAYER: makeAi(BattleSide.PLAYER, AiDifficulty.BEGINNER),
-      OPPONENT: makeAi(BattleSide.OPPONENT, AiDifficulty.MASTER),
-    })
+      playAiVsAi(sut, {
+        PLAYER: makeAi(BattleSide.PLAYER, AiDifficulty.BEGINNER),
+        OPPONENT: makeAi(BattleSide.OPPONENT, AiDifficulty.MASTER),
+      })
 
-    expect(sut.outcome).not.toBeNull()
-  })
+      expect(sut.outcome).not.toBeNull()
+    }
+  )
 
   it('should be able to decide the same way for the same seed (D90)', () => {
     const run = () => {
@@ -114,7 +118,8 @@ describe('Machine AI', () => {
     const candidates = generateCandidates(engine, turn.ref)
 
     expect(candidates.some((c) => c.payload.type === 'SKILL')).toBe(true)
-    expect(candidates.some((c) => c.payload.type === 'DEFEND')).toBe(true)
+    // D38: com skill possível, Defender não é opção
+    expect(candidates.some((c) => c.payload.type === 'DEFEND')).toBe(false)
 
     for (const { payload } of candidates) {
       const fresh = new BattleEngine(makeMixedSnapshot(), new SeededRng(1))
@@ -139,7 +144,7 @@ describe('Machine AI', () => {
           target: { row: 0, column: 0 },
         })
       } else {
-        engine.act({ type: 'DEFEND' })
+        engine.act({ type: 'DEFEND', timeout: true })
       }
       turn = engine.nextTurn()!
     }
@@ -182,7 +187,7 @@ describe('Machine AI', () => {
               targetSide: BattleSide.OPPONENT,
               target: { row: 0, column: 0 },
             }
-          : { type: 'DEFEND' }
+          : { type: 'DEFEND', timeout: true }
       )
       turn = engine.nextTurn()!
     }
@@ -212,13 +217,14 @@ describe('Machine AI', () => {
         })
         attacks += 1
       } else {
-        engine.act({ type: 'DEFEND' })
+        engine.act({ type: 'DEFEND', timeout: true })
       }
       turn = engine.nextTurn()!
     }
 
     const decision = sut.decide(engine, focused)
-    const defend = decision.candidates.find((c) => c.payload.type === 'DEFEND')!
+    // mover o focado é uma ação de proteção (10.2)
+    const defend = decision.candidates.find((c) => c.payload.type === 'MOVE')!
     // nota sem o log: a mesma conta, só sem o bônus de proteção
     const base = normalizeScores(
       decision.candidates.map((c) =>

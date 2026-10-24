@@ -34,10 +34,25 @@ export type MoveOutcome = 'MOVED' | 'BLOCKED'
  */
 export class BattleGrid {
   private readonly positions = new Map<string, GridPosition>()
+  /** Muda a cada mudança de posição (quem guarda vizinhança sabe quando recalcular). */
+  private changes = 0
+
+  get version(): number {
+    return this.changes
+  }
 
   constructor(units: readonly ({ ref: string } & GridPosition)[]) {
     for (const { ref, row, column } of units)
       this.positions.set(ref, { row, column })
+  }
+
+  /** Cópia independente (previsão da IA). */
+  clone(): BattleGrid {
+    const copy = new BattleGrid([])
+    for (const [ref, p] of this.positions) copy.positions.set(ref, { ...p })
+    copy.changes = this.changes
+
+    return copy
   }
 
   positionOf(ref: string): GridPosition {
@@ -61,6 +76,7 @@ export class BattleGrid {
   /** Tira da grade (derrotado deixa de bloquear, D21). */
   remove(ref: string) {
     this.positions.delete(ref)
+    this.changes += 1
   }
 
   /** Unidades vivas com a posição (para o alcance, 3.6). */
@@ -87,6 +103,7 @@ export class BattleGrid {
     }
 
     this.positions.set(ref, { ...to })
+    this.changes += 1
 
     return right(undefined)
   }
@@ -109,6 +126,7 @@ export class BattleGrid {
 
     this.positions.set(a, positionB)
     this.positions.set(b, positionA)
+    this.changes += 1
 
     return right(undefined)
   }
@@ -133,6 +151,7 @@ export class BattleGrid {
     if (!this.isEmpty(to)) return 'BLOCKED'
 
     this.positions.set(ref, to)
+    this.changes += 1
 
     return 'MOVED'
   }
@@ -155,6 +174,7 @@ export class BattleGrid {
     const a = this.positionOf(ref)
     this.positions.set(ref, this.positionOf(withRef))
     this.positions.set(withRef, a)
+    this.changes += 1
 
     return 'MOVED'
   }

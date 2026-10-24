@@ -108,7 +108,10 @@ export function generateCandidates(
     }
   }
 
-  candidates.push({ payload: { type: 'DEFEND' }, preview: null })
+  // D38: Defender só sem skill possível
+  if (!candidates.some((c) => c.payload.type === 'SKILL')) {
+    candidates.push({ payload: { type: 'DEFEND' }, preview: null })
+  }
 
   return candidates
 }

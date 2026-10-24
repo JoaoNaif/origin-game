@@ -36,6 +36,15 @@ export class SkillCooldowns {
     for (const skill of skills) this.remaining.set(skill.key, 0)
   }
 
+  /** Cópia independente (previsão da IA). */
+  clone(): SkillCooldowns {
+    const copy = new SkillCooldowns(this.skills)
+    for (const [key, left] of this.remaining) copy.remaining.set(key, left)
+    for (const key of this.usedThisTurn) copy.usedThisTurn.add(key)
+
+    return copy
+  }
+
   turnsLeft(key: string): number {
     return this.remaining.get(key) ?? 0
   }

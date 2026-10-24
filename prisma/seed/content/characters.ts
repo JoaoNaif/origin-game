@@ -45,21 +45,21 @@ const CLASS_PROFILE: Record<CharacterClass, StatBlock> = {
   },
   EXECUTOR: {
     HP: 400,
-    ATTACK: 140,
+    ATTACK: 130,
     DEFENSE: 55,
-    SPEED: 115,
-    PRECISION: 110,
-    EVASION: 115,
+    SPEED: 110,
+    PRECISION: 105,
+    EVASION: 105,
     WILL: 55,
   },
   CONTROLLER: {
-    HP: 520,
-    ATTACK: 80,
+    HP: 650,
+    ATTACK: 95,
     DEFENSE: 85,
     SPEED: 90,
     PRECISION: 115,
     EVASION: 75,
-    WILL: 125,
+    WILL: 110,
   },
   SUPPORT: {
     HP: 500,
@@ -89,13 +89,13 @@ const CLASS_PROFILE: Record<CharacterClass, StatBlock> = {
     WILL: 115,
   },
   TACTICIAN: {
-    HP: 480,
-    ATTACK: 75,
+    HP: 630,
+    ATTACK: 100,
     DEFENSE: 75,
     SPEED: 110,
     PRECISION: 105,
     EVASION: 90,
-    WILL: 120,
+    WILL: 95,
   },
 }
 
@@ -298,6 +298,7 @@ export const CHARACTERS: CharacterSpec[] = [
     npcPriority: [
       'detonacao-total',
       'colosso',
+      'grito-de-guerra',
       'onda-de-choque',
       'detonacao',
       'punho-de-aco',
@@ -306,11 +307,22 @@ export const CHARACTERS: CharacterSpec[] = [
     ],
     passive: {
       name: 'Disciplina de Guerra',
-      description: 'Com HP abaixo de 50%, endurece: +15% de Defesa.',
-      trigger: { type: 'HP_BELOW', percent: 50 },
-      effects: [{ type: 'STAT_MODIFIER', stat: Stat.DEFENSE, percent: 15 }],
+      description:
+        'Quando um aliado cai, +20% de Ataque até o fim do próximo turno (D124).',
+      trigger: { type: 'ON_ALLY_DEFEATED' },
+      effects: [{ type: 'STAT_MODIFIER', stat: Stat.ATTACK, percent: 20 }],
     },
     skills: [
+      {
+        key: 'grito-de-guerra',
+        name: 'Grito de Guerra',
+        variant: 'endurecimento',
+        tier: REINFORCED,
+        range: MELEE,
+        area: LINE,
+        // Provocar Reforçada (D124): uma linha
+        effects: only(status(StatusType.TAUNT)),
+      },
       {
         key: 'soco-explosivo',
         name: 'Soco Explosivo',
@@ -387,19 +399,29 @@ export const CHARACTERS: CharacterSpec[] = [
     npcPriority: [
       'moedor-de-carne',
       'atrito',
+      'corpo-de-escudo',
       'sangue-que-volta',
-      'nao-morre',
       'golpe-do-corpo',
+      'nao-morre',
       'pancada',
       'pele-viva',
     ],
     passive: {
       name: 'Imortal',
-      description: 'No começo de cada turno, regenera 3% do HP máximo.',
+      description: 'No começo de cada turno, regenera 2% do HP máximo.',
       trigger: { type: 'TURN_START' },
-      effects: [{ type: 'HEAL', percentOfMaxHp: 3 }],
+      effects: [{ type: 'HEAL', percentOfMaxHp: 2 }],
     },
     skills: [
+      {
+        key: 'corpo-de-escudo',
+        name: 'Corpo de Escudo',
+        variant: 'regeneracao',
+        tier: STANDARD,
+        target: ALLY,
+        // Proteger (D124): o que não pode ser morto segura o golpe
+        effects: only({ type: 'PROTECT' }),
+      },
       {
         key: 'pancada',
         name: 'Pancada',
@@ -574,6 +596,7 @@ export const CHARACTERS: CharacterSpec[] = [
     npcPriority: [
       'superionico',
       'zero-absoluto',
+      'estilhacar',
       'congelar',
       'grilhao',
       'muralha-de-gelo',
@@ -594,6 +617,23 @@ export const CHARACTERS: CharacterSpec[] = [
       ],
     },
     skills: [
+      {
+        key: 'estilhacar',
+        name: 'Estilhaçar',
+        variant: 'gelo-superionico',
+        tier: REINFORCED,
+        range: RANGED,
+        // executar (D125): ×1,5 em alvo Preso, e o gelo quebra (o Preso acaba)
+        effects: (power) => [
+          { type: 'DAMAGE', power },
+          {
+            type: 'EXPLOIT',
+            status: StatusType.ROOT,
+            multiplier: 1.5,
+            consume: true,
+          },
+        ],
+      },
       {
         key: 'estilhaco',
         name: 'Estilhaço',
@@ -671,6 +711,7 @@ export const CHARACTERS: CharacterSpec[] = [
     npcTrait: 'passo-leve',
     npcPriority: [
       'eclipse',
+      'execucao',
       'assassinato-silencioso',
       'compressao',
       'travamento',
@@ -685,6 +726,23 @@ export const CHARACTERS: CharacterSpec[] = [
       effects: [{ type: 'ADVANCE_TURN', percent: 30 }],
     },
     skills: [
+      {
+        key: 'execucao',
+        name: 'Execução',
+        variant: 'sombra',
+        tier: STRONG,
+        range: MELEE,
+        // executar (D125): ×1,5 em alvo Atordoado (não tira o Atordoado)
+        effects: (power) => [
+          { type: 'DAMAGE', power },
+          {
+            type: 'EXPLOIT',
+            status: StatusType.STUN,
+            multiplier: 1.5,
+            consume: false,
+          },
+        ],
+      },
       {
         key: 'lamina-de-sombra',
         name: 'Lâmina de Sombra',
@@ -760,6 +818,7 @@ export const CHARACTERS: CharacterSpec[] = [
     npcPriority: [
       'coracao-da-terra',
       'terremoto',
+      'desafio',
       'bastiao',
       'tremor',
       'muralha-de-terra',
@@ -774,6 +833,15 @@ export const CHARACTERS: CharacterSpec[] = [
       effects: [{ type: 'STAT_MODIFIER', stat: Stat.DEFENSE, percent: 10 }],
     },
     skills: [
+      {
+        key: 'desafio',
+        name: 'Desafio',
+        variant: 'terra',
+        tier: STANDARD,
+        range: RANGED,
+        // Provocar Padrão (D124): 1 inimigo
+        effects: only(status(StatusType.TAUNT)),
+      },
       {
         key: 'pedrada',
         name: 'Pedrada',
@@ -859,9 +927,9 @@ export const CHARACTERS: CharacterSpec[] = [
     ],
     passive: {
       name: 'Primeiro a Cair',
-      description: 'Com HP abaixo de 30%, +15% de Ataque.',
-      trigger: { type: 'HP_BELOW', percent: 30 },
-      effects: [{ type: 'STAT_MODIFIER', stat: Stat.ATTACK, percent: 15 }],
+      description: 'Ao ser derrotado, os aliados adiantam a vez em 30% (D124).',
+      trigger: { type: 'ON_DEFEATED' },
+      effects: [{ type: 'ADVANCE_ALLIES', percent: 30 }],
     },
     skills: [
       {
@@ -1069,7 +1137,9 @@ export const CHARACTERS: CharacterSpec[] = [
         tier: STANDARD,
         slot: K.ROLE,
         target: ALLY,
-        effects: only({ type: 'TURN_SHIFT', percent: 50 }),
+        // Comando (D126): o aliado age logo depois do Tyir
+        cooldown: 3,
+        effects: only({ type: 'GRANT_TURN' }),
       },
       {
         key: 'postura-firme',
@@ -1105,7 +1175,9 @@ export const CHARACTERS: CharacterSpec[] = [
         variant: 'resistencia',
         tier: FINAL,
         target: ALLY,
-        effects: only({ type: 'TURN_SHIFT', percent: 100 }),
+        // Comando Forte (D126): age logo depois, com +15% de Ataque
+        cooldown: 2,
+        effects: only({ type: 'GRANT_TURN', attackPercent: 15 }),
       },
     ],
   },
@@ -1215,6 +1287,7 @@ export const CHARACTERS: CharacterSpec[] = [
     npcPriority: [
       'esforco',
       'guarda-alta',
+      'escudo-vivo',
       'escudo-humano',
       'firmeza',
       'investida',
@@ -1228,6 +1301,15 @@ export const CHARACTERS: CharacterSpec[] = [
       effects: [{ type: 'REDUCE_DAMAGE', percent: 15 }],
     },
     skills: [
+      {
+        key: 'escudo-vivo',
+        name: 'Escudo Vivo',
+        variant: null,
+        tier: STANDARD,
+        target: ALLY,
+        // Proteger (D124): golpes de alvo único no aliado adjacente caem no Tank
+        effects: only({ type: 'PROTECT' }),
+      },
       {
         key: 'soco-firme',
         name: 'Soco Firme',

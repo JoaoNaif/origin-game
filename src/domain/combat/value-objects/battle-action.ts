@@ -23,8 +23,11 @@ export type BattleActionPayload =
   | { type: 'MOVE'; to: GridPosition }
   /** Troca de lugar com um aliado (os dois perdem a ação, D42). */
   | { type: 'SWAP'; withRef: string }
-  /** Defender (D38): sem skill possível, ou tempo esgotado. */
-  | { type: 'DEFEND' }
+  /**
+   * Defender (D38): só sem skill possível, ou com o tempo esgotado (`timeout`, Defender automático do servidor,
+   * `pvp_brief.md` 2). Com skill possível e sem `timeout`, o motor recusa (D122).
+   */
+  | { type: 'DEFEND'; timeout?: boolean }
 
 export interface BattleActionRecord {
   /** Ordem da ação na batalha (0, 1, 2...). */

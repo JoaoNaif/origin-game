@@ -24,7 +24,7 @@ function simpleChoice(engine: BattleEngine, ref: string): BattleActionPayload {
 
   return skillKey
     ? { type: 'SKILL', skillKey, targetSide: enemySide, target }
-    : { type: 'DEFEND' }
+    : { type: 'DEFEND', timeout: true }
 }
 
 /** Roda a batalha até o fim com a jogada simples e devolve as ações tomadas. */
@@ -130,7 +130,7 @@ describe('Battle Engine', () => {
     const turn = sut.nextTurn()!
     const before = sut.unit(turn.ref).stats[Stat.DEFENSE]
 
-    sut.act({ type: 'DEFEND' })
+    sut.act({ type: 'DEFEND', timeout: true })
 
     expect(sut.unit(turn.ref).stats[Stat.DEFENSE]).toBeCloseTo(before * 1.5)
   })
@@ -168,7 +168,8 @@ describe('Battle Engine', () => {
   it('should be able to force the end on round 30 when nobody falls', () => {
     const sut = new BattleEngine(makeBattleSnapshot(), new SeededRng(5))
 
-    play(sut, () => ({ type: 'DEFEND' }))
+    // ninguém age: todo turno estoura o tempo (Defender automático, D38)
+    play(sut, () => ({ type: 'DEFEND', timeout: true }))
 
     expect(sut.outcome?.reason).toBe(BattleEndReason.ROUND_LIMIT)
     expect(sut.events.at(-1)).toMatchObject({ type: 'BATTLE_END', round: 30 })

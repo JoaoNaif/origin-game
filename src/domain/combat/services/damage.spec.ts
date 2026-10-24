@@ -9,13 +9,13 @@ import {
 
 describe('Damage', () => {
   describe('Base Damage', () => {
-    // Tabela de referência de `classes_brief.md` 4 (Poder 1,0, % do HP do alvo no nível 100)
+    // Tabela de referência de `classes_brief.md` 4 (Poder 1,0, % do HP do alvo no nível 100), já com a escala ×0,7 (D131)
     it.each([
-      ['Vanguarda → Vanguarda', 100, 120, 700, 6.5],
-      ['Executor → Atirador', 140, 60, 420, 23.3],
-      ['Atirador → Executor', 125, 55, 400, 21.7],
-      ['Guardião → Guardião', 60, 140, 780, 2.3],
-      ['Suporte → Vanguarda', 70, 120, 700, 3.7],
+      ['Vanguarda → Vanguarda', 100, 120, 700, 4.55],
+      ['Executor → Atirador', 140, 60, 420, 16.31],
+      ['Atirador → Executor', 125, 55, 400, 15.19],
+      ['Guardião → Guardião', 60, 140, 780, 1.61],
+      ['Suporte → Vanguarda', 70, 120, 700, 2.59],
     ])(
       'should be able to match the reference table %s',
       (_, attack, defense, targetHp, percent) => {

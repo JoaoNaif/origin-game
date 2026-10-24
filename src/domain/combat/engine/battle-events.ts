@@ -9,8 +9,15 @@ import { StatusApplication } from '../services/conditions'
  * banco guarda só as ações, e o motor reproduz os eventos pela seed.
  */
 export type BattleEvent =
-  | { type: 'TURN'; ref: string; round: number; tick: number }
-  | { type: 'SKIP'; ref: string; reason: 'STUN' | 'SWAPPED' }
+  | {
+      type: 'TURN'
+      ref: string
+      round: number
+      tick: number
+      /** Ação cedida pelo Comando (não é um turno novo: sem início de turno nem recarga). */
+      extra?: boolean
+    }
+  | { type: 'SKIP'; ref: string; reason: 'STUN' }
   | { type: 'DOT'; ref: string; amount: number }
   | { type: 'SKILL'; ref: string; skillKey: string; potency: number }
   | { type: 'INTERCEPT'; guardianRef: string; protectedRef: string }
@@ -24,6 +31,19 @@ export type BattleEvent =
     }
   | { type: 'HEAL'; ref: string; targetRef: string; amount: number }
   | { type: 'SHIELD'; ref: string; targetRef: string; amount: number }
+  /** Proteger (D124): `ref` protege `targetRef` até o próximo turno dele. */
+  | { type: 'PROTECT'; ref: string; targetRef: string }
+  /** Comando (D126): `targetRef` age logo depois de `ref`. */
+  | { type: 'GRANT_TURN'; ref: string; targetRef: string }
+  /** Executar (D125): o golpe aproveitou o status do alvo (e o tirou, se `consumed`). */
+  | {
+      type: 'EXPLOIT'
+      targetRef: string
+      status: StatusType
+      consumed: boolean
+    }
+  /** Um golpe no protegido caiu no protetor. */
+  | { type: 'PROTECTED'; protectorRef: string; protectedRef: string }
   /** Skill de recuperação: `relieved` = fração do Desgaste aliviada (soma das frações dos stats). */
   | { type: 'RECOVER'; ref: string; targetRef: string; relieved: number }
   | {

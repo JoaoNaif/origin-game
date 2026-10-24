@@ -18,4 +18,11 @@ export class SeededRng extends Rng {
 
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296
   }
+
+  clone(): SeededRng {
+    const copy = new SeededRng(0)
+    copy.state = this.state
+
+    return copy
+  }
 }

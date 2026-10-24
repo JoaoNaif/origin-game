@@ -18,7 +18,8 @@ const NEUTRAL: Modifier = { power: 1, cost: 1 }
 const RANGE_MODIFIER: Record<SkillRange, Modifier> = {
   MELEE: NEUTRAL,
   RANGED: { power: 0.9, cost: 1.25 },
-  FLANK: { power: 1.0, cost: 1.4 },
+  // ×0,85 desde o D122: acerta o fundo da linha e não é interceptado
+  FLANK: { power: 0.85, cost: 1.4 },
   PIERCING: { power: 0.65, cost: 1.5 },
 }
 

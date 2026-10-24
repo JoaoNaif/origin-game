@@ -47,7 +47,7 @@ function snapshotWithFields(initial: SnapshotField | null): BattleSnapshot {
 function untilTurnOf(engine: BattleEngine, ref: string) {
   for (let t = engine.nextTurn(); t; t = engine.nextTurn()) {
     if (t.ref === ref) return t
-    engine.act({ type: 'DEFEND' })
+    engine.act({ type: 'DEFEND', timeout: true })
   }
   throw new Error('a batalha acabou antes')
 }
@@ -113,7 +113,7 @@ describe('Battle Engine: battle field (D98)', () => {
       t && t.round <= turn.round + 2;
       t = engine.nextTurn()
     ) {
-      engine.act({ type: 'DEFEND' })
+      engine.act({ type: 'DEFEND', timeout: true })
     }
     expect(engine.activeField).toEqual({ key: 'arena', untilRound: null })
   })

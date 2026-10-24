@@ -10,7 +10,15 @@ export const STATUS_RULES = {
   EXPOSE: { duration: 2, baseChance: 0.85 },
   MARK: { duration: 3, baseChance: 0.8, damageTakenPercent: 20 },
   DOT: { duration: 3, baseChance: 0.8, maxHpPercentPerTurn: 4 },
+  /** Vale na próxima ação do afetado e acaba no fim dela (D124). */
+  TAUNT: { duration: 1, baseChance: 0.8 },
 } as const
+
+/** Ferida (D125): com Dano contínuo, a cura recebida rende metade. */
+export const WOUND_HEAL_MULTIPLIER = 0.5
+
+/** Marca do Controlador (D125): nos status dele, a Vontade do alvo conta 30% menos. */
+export const CONTROLLER_WILL_FACTOR = 0.7
 
 /** Depois de perder a ação pelo Atordoado, fica imune a novo Atordoado por 1 turno (anti-cadeia, 11.9). */
 export const STUN_IMMUNITY_TURNS = 1
@@ -37,6 +45,8 @@ export interface StatModifier {
   turnsLeft: number
   /** Fora do limite de 2 fontes (Defender, campo de batalha: D98, D102). */
   unlimited?: boolean
+  /** Vale até o fim da próxima ação do afetado, em vez de contar turnos (Comando e Coordenação, D126). */
+  untilAction?: boolean
 }
 
 export interface TurnStart {
@@ -56,8 +66,25 @@ export class UnitConditions {
   private modifiers: StatModifier[] = []
   private stunImmunity = 0
 
+  /** Cópia independente (previsão da IA, `BattleEngine.fork`). */
+  clone(): UnitConditions {
+    const copy = new UnitConditions()
+    for (const [status, active] of this.statuses) {
+      copy.statuses.set(status, { ...active })
+    }
+    copy.modifiers = this.modifiers.map((m) => ({ ...m }))
+    copy.stunImmunity = this.stunImmunity
+
+    return copy
+  }
+
   has(status: StatusType): boolean {
     return this.statuses.has(status)
+  }
+
+  /** Status ativos agora (a tela mostra; a IA lê). */
+  active(): StatusType[] {
+    return [...this.statuses.keys()]
   }
 
   turnsLeft(status: StatusType): number {
@@ -140,14 +167,29 @@ export class UnitConditions {
     if (skipAction) this.stunImmunity = STUN_IMMUNITY_TURNS
 
     for (const [status, active] of this.statuses) {
+      // o Provocado vale na ação deste turno: acaba no fim dela (afterAction)
+      if (status === StatusType.TAUNT) continue
       active.turnsLeft -= 1
       if (active.turnsLeft <= 0) this.statuses.delete(status)
     }
 
-    for (const modifier of this.modifiers) modifier.turnsLeft -= 1
+    for (const modifier of this.modifiers) {
+      if (!modifier.untilAction) modifier.turnsLeft -= 1
+    }
     this.modifiers = this.modifiers.filter((m) => m.turnsLeft > 0)
 
     return { skipAction, dotDamage }
+  }
+
+  /** Tira um status (skill de executar que consome, D125). */
+  remove(status: StatusType) {
+    this.statuses.delete(status)
+  }
+
+  /** Fim da ação do afetado: o Provocado acaba (D124). */
+  afterAction() {
+    this.statuses.delete(StatusType.TAUNT)
+    this.modifiers = this.modifiers.filter((m) => !m.untilAction)
   }
 
   /**

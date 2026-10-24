@@ -6,6 +6,8 @@ export const StatusType = {
   EXPOSE: 'EXPOSE',
   MARK: 'MARK',
   DOT: 'DOT',
+  /** Provocado (D124): golpes de alvo único só em quem provocou, na próxima ação. */
+  TAUNT: 'TAUNT',
 } as const
 
 export type StatusType = (typeof StatusType)[keyof typeof StatusType]

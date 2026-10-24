@@ -1,8 +1,11 @@
 import { Either, left, right } from '@/core/either'
 import { Rng } from '@/core/rng/rng'
+import { SwitchableRng } from '@/core/rng/switchable-rng'
+import { CharacterClass } from '@/domain/characters/enums/character-class'
 import { Stat } from '@/domain/characters/enums/stat'
 import { computeStats } from '@/domain/characters/services/stat-calculator'
 import { StatBlock } from '@/domain/characters/value-objects/stat-block'
+import { SkillArea } from '@/domain/skills/enums/skill-area'
 import { SkillRange } from '@/domain/skills/enums/skill-range'
 import { SkillTarget } from '@/domain/skills/enums/skill-target'
 import { StatusType } from '@/domain/skills/enums/status-type'
@@ -32,7 +35,12 @@ import {
   FORCED_MOVE_BASE_CHANCE,
   isAdjacent,
 } from '../services/battle-grid'
-import { STATUS_RULES, UnitConditions } from '../services/conditions'
+import {
+  CONTROLLER_WILL_FACTOR,
+  STATUS_RULES,
+  UnitConditions,
+  WOUND_HEAL_MULTIPLIER,
+} from '../services/conditions'
 import { SkillCooldowns } from '../services/cooldowns'
 import {
   applyDamage,
@@ -45,9 +53,15 @@ import { defend } from '../services/defend'
 import { DesgasteState, RELIEF } from '../services/desgaste'
 import { hitChance, roll, statusChance } from '../services/hit'
 import { InterceptState } from '../services/intercept'
-import { resolveTargets, TargetHit } from '../services/targeting'
+import {
+  COVER_DAMAGE_MULTIPLIER,
+  exposedOfRow,
+  resolveTargets,
+  TargetHit,
+} from '../services/targeting'
 import {
   ACTION_BAR_MAX,
+  MOVE_TURN_COST_PERCENT,
   statAverage,
   Turn,
   TurnQueue,
@@ -68,12 +82,14 @@ interface EngineUnit {
   desgaste: DesgasteState
   conditions: UnitConditions
   cooldowns: SkillCooldowns
-  /** Trocou de lugar com um aliado por ação: perde a próxima ação (D42). */
-  skipNext: boolean
   /** Já foi atrasado: imune a novo atraso até agir (D102). */
   delayImmune: boolean
   /** Turnos começados (para a passiva periódica). */
   turnsStarted: number
+  /** Quem provocou (D124), enquanto a unidade está Provocada. */
+  tauntedBy: string | null
+  /** Quem protege a unidade até o próximo turno dele (D124). */
+  protectedBy: string | null
 }
 
 /** Contexto de um gatilho de passiva. */
@@ -94,6 +110,8 @@ type PassiveEvent =
   | 'ON_DESGASTE'
   | 'ON_STATUS'
   | 'ON_FIELD_CHANGE'
+  | 'ON_ALLY_DEFEATED'
+  | 'ON_DEFEATED'
 
 /** Vez de agir devolvida por `nextTurn`. */
 export interface ActorTurn {
@@ -118,6 +136,10 @@ export type PreviewEffect =
   | { type: 'CHANGE_FIELD' }
   /** Fração do Desgaste que a recuperação aliviaria. */
   | { type: 'RECOVER'; relieved: number }
+  | { type: 'PROTECT' }
+  | { type: 'GRANT_TURN' }
+  /** O dano já vem multiplicado na prévia. */
+  | { type: 'EXPLOIT' }
 
 export interface PreviewHit {
   ref: string
@@ -135,6 +157,46 @@ export interface SkillPreview {
   hits: PreviewHit[]
 }
 
+/**
+ * Formação (D128): aura de cada classe nos aliados **adjacentes** (4 direções). Duas auras iguais não somam. A
+ * Vanguarda impede empurrar/puxar/trocar os adjacentes; o Suporte aumenta a cura recebida; a Artilharia (no fundo da
+ * linha) e o Executor (sem ninguém ao lado) ganham para si.
+ */
+export const FORMATION_STAT_AURA: Partial<
+  Record<CharacterClass, { stat: Stat; percent: number }>
+> = {
+  GUARDIAN: { stat: Stat.DEFENSE, percent: 10 },
+  TACTICIAN: { stat: Stat.SPEED, percent: 5 },
+  CONTROLLER: { stat: Stat.WILL, percent: 10 },
+  MARKSMAN: { stat: Stat.PRECISION, percent: 10 },
+}
+export const SUPPORT_HEAL_AURA_PERCENT = 15
+export const ARTILLERY_BACK_DAMAGE_PERCENT = 10
+export const EXECUTOR_LONE_ATTACK_PERCENT = 10
+
+/** Engajado (D129): quem tem na frente da linha oposta um destes não sai barato da frente. */
+export const ENGAGING_CLASSES: readonly CharacterClass[] = [
+  CharacterClass.VANGUARD,
+  CharacterClass.GUARDIAN,
+  CharacterClass.EXECUTOR,
+]
+
+/** Proteger (D127): Defesa do protetor enquanto protege e Poder do contra-ataque em quem bate no protegido. */
+export const PROTECT_DEFENSE_PERCENT = 50
+export const PROTECT_COUNTER_POWER = 0.4
+
+/** Marca de Coordenação do Tático (D126). */
+/** Marcas de classe (D125, D126): objeto para a calibração conseguir testar valores (`scripts/sim-setup.ts`). */
+export const CLASS_MARKS = {
+  /** Coordenação do Tático: Ataque do aliado até agir (D126). */
+  coordinationAttackPercent: 10,
+  /** Controlador: fator da Vontade do alvo nos status dele (D125). */
+  controllerWillFactor: CONTROLLER_WILL_FACTOR,
+}
+
+/** Quantas vezes a linha do tempo mostra (D126). */
+export const TIMELINE_LENGTH = 8
+
 const other = (side: BattleSide) =>
   side === BattleSide.PLAYER ? BattleSide.OPPONENT : BattleSide.PLAYER
 
@@ -149,16 +211,13 @@ const other = (side: BattleSide) =>
 export class BattleEngine {
   private readonly units = new Map<string, EngineUnit>()
   private readonly grids: Record<BattleSide, BattleGrid>
-  private readonly intercepts: Record<BattleSide, InterceptState> = {
-    PLAYER: new InterceptState(),
-    OPPONENT: new InterceptState(),
-  }
+  private readonly intercepts: Record<BattleSide, InterceptState>
   /** Ordem dos Guardiões de cada lado, fixa pela seed no início (D102). */
   private readonly guardianOrder: Record<BattleSide, string[]>
   private readonly queue: TurnQueue
   private current: Turn | null = null
   private result: BattleOutcome | null = null
-  private readonly log: BattleEvent[] = []
+  private log: BattleEvent[] = []
   /** Dano causado por lado nos inimigos (HP + escudo), para o resumo do fim da batalha. */
   private readonly damageDealt: Record<BattleSide, number> = {
     PLAYER: 0,
@@ -170,6 +229,20 @@ export class BattleEngine {
     killed: [] as EngineUnit[],
     healed: false,
   }
+  /** Ações cedidas pelo Comando, na ordem (D126): agem antes da fila voltar a andar. */
+  private granted: string[] = []
+  /** Vizinhos de cada unidade, por versão da grade (auras de formação, D128). */
+  private readonly neighbourCache: Record<
+    BattleSide,
+    { version: number; byRef: Map<string, EngineUnit[]> }
+  > = {
+    PLAYER: { version: -1, byRef: new Map() },
+    OPPONENT: { version: -1, byRef: new Map() },
+  }
+  /** Protetor que segurou o golpe da skill em resolução (contra-ataque depois dela, D127). */
+  private redirectedTo: string | null = null
+  /** A vez atual é uma ação cedida (não conta recarga). */
+  private currentIsExtra = false
   /** Efeito de passiva não dispara outra passiva (evita cadeias). */
   private inPassive = false
   /** Campo sorteado no início (D28) e catálogo para as trocas por skill (D98). */
@@ -182,16 +255,60 @@ export class BattleEngine {
     untilRound: number | null
   }
 
+  /** Foto, sorte do início e ações já jogadas: bastam para reconstruir a batalha (`fork`). */
+  private readonly initialRng: Rng
+  private history: BattleActionPayload[] = []
+
+  /** `source`: cópia direta de outra batalha no ponto atual (`fork`), com `rng` como a sorte dali em diante. */
   constructor(
-    snapshot: BattleSnapshot,
-    private readonly rng: Rng
+    private readonly snapshot: BattleSnapshot,
+    private readonly rng: Rng,
+    source?: BattleEngine
   ) {
+    if (source) {
+      for (const [ref, u] of source.units) {
+        this.units.set(ref, {
+          ...u,
+          desgaste: u.desgaste.clone(),
+          conditions: u.conditions.clone(),
+          cooldowns: u.cooldowns.clone(),
+        })
+      }
+      this.grids = {
+        PLAYER: source.grids.PLAYER.clone(),
+        OPPONENT: source.grids.OPPONENT.clone(),
+      }
+      this.intercepts = {
+        PLAYER: source.intercepts.PLAYER.clone(),
+        OPPONENT: source.intercepts.OPPONENT.clone(),
+      }
+      this.guardianOrder = source.guardianOrder
+      this.queue = source.queue.clone(rng)
+      this.current = source.current ? { ...source.current } : null
+      this.result = source.result
+      this.log = [...source.log]
+      this.damageDealt = { ...source.damageDealt }
+      this.granted = [...source.granted]
+      this.currentIsExtra = source.currentIsExtra
+      this.initialField = source.initialField
+      this.fieldCatalog = source.fieldCatalog
+      this.field = { ...source.field }
+      this.initialRng = source.initialRng
+      this.history = [...source.history]
+      return
+    }
+
+    this.initialRng = rng.clone()
     for (const side of [snapshot.player, snapshot.opponent]) {
       for (const unit of side.units) {
         this.units.set(unit.ref, createUnit(unit, side.side))
       }
     }
 
+    this.intercepts = {
+      PLAYER: new InterceptState(),
+      OPPONENT: new InterceptState(),
+    }
     this.initialField = snapshot.field.initial
     this.fieldCatalog = snapshot.field.catalog
     this.field = { current: this.initialField, multiplier: 1, untilRound: null }
@@ -224,6 +341,11 @@ export class BattleEngine {
     })
   }
 
+  /** De quem é a vez agora (depois de `nextTurn`), ou nulo. */
+  get currentRef(): string | null {
+    return this.current?.ref ?? null
+  }
+
   /** Resultado, quando a batalha acabou. */
   get outcome(): BattleOutcome | null {
     return this.result
@@ -240,6 +362,14 @@ export class BattleEngine {
   /** Visão de leitura de uma unidade (HP, escudo, posição, vivo). */
   unit(ref: string) {
     const unit = this.get(ref)
+    // stats, recargas e engajamento só são calculados se alguém ler (a IA lê `unit` milhares de vezes por decisão,
+    // quase sempre só o lado, a vida ou a posição)
+    let stats: StatBlock | null = null
+    const computeStats = () =>
+      Object.fromEntries(
+        Object.values(Stat).map((s) => [s, this.stat(unit, s)])
+      ) as StatBlock
+    const engaged = () => this.isEngaged(unit)
 
     return {
       ref: unit.ref,
@@ -249,13 +379,25 @@ export class BattleEngine {
       shield: unit.shield,
       alive: unit.alive,
       position: unit.alive ? this.grids[unit.side].positionOf(ref) : null,
-      stats: Object.fromEntries(
-        Object.values(Stat).map((s) => [s, this.stat(unit, s)])
-      ) as StatBlock,
-      readySkills: unit.cooldowns.ready().map((s) => s.key),
+      get stats(): StatBlock {
+        stats ??= computeStats()
+        return stats
+      },
+      get readySkills(): string[] {
+        return unit.cooldowns.ready().map((s) => s.key)
+      },
       canBeMoved: unit.conditions.canBeMoved,
       isExposed: unit.conditions.isExposed,
       traitKeys: unit.snapshot.traitKeys,
+      tauntedBy: unit.conditions.has(StatusType.TAUNT) ? unit.tauntedBy : null,
+      protectedBy: unit.protectedBy,
+      get statuses(): StatusType[] {
+        return unit.conditions.active()
+      },
+      get engaged(): boolean {
+        return engaged()
+      },
+      skillCount: unit.snapshot.skills.length,
     }
   }
 
@@ -319,6 +461,8 @@ export class BattleEngine {
             this.stat(target, Stat.WILL)
           )
         : 1
+    const statusChanceOf = (base: number) =>
+      hostile ? this.statusLandChance(actor, target, base) : 1
 
     const effects = skill.effects
       .filter((e) => e.appliesTo !== 'SELF')
@@ -346,7 +490,8 @@ export class BattleEngine {
                 skill,
                 effect.power,
                 potency,
-                round
+                round,
+                effect.type
               ),
             }
           case 'STAT_MODIFIER':
@@ -363,7 +508,7 @@ export class BattleEngine {
                 effect.status === StatusType.STUN &&
                 target.conditions.isStunImmune
                   ? 0
-                  : chanceAgainstWill(effect.baseChance),
+                  : statusChanceOf(effect.baseChance),
             }
           case 'REPOSITION':
             return {
@@ -381,6 +526,12 @@ export class BattleEngine {
             }
           case 'CHANGE_FIELD':
             return { type: 'CHANGE_FIELD' }
+          case 'PROTECT':
+            return { type: 'PROTECT' }
+          case 'GRANT_TURN':
+            return { type: 'GRANT_TURN' }
+          case 'EXPLOIT':
+            return { type: 'EXPLOIT' }
           case 'RECOVER':
             return {
               type: 'RECOVER',
@@ -395,13 +546,41 @@ export class BattleEngine {
       hitChance:
         skill.baseHitChance === null
           ? 1
-          : hitChance(
-              skill.baseHitChance,
-              this.stat(actor, Stat.PRECISION),
-              this.stat(target, Stat.EVASION)
-            ),
+          : this.landChance(actor, target, skill.baseHitChance),
       effects,
     }
+  }
+
+  /** Barra de ação da unidade (0 a 1000): a linha do tempo que o jogador vê (D126). */
+  gauge(ref: string): number {
+    return this.queue.gaugeOf(ref)
+  }
+
+  /**
+   * Cópia da batalha no ponto atual, para a IA testar jogadas (`engine.md` 3.13). Reconstrói pela foto, pela sorte do
+   * início e pelas ações jogadas (o motor é determinístico) e depois passa a usar `futureRng`: quem simula o futuro não
+   * vê os sorteios reais. A batalha original não muda.
+   */
+  fork(futureRng: Rng): BattleEngine {
+    return new BattleEngine(this.snapshot, futureRng, this)
+  }
+
+  /**
+   * A mesma cópia, mas reconstruída pela foto, pela sorte do início e pelas ações jogadas. Mais lenta; serve de
+   * referência para conferir a cópia direta (testes).
+   */
+  forkByReplay(futureRng: Rng): BattleEngine {
+    const rng = new SwitchableRng(this.initialRng.clone())
+    const copy = new BattleEngine(this.snapshot, rng)
+
+    for (const payload of this.history) {
+      copy.nextTurn()
+      copy.act(payload)
+    }
+    if (this.current) copy.nextTurn()
+    rng.inner = futureRng
+
+    return copy
   }
 
   /** Unidades vivas de um lado. */
@@ -427,9 +606,35 @@ export class BattleEngine {
         }
       }
 
+      // Comando (D126): a ação cedida vem antes da fila andar; não é turno novo (sem início de turno)
+      const grantedRef = this.granted.shift()
+      if (grantedRef) {
+        const ally = this.get(grantedRef)
+        if (!ally.alive || ally.conditions.has(StatusType.STUN)) continue
+        this.current = {
+          ref: ally.ref,
+          round: this.queue.currentRound,
+          tick: this.queue.currentTick,
+        }
+        this.currentIsExtra = true
+        this.log.push({
+          type: 'TURN',
+          ref: ally.ref,
+          round: this.current.round,
+          tick: this.current.tick,
+          extra: true,
+        })
+        this.refreshSpeeds()
+        continue
+      }
+
       const turn = this.queue.next()
+      this.currentIsExtra = false
       this.expireField(turn.round)
       const unit = this.get(turn.ref)
+      for (const other of this.units.values()) {
+        if (other.protectedBy === unit.ref) other.protectedBy = null
+      }
       this.log.push({
         type: 'TURN',
         ref: unit.ref,
@@ -455,13 +660,12 @@ export class BattleEngine {
       this.firePassive(unit, 'TURN_START')
       this.firePassive(unit, 'PERIODIC')
 
-      if (start.skipAction || unit.skipNext) {
+      if (start.skipAction) {
         this.log.push({
           type: 'SKIP',
           ref: unit.ref,
-          reason: start.skipAction ? 'STUN' : 'SWAPPED',
+          reason: 'STUN',
         })
-        unit.skipNext = false
         this.endTurn(unit)
         continue
       }
@@ -485,8 +689,21 @@ export class BattleEngine {
 
     const done = this.perform(actor, payload)
     if (done.isLeft()) return left(done.value)
+    this.history.push(payload)
 
-    this.endTurn(actor)
+    // mover e trocar custam meio turno e não contam para as recargas (senão andar aceleraria as skills)
+    // Proteger custa meio turno, como mover (D127)
+    const protecting =
+      payload.type === 'SKILL' &&
+      actor.snapshot.skills
+        .find((s) => s.key === payload.skillKey)!
+        .effects.some((e) => e.type === 'PROTECT')
+    if (protecting) this.halfTurnBack(actor)
+    const moved =
+      payload.type === 'MOVE' || payload.type === 'SWAP' || protecting
+    // ação cedida pelo Comando também não conta recarga (não é um turno do aliado)
+    this.endTurn(actor, { tickCooldowns: !moved && !this.currentIsExtra })
+    this.currentIsExtra = false
 
     return right(this.log.slice(from))
   }
@@ -501,11 +718,19 @@ export class BattleEngine {
   ): Either<InvalidActionError, void> {
     switch (payload.type) {
       case 'DEFEND':
+        if (!payload.timeout && this.hasPossibleSkill(actor)) {
+          return left(
+            new InvalidActionError(
+              'só Defende sem skill possível ou com o tempo esgotado (D38)'
+            )
+          )
+        }
         defend(actor.conditions, actor.desgaste)
         this.log.push({ type: 'DEFEND', ref: actor.ref })
         return right(undefined)
 
       case 'MOVE': {
+        const engaged = this.isEngaged(actor)
         const moved = this.grids[actor.side].move(
           actor.ref,
           payload.to,
@@ -519,6 +744,7 @@ export class BattleEngine {
           to: payload.to,
           forced: false,
         })
+        if (!engaged) this.halfTurnBack(actor)
         return right(undefined)
       }
 
@@ -541,18 +767,28 @@ export class BattleEngine {
             new InvalidActionError('troca só com aliado adjacente (D120)')
           )
         }
+        const actorEngaged = this.isEngaged(actor)
+        const allyEngaged = this.isEngaged(ally)
         const swapped = this.grids[actor.side].swap(actor.ref, ally.ref, {
           a: actor.conditions.canBeMoved,
           b: ally.conditions.canBeMoved,
         })
         if (swapped.isLeft())
           return left(new InvalidActionError(swapped.value.message))
-        ally.skipNext = true // os dois perdem a ação (D42)
         this.log.push({
           type: 'MOVE',
           ref: actor.ref,
           to: this.grids[actor.side].positionOf(actor.ref),
           forced: false,
+        })
+        // meio turno para os dois (D123); quem está Engajado paga o turno inteiro (D129)
+        if (!actorEngaged) this.halfTurnBack(actor)
+        const allyCost = allyEngaged ? 100 : MOVE_TURN_COST_PERCENT
+        this.queue.shift(ally.ref, -allyCost)
+        this.log.push({
+          type: 'TURN_SHIFT',
+          targetRef: ally.ref,
+          percent: -allyCost,
         })
         return right(undefined)
       }
@@ -560,6 +796,150 @@ export class BattleEngine {
       case 'SKILL':
         return this.useSkill(actor, payload)
     }
+  }
+
+  /**
+   * Provocado (D124): golpe de alvo único em inimigo tem que mirar em quem provocou, se ele puder ser alvo dessa skill.
+   * Área, apoio e movimento ficam livres.
+   */
+  private tauntError(
+    actor: EngineUnit,
+    skill: SnapshotSkill,
+    targetSide: BattleSide,
+    hits: readonly TargetHit[]
+  ): InvalidActionError | null {
+    if (
+      !actor.conditions.has(StatusType.TAUNT) ||
+      !actor.tauntedBy ||
+      skill.target !== SkillTarget.ENEMY ||
+      skill.area !== SkillArea.SINGLE
+    ) {
+      return null
+    }
+    const taunter = this.get(actor.tauntedBy)
+    if (!taunter.alive || taunter.side !== targetSide) return null
+    if (hits.some((h) => h.ref === taunter.ref)) return null
+
+    const grid = this.grids[targetSide]
+    const reach = resolveTargets({
+      skill,
+      actor: {
+        ref: actor.ref,
+        ...this.grids[actor.side].positionOf(actor.ref),
+      },
+      units: grid.units(),
+      cell: grid.positionOf(taunter.ref),
+      exposedRefs: new Set(
+        grid
+          .units()
+          .map((u) => u.ref)
+          .filter((ref) => this.get(ref).conditions.isExposed)
+      ),
+    })
+    const canReach =
+      reach.isRight() && reach.value.some((h) => h.ref === taunter.ref)
+
+    return canReach
+      ? new InvalidActionError(
+          `Provocado: o golpe tem que ir em ${taunter.snapshot.name} (D124)`
+        )
+      : null
+  }
+
+  /** Contra-ataque (D127): quem segurou um golpe protegendo devolve um golpe em quem bateu (sem acerto nem Desgaste). */
+  private counterAttack(attacker: EngineUnit) {
+    const protector = this.redirectedTo ? this.get(this.redirectedTo) : null
+    this.redirectedTo = null
+    if (!protector?.alive || !attacker.alive) return
+
+    const round = this.current?.round ?? this.queue.currentRound
+    const amount = finalDamage(
+      baseDamage(
+        PROTECT_COUNTER_POWER,
+        this.stat(protector, Stat.ATTACK),
+        this.stat(attacker, Stat.DEFENSE)
+      ) *
+        damageMultiplier(round) *
+        attacker.conditions.damageTakenMultiplier *
+        (1 - this.passiveDamageReduction(attacker) / 100)
+    )
+    const result = applyDamage(amount, attacker)
+    this.setHp(attacker, result.hpLeft, result.shieldLeft)
+    this.damageDealt[protector.side] += result.hpLost + result.shieldAbsorbed
+    this.log.push({
+      type: 'DAMAGE',
+      ref: protector.ref,
+      targetRef: attacker.ref,
+      amount: result.hpLost,
+      shieldAbsorbed: result.shieldAbsorbed,
+    })
+  }
+
+  /** Marca do Tático (D126): skill dele em aliado dá Coordenação (+10% de Ataque até o aliado agir). */
+  private coordinates(actor: EngineUnit, skill: SnapshotSkill): boolean {
+    return (
+      actor.snapshot.characterClass === CharacterClass.TACTICIAN &&
+      skill.target === SkillTarget.ALLY
+    )
+  }
+
+  /**
+   * Linha do tempo (D126): de quem são as próximas `count` vezes (as ações cedidas pelo Comando primeiro). Não muda
+   * nada e não usa a seed; empate exato pode sair trocado.
+   */
+  timeline(
+    count = TIMELINE_LENGTH
+  ): { ref: string; round: number; extra: boolean }[] {
+    const extras = this.granted
+      .filter((ref) => this.get(ref).alive)
+      .map((ref) => ({ ref, round: this.queue.currentRound, extra: true }))
+
+    return [
+      ...extras,
+      ...this.queue
+        .project(Math.max(0, count - extras.length))
+        .map((t) => ({ ref: t.ref, round: t.round, extra: false })),
+    ].slice(0, count)
+  }
+
+  /** Mover/trocar custa meio turno (D123): devolve metade da barra que a ação gastou. */
+  private halfTurnBack(unit: EngineUnit) {
+    this.queue.shift(unit.ref, MOVE_TURN_COST_PERCENT)
+    this.log.push({
+      type: 'TURN_SHIFT',
+      targetRef: unit.ref,
+      percent: MOVE_TURN_COST_PERCENT,
+    })
+  }
+
+  /** Alguma skill pronta tem alvo válido agora (D38: sem isso, Defender é a única ação). */
+  private hasPossibleSkill(actor: EngineUnit): boolean {
+    const fieldKey = this.fieldCatalog[0]?.key
+    const cells = [0, 1, 2].flatMap((row) =>
+      [0, 1, 2].map((column) => ({ row, column }))
+    )
+
+    const ready = new Set(actor.cooldowns.ready().map((s) => s.key))
+
+    return actor.snapshot.skills
+      .filter((s) => ready.has(s.key))
+      .some((skill) => {
+        const targetSide =
+          skill.target === SkillTarget.ENEMY ? other(actor.side) : actor.side
+        return cells.some((cell) => {
+          const resolved = this.resolveSkill(actor, {
+            type: 'SKILL',
+            skillKey: skill.key,
+            targetSide,
+            target: cell,
+            fieldKey,
+          })
+          return (
+            resolved.isRight() &&
+            resolved.value.hits.some((h) => this.get(h.ref).alive)
+          )
+        })
+      })
   }
 
   /** Valida a skill e resolve os alvos (sem mudar nada). Usado pela ação e pela prévia da IA. */
@@ -610,6 +990,40 @@ export class BattleEngine {
     if (targets.isLeft())
       return left(new InvalidActionError(targets.value.message))
 
+    const taunt = this.tauntError(actor, skill, targetSide, targets.value)
+    if (taunt) return left(taunt)
+
+    if (skill.effects.some((e) => e.type === 'GRANT_TURN')) {
+      const ally = targets.value[0] ? this.get(targets.value[0].ref) : null
+      if (
+        !ally ||
+        ally.ref === actor.ref ||
+        ally.conditions.has(StatusType.STUN)
+      ) {
+        return left(
+          new InvalidActionError(
+            'Comando só em outro aliado que possa agir (D126)'
+          )
+        )
+      }
+    }
+
+    if (skill.effects.some((e) => e.type === 'PROTECT')) {
+      const ward = targets.value[0] ? this.get(targets.value[0].ref) : null
+      if (
+        !ward ||
+        ward.ref === actor.ref ||
+        !isAdjacent(
+          this.grids[actor.side].positionOf(actor.ref),
+          this.grids[actor.side].positionOf(ward.ref)
+        )
+      ) {
+        return left(
+          new InvalidActionError('Proteger só um aliado adjacente (D124)')
+        )
+      }
+    }
+
     return right({ skill, hits: targets.value })
   }
 
@@ -629,6 +1043,7 @@ export class BattleEngine {
       potency,
     })
 
+    this.redirectedTo = null
     const hits = this.applyIntercept(skill, resolved.value.hits, payload.target)
     let producedEffect = false
     this.action = { damaged: [], killed: [], healed: false }
@@ -638,11 +1053,7 @@ export class BattleEngine {
       if (!target.alive) continue
 
       if (skill.baseHitChance !== null) {
-        const chance = hitChance(
-          skill.baseHitChance,
-          this.stat(actor, Stat.PRECISION),
-          this.stat(target, Stat.EVASION)
-        )
+        const chance = this.landChance(actor, target, skill.baseHitChance)
         if (!roll(this.rng, chance)) {
           this.log.push({ type: 'MISS', ref: actor.ref, targetRef: target.ref })
           continue
@@ -661,6 +1072,28 @@ export class BattleEngine {
           hit.falloff,
           payload
         )
+      }
+    }
+
+    if (producedEffect && this.coordinates(actor, skill)) {
+      for (const hit of hits) {
+        const ally = this.get(hit.ref)
+        if (!ally.alive || ally === actor) continue
+        ally.conditions.addModifier({
+          source: 'COORDINATION',
+          stat: Stat.ATTACK,
+          percent: CLASS_MARKS.coordinationAttackPercent,
+          turnsLeft: 1,
+          unlimited: true,
+          untilAction: true,
+        })
+        this.log.push({
+          type: 'MODIFIER',
+          targetRef: ally.ref,
+          stat: Stat.ATTACK,
+          percent: CLASS_MARKS.coordinationAttackPercent,
+          result: 'ADDED',
+        })
       }
     }
 
@@ -695,6 +1128,8 @@ export class BattleEngine {
       }
     }
 
+    this.counterAttack(actor)
+
     // recarga vale mesmo errando (errar já custou turno e recarga, 9.4b)
     actor.cooldowns.use(skill.key)
 
@@ -711,6 +1146,21 @@ export class BattleEngine {
     if (skill.target !== SkillTarget.ENEMY || hits.length !== 1) return hits
 
     const target = this.get(hits[0].ref)
+    if (!this.canBeProtected(target)) return hits
+
+    // Proteger (D124): qualquer alcance de alvo único, antes do Interceptar
+    const protector = target.protectedBy ? this.get(target.protectedBy) : null
+    if (protector?.alive && protector.ref !== target.ref) {
+      if (!dryRun) {
+        this.log.push({
+          type: 'PROTECTED',
+          protectorRef: protector.ref,
+          protectedRef: target.ref,
+        })
+        this.redirectedTo = protector.ref
+      }
+      return [{ ref: protector.ref, falloff: hits[0].falloff }]
+    }
     const grid = this.grids[target.side]
     const guardians = this.guardianOrder[target.side]
       .map((ref) => this.get(ref))
@@ -797,7 +1247,8 @@ export class BattleEngine {
           skill,
           effect.power,
           potency,
-          round
+          round,
+          'HEAL'
         )
         const healed = Math.min(amount, target.desgaste.maxHp - target.hp)
         target.hp += healed
@@ -818,7 +1269,8 @@ export class BattleEngine {
           skill,
           effect.power,
           potency,
-          round
+          round,
+          'SHIELD'
         )
         target.shield += amount
         this.log.push({
@@ -852,11 +1304,7 @@ export class BattleEngine {
       case 'APPLY_STATUS': {
         const hostile = target.side !== actor.side
         if (hostile) {
-          const chance = statusChance(
-            effect.baseChance,
-            this.stat(actor, Stat.PRECISION),
-            this.stat(target, Stat.WILL)
-          )
+          const chance = this.statusLandChance(actor, target, effect.baseChance)
           if (!roll(this.rng, chance)) {
             this.log.push({
               type: 'STATUS',
@@ -885,6 +1333,9 @@ export class BattleEngine {
           effect.duration,
           value
         )
+        if (effect.status === StatusType.TAUNT && result !== 'IMMUNE') {
+          target.tauntedBy = actor.ref
+        }
         this.log.push({
           type: 'STATUS',
           targetRef: target.ref,
@@ -925,6 +1376,55 @@ export class BattleEngine {
           effect.duration,
           effect.multiplier
         )
+        return
+
+      case 'EXPLOIT':
+        // o dano já veio multiplicado (exploitMultiplier); aqui só consome
+        if (target.conditions.has(effect.status)) {
+          if (effect.consume) target.conditions.remove(effect.status)
+          this.log.push({
+            type: 'EXPLOIT',
+            targetRef: target.ref,
+            status: effect.status,
+            consumed: effect.consume,
+          })
+        }
+        return
+
+      case 'GRANT_TURN':
+        this.granted.push(target.ref)
+        if (effect.attackPercent) {
+          target.conditions.addModifier({
+            source: 'COMMAND',
+            stat: Stat.ATTACK,
+            percent: effect.attackPercent,
+            turnsLeft: 1,
+            unlimited: true,
+            untilAction: true,
+          })
+        }
+        this.log.push({
+          type: 'GRANT_TURN',
+          ref: actor.ref,
+          targetRef: target.ref,
+        })
+        return
+
+      case 'PROTECT':
+        target.protectedBy = actor.ref
+        // até o próximo turno do protetor (D127)
+        actor.conditions.addModifier({
+          source: 'PROTECTING',
+          stat: Stat.DEFENSE,
+          percent: PROTECT_DEFENSE_PERCENT,
+          turnsLeft: 1,
+          unlimited: true,
+        })
+        this.log.push({
+          type: 'PROTECT',
+          ref: actor.ref,
+          targetRef: target.ref,
+        })
         return
 
       case 'RECOVER': {
@@ -977,23 +1477,104 @@ export class BattleEngine {
       damageMultiplier(round) *
       target.conditions.damageTakenMultiplier *
       traitDamageMultiplier(actor, skill.range) *
+      this.coverMultiplier(skill, target) *
+      this.exploitMultiplier(skill, target) *
+      this.artilleryMultiplier(actor) *
       (1 - this.passiveDamageReduction(target) / 100)
 
     return finalDamage(raw)
   }
 
-  /** Quanto uma cura ou escudo renderia no alvo. */
+  /** Cobertura (D123): à distância, alvo único, em quem tem alguém na frente da linha e não está Exposto. */
+  private coverMultiplier(skill: SnapshotSkill, target: EngineUnit): number {
+    if (
+      skill.target !== SkillTarget.ENEMY ||
+      skill.range !== SkillRange.RANGED ||
+      skill.area !== SkillArea.SINGLE ||
+      target.conditions.isExposed ||
+      !target.alive
+    ) {
+      return 1
+    }
+    const units = this.grids[target.side].units()
+    const front = exposedOfRow(
+      units,
+      this.grids[target.side].positionOf(target.ref).row
+    )
+
+    return front && front.ref !== target.ref ? COVER_DAMAGE_MULTIPLIER : 1
+  }
+
+  /** Executar (D125): o dano cresce em alvo com o status que a skill aproveita. */
+  private exploitMultiplier(skill: SnapshotSkill, target: EngineUnit): number {
+    return skill.effects.reduce(
+      (total, e) =>
+        e.type === 'EXPLOIT' && target.conditions.has(e.status)
+          ? total * e.multiplier
+          : total,
+      1
+    )
+  }
+
+  /** Quanto uma cura ou escudo renderia no alvo; a cura rende metade em quem tem Ferida (D125). */
   private restoreOf(
     target: EngineUnit,
     skill: SnapshotSkill,
     effectPower: number,
     potency: number,
-    round: number
+    round: number,
+    kind: 'HEAL' | 'SHIELD'
   ): number {
     const power = effectivePower(effectPower, skill.isEnhanced) * potency
+    const wound =
+      kind === 'HEAL'
+        ? this.woundMultiplier(target) * this.supportHealMultiplier(target)
+        : 1
 
     return Math.round(
-      healAmount(power, target.desgaste.maxHp) * healMultiplier(round)
+      healAmount(power, target.desgaste.maxHp) * healMultiplier(round) * wound
+    )
+  }
+
+  /** Ferida (D125): Dano contínuo corta a cura recebida pela metade. */
+  private woundMultiplier(unit: EngineUnit): number {
+    return unit.conditions.has(StatusType.DOT) ? WOUND_HEAL_MULTIPLIER : 1
+  }
+
+  /** Acerto da skill; contra Atordoado é certo (indefeso, D125). */
+  private landChance(actor: EngineUnit, target: EngineUnit, base: number) {
+    if (target.conditions.has(StatusType.STUN)) return 1
+
+    return hitChance(
+      base,
+      this.stat(actor, Stat.PRECISION),
+      this.stat(target, Stat.EVASION)
+    )
+  }
+
+  /** Chance de status; nos do Controlador, a Vontade do alvo conta 30% menos (D125). */
+  private statusLandChance(
+    actor: EngineUnit,
+    target: EngineUnit,
+    base: number
+  ) {
+    const factor =
+      actor.snapshot.characterClass === CharacterClass.CONTROLLER
+        ? CLASS_MARKS.controllerWillFactor
+        : 1
+
+    return statusChance(
+      base,
+      this.stat(actor, Stat.PRECISION),
+      this.stat(target, Stat.WILL) * factor
+    )
+  }
+
+  /** Atordoado (indefeso) e Preso (isolado) não podem ser protegidos por aliados (D125). */
+  private canBeProtected(unit: EngineUnit): boolean {
+    return (
+      !unit.conditions.has(StatusType.STUN) &&
+      !unit.conditions.has(StatusType.ROOT)
     )
   }
 
@@ -1026,6 +1607,16 @@ export class BattleEngine {
           ? { type: 'MOVE', ref: mover.ref, to, forced: false }
           : { type: 'MOVE_BLOCKED', ref: mover.ref, reason: 'BLOCKED' }
       )
+      return
+    }
+
+    // Vanguarda ao lado ancora (D128): o forçado é barrado, o resto da skill acontece
+    if (this.anchoredByVanguard(target)) {
+      this.log.push({
+        type: 'MOVE_BLOCKED',
+        ref: target.ref,
+        reason: 'BLOCKED',
+      })
       return
     }
 
@@ -1075,8 +1666,10 @@ export class BattleEngine {
   // Turno e fim
   // ---------------------------------------------------------------------------
 
-  private endTurn(unit: EngineUnit) {
-    unit.cooldowns.endTurn()
+  private endTurn(unit: EngineUnit, options: { tickCooldowns?: boolean } = {}) {
+    if (options.tickCooldowns ?? true) unit.cooldowns.endTurn()
+    unit.conditions.afterAction()
+    if (!unit.conditions.has(StatusType.TAUNT)) unit.tauntedBy = null
     unit.delayImmune = false
     this.current = null
     this.afterAction()
@@ -1138,7 +1731,104 @@ export class BattleEngine {
     return (
       unit.conditions.effectiveStat(stat, unit.desgaste.stat(stat)) *
       this.passiveStatMultiplier(unit, stat) *
-      this.fieldMultiplier(unit, stat)
+      this.fieldMultiplier(unit, stat) *
+      this.formationMultiplier(unit, stat)
+    )
+  }
+
+  // ---------------------------------------------------------------------------
+  // Formação e engajamento (D128, D129)
+  // ---------------------------------------------------------------------------
+
+  /** Aliados vivos adjacentes (4 direções). */
+  private adjacentAllies(unit: EngineUnit): EngineUnit[] {
+    if (!unit.alive) return []
+    const grid = this.grids[unit.side]
+    // a vizinhança só muda quando alguém se move ou cai: guarda por versão da grade (desempenho da previsão)
+    const cache = this.neighbourCache[unit.side]
+    if (cache.version !== grid.version) {
+      cache.version = grid.version
+      cache.byRef.clear()
+    }
+    const cached = cache.byRef.get(unit.ref)
+    if (cached) return cached
+
+    const at = grid.positionOf(unit.ref)
+    const neighbours = grid
+      .units()
+      .filter((u) => u.ref !== unit.ref && isAdjacent(at, u))
+      .map((u) => this.get(u.ref))
+    cache.byRef.set(unit.ref, neighbours)
+
+    return neighbours
+  }
+
+  /** Auras dos aliados adjacentes (sem somar iguais) e o lobo solitário do Executor. */
+  private formationMultiplier(unit: EngineUnit, stat: Stat): number {
+    if (!unit.alive) return 1
+    const neighbours = this.adjacentAllies(unit)
+    let total = 1
+
+    for (const characterClass of new Set(
+      neighbours.map((n) => n.snapshot.characterClass)
+    )) {
+      const aura = FORMATION_STAT_AURA[characterClass]
+      if (aura && aura.stat === stat) total *= 1 + aura.percent / 100
+    }
+    if (
+      stat === Stat.ATTACK &&
+      unit.snapshot.characterClass === CharacterClass.EXECUTOR &&
+      neighbours.length === 0
+    ) {
+      total *= 1 + EXECUTOR_LONE_ATTACK_PERCENT / 100
+    }
+
+    return total
+  }
+
+  /** Cura recebida com um Suporte ao lado (D128). */
+  private supportHealMultiplier(unit: EngineUnit): number {
+    return this.adjacentAllies(unit).some(
+      (n) => n.snapshot.characterClass === CharacterClass.SUPPORT
+    )
+      ? 1 + SUPPORT_HEAL_AURA_PERCENT / 100
+      : 1
+  }
+
+  /** Vanguarda ao lado: não pode ser empurrado, puxado nem trocado à força (D128). */
+  private anchoredByVanguard(unit: EngineUnit): boolean {
+    return this.adjacentAllies(unit).some(
+      (n) => n.snapshot.characterClass === CharacterClass.VANGUARD
+    )
+  }
+
+  /** Artilharia no fundo da linha (com alguém na frente dela): +10% de dano (D128). */
+  private artilleryMultiplier(actor: EngineUnit): number {
+    if (actor.snapshot.characterClass !== CharacterClass.ARTILLERY) return 1
+    const grid = this.grids[actor.side]
+    const at = grid.positionOf(actor.ref)
+    const row = grid.units().filter((u) => u.row === at.row)
+    const atBack = row.every((u) => u.column <= at.column)
+
+    return atBack && row.length > 1
+      ? 1 + ARTILLERY_BACK_DAMAGE_PERCENT / 100
+      : 1
+  }
+
+  /**
+   * Engajado (D129): na frente da linha, com um Vanguarda, Guardião ou Executor na frente da linha oposta. Mover ou
+   * trocar custa o turno inteiro.
+   */
+  private isEngaged(unit: EngineUnit): boolean {
+    if (!unit.alive) return false
+    const own = this.grids[unit.side]
+    const row = own.positionOf(unit.ref).row
+    if (exposedOfRow(own.units(), row)?.ref !== unit.ref) return false
+
+    const facing = exposedOfRow(this.grids[other(unit.side)].units(), row)
+    return (
+      !!facing &&
+      ENGAGING_CLASSES.includes(this.get(facing.ref).snapshot.characterClass)
     )
   }
 
@@ -1270,7 +1960,8 @@ export class BattleEngine {
     event: PassiveEvent,
     context: PassiveContext = {}
   ) {
-    if (this.inPassive || !unit.alive) return
+    // a passiva "ao ser derrotado" dispara com o dono já caído (D124)
+    if (this.inPassive || (!unit.alive && event !== 'ON_DEFEATED')) return
 
     const passive = unit.snapshot.passive
     const trigger = passive.trigger
@@ -1312,7 +2003,9 @@ export class BattleEngine {
         const round = this.current?.round ?? this.queue.currentRound
         const amount = Math.round(
           ((owner.desgaste.maxHp * effect.percentOfMaxHp) / 100) *
-            healMultiplier(round)
+            healMultiplier(round) *
+            this.woundMultiplier(owner) *
+            this.supportHealMultiplier(owner)
         )
         const healed = Math.min(amount, owner.desgaste.maxHp - owner.hp)
         owner.hp += healed
@@ -1324,6 +2017,19 @@ export class BattleEngine {
         })
         return
       }
+
+      case 'ADVANCE_ALLIES':
+        for (const ally of this.units.values()) {
+          if (ally.side !== owner.side || !ally.alive || ally === owner)
+            continue
+          this.queue.shift(ally.ref, effect.percent)
+          this.log.push({
+            type: 'TURN_SHIFT',
+            targetRef: ally.ref,
+            percent: effect.percent,
+          })
+        }
+        return
 
       case 'ADVANCE_TURN':
         this.queue.shift(owner.ref, effect.percent)
@@ -1357,11 +2063,7 @@ export class BattleEngine {
         const chance =
           target.side === owner.side
             ? effect.chance
-            : statusChance(
-                effect.chance,
-                this.stat(owner, Stat.PRECISION),
-                this.stat(target, Stat.WILL)
-              )
+            : this.statusLandChance(owner, target, effect.chance)
         if (!roll(this.rng, chance)) {
           this.log.push({
             type: 'STATUS',
@@ -1382,6 +2084,7 @@ export class BattleEngine {
         }
 
         const result = target.conditions.applyDefaultStatus(effect.status)
+        if (effect.status === StatusType.TAUNT) target.tauntedBy = owner.ref
         this.log.push({
           type: 'STATUS',
           targetRef: target.ref,
@@ -1407,6 +2110,12 @@ export class BattleEngine {
       this.queue.remove(unit.ref)
       this.grids[unit.side].remove(unit.ref)
       this.log.push({ type: 'DEFEATED', ref: unit.ref })
+      this.firePassive(unit, 'ON_DEFEATED')
+      for (const ally of this.units.values()) {
+        if (ally.side === unit.side && ally.alive) {
+          this.firePassive(ally, 'ON_ALLY_DEFEATED')
+        }
+      }
     }
   }
 
@@ -1470,9 +2179,10 @@ function createUnit(snapshot: SnapshotUnit, side: BattleSide): EngineUnit {
     }),
     conditions: new UnitConditions(),
     cooldowns: new SkillCooldowns(snapshot.skills),
-    skipNext: false,
     delayImmune: false,
     turnsStarted: 0,
+    tauntedBy: null,
+    protectedBy: null,
   }
 }
 

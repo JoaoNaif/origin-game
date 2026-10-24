@@ -5,6 +5,7 @@ import {
   PreviewHit,
   SkillPreview,
 } from '@/domain/combat/engine/battle-engine'
+import { baseDamage } from '@/domain/combat/services/damage'
 import { qualifies } from '@/domain/combat/services/field-draw'
 import { SnapshotField } from '@/domain/combat/value-objects/battle-snapshot'
 import {
@@ -70,7 +71,7 @@ export function scoreFactors(
         support += hostile.support
         offensive = true
       } else {
-        support += allyValue(engine, hit)
+        support += allyValue(engine, hit, context)
       }
     }
     support += selfValue(preview)
@@ -175,7 +176,11 @@ function hostileValue(
 }
 
 /** Cura e escudo (×(1 + o que falta de vida)), buff e adiantar a vez num aliado. */
-function allyValue(engine: BattleEngine, hit: PreviewHit): number {
+function allyValue(
+  engine: BattleEngine,
+  hit: PreviewHit,
+  context: ScoringContext
+): number {
   const target = engine.unit(hit.ref)
   const missing = 1 - target.hp / target.maxHp
   let value = 0
@@ -203,6 +208,15 @@ function allyValue(engine: BattleEngine, hit: PreviewHit): number {
       case 'REPOSITION':
         value += MOVE_VALUE
         break
+      case 'PROTECT':
+        // pelo perigo real (2026-10-23): o dano que o aliado levaria antes da próxima vez do protetor
+        value +=
+          incomingDanger(engine, context.actorRef, target.ref) * (1 + missing)
+        break
+      case 'GRANT_TURN':
+        // uma ação inteira do aliado (D126)
+        value += TURN_SHIFT_VALUE
+        break
       case 'RECOVER':
         // fração aliviada em pontos percentuais de stat, como os buffs (D120)
         value += effect.relieved * 100 * MODIFIER_VALUE_PER_PERCENT
@@ -211,6 +225,29 @@ function allyValue(engine: BattleEngine, hit: PreviewHit): number {
   }
 
   return value
+}
+
+/**
+ * Perigo que um aliado corre até a próxima vez de `guardRef` (Proteger pelo perigo): pela linha do tempo, cada inimigo
+ * que age antes conta um golpe padrão (Poder 1) no aliado, em % do HP máximo dele. É o que o Proteger evitaria.
+ */
+export function incomingDanger(
+  engine: BattleEngine,
+  guardRef: string,
+  allyRef: string
+): number {
+  const ally = engine.unit(allyRef)
+  const allySide = ally.side
+  const until = engine.timeline().findIndex((t) => t.ref === guardRef)
+  const window = engine.timeline().slice(0, until < 0 ? undefined : until)
+  const defense = ally.stats[Stat.DEFENSE]
+
+  return window.reduce((total, turn) => {
+    const enemy = engine.unit(turn.ref)
+    if (enemy.side === allySide || !enemy.alive) return total
+    const hit = baseDamage(1, enemy.stats[Stat.ATTACK], defense)
+    return total + (hit / ally.maxHp) * 100
+  }, 0)
 }
 
 /** Efeitos em quem usa (ex.: golpe que dá buff no próprio usuário). */

@@ -81,12 +81,21 @@ export function checkElimination(
  * Fim forçado na rodada 30 (D72): vence quem tem **mais % de HP total**; empate, o de **menor Desgaste** acumulado;
  * empate ainda, a **seed**. Sempre há vencedor.
  */
+/** Dano causado pelo lado em % do HP total do início da batalha do outro lado. */
+function damageShare(dealer: SideSummary, victim: SideSummary): number {
+  const total = victim.units.reduce((sum, u) => sum + u.startingMaxHp, 0)
+
+  return total > 0 ? (dealer.damageDealt ?? 0) / total : 0
+}
+
 export function forcedEnd(
   player: SideSummary,
   opponent: SideSummary,
   rng: Rng
 ): BattleOutcome {
-  const difference = hpShare(player) - hpShare(opponent)
+  // D122: vence quem causou mais dano, em % do HP total inicial do inimigo (curas não descontam)
+  const difference =
+    damageShare(player, opponent) - damageShare(opponent, player)
 
   if (Math.abs(difference) > EPSILON) {
     return {

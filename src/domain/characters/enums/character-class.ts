@@ -17,12 +17,12 @@ export type CharacterClass =
 export const CLASS_BUDGET: Record<CharacterClass, number> = {
   VANGUARD: 670,
   MARKSMAN: 670,
-  EXECUTOR: 670,
-  CONTROLLER: 670,
+  EXECUTOR: 640,
+  CONTROLLER: 700,
   SUPPORT: 670,
   ARTILLERY: 640,
   GUARDIAN: 670,
-  TACTICIAN: 670,
+  TACTICIAN: 700,
 }
 
 /** Tolerância do orçamento por personagem (o admin ajusta stats dentro da classe). */

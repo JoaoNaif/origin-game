@@ -17,6 +17,10 @@ export type PassiveTrigger =
   | { type: 'ON_DESGASTE' }
   | { type: 'ON_FIELD_CHANGE' }
   | { type: 'ON_STATUS'; status: StatusType }
+  /** Um aliado foi derrotado (D124). */
+  | { type: 'ON_ALLY_DEFEATED' }
+  /** O próprio dono foi derrotado (D124): a passiva dispara uma última vez. */
+  | { type: 'ON_DEFEATED' }
 
 export type PassiveEffect =
   | { type: 'IGNORE_SHIELD' }
@@ -29,6 +33,8 @@ export type PassiveEffect =
     }
   | { type: 'HEAL'; percentOfMaxHp: number }
   | { type: 'ADVANCE_TURN'; percent: number }
+  /** Adianta a vez de todos os aliados vivos (sem o dono). */
+  | { type: 'ADVANCE_ALLIES'; percent: number }
   | { type: 'REDUCE_DAMAGE'; percent: number }
   | { type: 'STAT_MODIFIER'; stat: Stat; percent: number }
 

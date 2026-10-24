@@ -6,6 +6,9 @@ export abstract class Rng {
   /** Número em [0, 1). */
   abstract next(): number
 
+  /** Cópia com o mesmo estado: segue a mesma sequência daqui em diante. */
+  abstract clone(): Rng
+
   /** Inteiro em [min, max], ambos inclusos. */
   int(min: number, max: number): number {
     return min + Math.floor(this.next() * (max - min + 1))

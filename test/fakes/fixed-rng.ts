@@ -14,4 +14,11 @@ export class FixedRng extends Rng {
 
     return value
   }
+
+  clone(): FixedRng {
+    const copy = new FixedRng(this.values)
+    copy.index = this.index
+
+    return copy
+  }
 }

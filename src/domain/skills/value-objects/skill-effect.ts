@@ -32,6 +32,22 @@ export type SkillEffect = EffectBase &
     | { type: 'CHANGE_FIELD'; duration: number; multiplier: number }
     /** Skill de recuperação (9.4b, D120): alivia 50% do Desgaste acumulado, incluindo o HP máximo da Fundamental. */
     | { type: 'RECOVER' }
+    /** Proteger (D124): até o próximo turno do protetor, golpes de alvo único no aliado adjacente caem nele. */
+    | { type: 'PROTECT' }
+    /**
+     * Comando (D126): o aliado age logo depois de quem usou, sem mexer na barra dele; `attackPercent` = bônus de Ataque
+     * nessa ação (Forte).
+     */
+    | { type: 'GRANT_TURN'; attackPercent?: number }
+    /**
+     * Executar (D125): o dano da skill × `multiplier` em alvo com `status`; `consume` tira o status depois do golpe.
+     */
+    | {
+        type: 'EXPLOIT'
+        status: StatusType
+        multiplier: number
+        consume: boolean
+      }
   )
 
 export type SkillEffectType = SkillEffect['type']

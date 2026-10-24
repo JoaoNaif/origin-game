@@ -7,6 +7,9 @@ import {
 /** Barra de ação: age ao chegar a 1000 (D102). */
 export const ACTION_BAR_MAX = 1000
 
+/** Mover e trocar com aliado custam meio turno (D123): metade da barra. */
+export const MOVE_TURN_COST_PERCENT = 50
+
 /** Proteção contra fila sem fim (ninguém consegue agir). */
 const MAX_IDLE_TICKS = 100_000
 
@@ -55,6 +58,17 @@ export class TurnQueue {
     private readonly rng: Rng
   ) {
     for (const unit of units) this.add(unit)
+  }
+
+  /** Cópia independente com outra sorte (previsão da IA): mesmas barras, rodada e quem já agiu. */
+  clone(rng: Rng): TurnQueue {
+    const copy = new TurnQueue([], rng)
+    for (const [ref, unit] of this.units) copy.units.set(ref, { ...unit })
+    copy.tick = this.tick
+    copy.round = this.round
+    for (const ref of this.actedThisRound) copy.actedThisRound.add(ref)
+
+    return copy
   }
 
   get currentTick() {
@@ -125,6 +139,43 @@ export class TurnQueue {
     this.closeRoundIfEveryoneActed()
 
     return turn
+  }
+
+  /**
+   * Linha do tempo (D126): as próximas `count` vezes, sem mudar a fila e **sem usar a seed**. Empate exato fica pela
+   * ordem da `ref` (na hora, quem decide é a seed, então a projeção pode trocar dois empatados).
+   */
+  project(count: number): Turn[] {
+    const units = [...this.units.values()].map((u) => ({ ...u }))
+    const acted = new Set(this.actedThisRound)
+    let tick = this.tick
+    let round = this.round
+    const turns: Turn[] = []
+
+    while (turns.length < count && units.length > 0) {
+      let ready = units.filter((u) => u.gauge >= ACTION_BAR_MAX)
+      while (ready.length === 0) {
+        tick += 1
+        for (const unit of units) {
+          unit.previous = unit.gauge
+          unit.gauge += unit.speed
+        }
+        ready = units.filter((u) => u.gauge >= ACTION_BAR_MAX)
+      }
+      const actor = [...ready].sort(
+        (a, b) => compare(a, b) || a.ref.localeCompare(b.ref)
+      )[0]
+      actor.gauge -= ACTION_BAR_MAX
+      turns.push({ ref: actor.ref, tick, round })
+
+      acted.add(actor.ref)
+      if (units.every((u) => acted.has(u.ref))) {
+        round += 1
+        acted.clear()
+      }
+    }
+
+    return turns
   }
 
   private closeRoundIfEveryoneActed() {

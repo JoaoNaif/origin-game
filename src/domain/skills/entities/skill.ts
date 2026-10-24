@@ -213,6 +213,29 @@ function validate(
       }
     }
 
+    if (
+      effect.type === 'PROTECT' &&
+      (props.target !== SkillTarget.ALLY || props.area !== SkillArea.SINGLE)
+    ) {
+      return 'Proteger é em um aliado (alvo único)'
+    }
+
+    if (
+      effect.type === 'GRANT_TURN' &&
+      (props.target !== SkillTarget.ALLY || props.area !== SkillArea.SINGLE)
+    ) {
+      return 'Comando é em um aliado (alvo único)'
+    }
+
+    if (
+      effect.type === 'EXPLOIT' &&
+      (props.target !== SkillTarget.ENEMY ||
+        !props.effects.some((e) => e.type === 'DAMAGE') ||
+        effect.multiplier <= 1)
+    ) {
+      return 'executar é em inimigo, numa skill de dano, com multiplicador acima de 1'
+    }
+
     if (effect.type === 'RECOVER' && props.target === SkillTarget.ENEMY) {
       return 'recuperação só em aliado ou em si mesmo'
     }

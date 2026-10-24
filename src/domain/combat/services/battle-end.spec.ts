@@ -76,11 +76,12 @@ describe('Battle End', () => {
     })
   })
 
-  describe('Forced end (D72)', () => {
-    it('should be able to give the win to the side with more total HP share', () => {
+  describe('Forced end (D72, D122)', () => {
+    it('should be able to give the win to who dealt more damage, as a share of the enemy HP', () => {
+      // o jogador tem menos HP sobrando, mas causou mais dano: vence (segurar não ganha, D122)
       const result = forcedEnd(
-        side(BattleSide.PLAYER, [250, 0, 0, 0]), // 12,5%
-        side(BattleSide.OPPONENT, [100, 100, 0, 0]), // 10%
+        { ...side(BattleSide.PLAYER, [100, 0, 0, 0]), damageDealt: 900 }, // 900 de 2000 = 45%
+        { ...side(BattleSide.OPPONENT, [400, 400, 0, 0]), damageDealt: 600 }, // 30%
         new FixedRng()
       )
 
@@ -90,13 +91,24 @@ describe('Battle End', () => {
       })
     })
 
+    it('should be able to compare damage against each side starting HP', () => {
+      // mesmo dano, mas o oponente tem metade do HP total: o dano do jogador vale o dobro em %
+      const result = forcedEnd(
+        { ...side(BattleSide.PLAYER, [500, 500]), damageDealt: 300 },
+        { ...side(BattleSide.OPPONENT, [250, 250], 0, 250), damageDealt: 300 },
+        new FixedRng()
+      )
+
+      expect(result.winner).toBe(BattleSide.PLAYER)
+    })
+
     it('should be able to use the starting max HP (Fundamental does not help)', () => {
       expect(hpShare(side(BattleSide.PLAYER, [400, 400], 0, 500))).toBeCloseTo(
         0.8
       )
     })
 
-    it('should be able to break an HP tie by the lower desgaste', () => {
+    it('should be able to break a damage tie by the lower desgaste', () => {
       const result = forcedEnd(
         side(BattleSide.PLAYER, [200, 0], 0.4),
         side(BattleSide.OPPONENT, [100, 100], 0.1),

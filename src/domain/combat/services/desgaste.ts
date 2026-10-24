@@ -98,6 +98,14 @@ export class DesgasteState {
 
   constructor(private readonly unit: DesgasteUnit) {}
 
+  /** Cópia independente (previsão da IA). */
+  clone(): DesgasteState {
+    const copy = new DesgasteState(this.unit)
+    Object.assign(copy.lost, this.lost)
+
+    return copy
+  }
+
   /** Perda acumulada (em unidades do stat). */
   lostOf(target: LossTarget): number {
     return this.lost[target]

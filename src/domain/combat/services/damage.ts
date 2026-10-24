@@ -17,7 +17,13 @@ export function effectivePower(
 }
 
 /**
- * Dano base (D68): `Poder × Ataque² / (Ataque + Defesa)`. Razão, não subtração: nunca zera e o equilíbrio é o mesmo
+ * Escala do dano (D131): ×0,7 para dar tempo à tática (com um personagem caindo em 1 ou 2 turnos de foco, não havia
+ * tempo para preparar e executar; na simulação, a squad tática passou de 35% para 60% contra a de força bruta).
+ */
+export const DAMAGE_SCALE = 0.7
+
+/**
+ * Dano base (D68, D131): `Poder × Ataque² / (Ataque + Defesa) × 0,7`. Razão, não subtração: nunca zera e o equilíbrio é o mesmo
  * em qualquer nível. Sem variação aleatória nem crítico. Ataque e Defesa já com buffs, debuffs e Desgaste.
  * Depois deste valor vêm, nesta ordem: queda da linha, modificadores de dano, Defender, escudo e HP (D68).
  */
@@ -26,7 +32,7 @@ export function baseDamage(
   attack: number,
   defense: number
 ): number {
-  return (power * attack * attack) / (attack + defense)
+  return ((power * attack * attack) / (attack + defense)) * DAMAGE_SCALE
 }
 
 /** Dano final em inteiro: arredonda, mas um acerto sempre tira pelo menos 1 (o dano nunca zera, D68). */

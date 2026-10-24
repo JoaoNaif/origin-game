@@ -9,6 +9,12 @@ import {
 } from '@/domain/squads/value-objects/grid-position'
 import { InvalidTargetError } from '../errors/invalid-target-error'
 
+/**
+ * Cobertura (D123): golpe à distância de alvo único em quem não é o primeiro da linha causa ×0,7 (o tiro passa por cima
+ * de quem está na frente). Não vale para flanco, perfurante, área nem para quem está Exposto.
+ */
+export const COVER_DAMAGE_MULTIPLIER = 0.7
+
 /** Queda de dano por personagem atingido, em ordem (D36): 100%, 60%, 30%. */
 export const LINE_FALLOFF = [1, 0.6, 0.3] as const
 

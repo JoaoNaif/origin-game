@@ -14,6 +14,8 @@ import { aiRng, MachineAi } from '../machine-ai'
 export interface AiSetup {
   profile: AiProfile
   difficulty: AiDifficulty
+  /** `false` desliga a previsão (comparar a IA que planeja com a que não planeja). */
+  planning?: boolean
 }
 
 export interface SimulatedBattle {

@@ -36,6 +36,15 @@ export class InterceptState {
   /** Rodada em que cada Guardião interceptou pela última vez. */
   private readonly usedInRound = new Map<string, number>()
 
+  /** Cópia independente (previsão da IA). */
+  clone(): InterceptState {
+    const copy = new InterceptState()
+    for (const [ref, round] of this.usedInRound)
+      copy.usedInRound.set(ref, round)
+
+    return copy
+  }
+
   /**
    * `guardians` na ordem de prioridade, fixa pela seed no início da batalha (com mais de um Guardião). Devolve quem
    * intercepta, ou `undefined` se ninguém (e o golpe segue para o alvo original).
