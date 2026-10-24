@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { makePveWorld, PveWorld } from 'test/factories/make-pve-world'
 import { aiDecisionRng, MachineAi } from '@/domain/ai/machine-ai'
+import { NotAllowedError } from '@/core/errors/err/not-allowed-error'
 import { InvalidActionError } from '../../errors/invalid-action-error'
 import { InvalidBattleError } from '../../errors/invalid-battle-error'
 import { BattleEngine } from '../../engine/battle-engine'
@@ -42,7 +43,10 @@ describe('Submit Battle Action', () => {
       world.drafts,
       world.seeds,
       world.clock
-    ).execute({ username: 'jogador_pve', npcSquadKey: 'balanced-beginner' })
+    ).execute({
+      accountId: world.account.id.toString(),
+      npcSquadKey: 'balanced-beginner',
+    })
     if (drafted.isLeft()) throw drafted.value
 
     const started = await new StartPveBattleUseCase(
@@ -54,6 +58,7 @@ describe('Submit Battle Action', () => {
       world.battles,
       world.clock
     ).execute({
+      accountId: world.account.id.toString(),
       draftId: drafted.value.draft.id.toString(),
       squadId: world.squad.id.toString(),
     })
@@ -72,6 +77,7 @@ describe('Submit Battle Action', () => {
 
     const result = await sut.execute({
       battleId: battle.id.toString(),
+      accountId: world.account.id.toString(),
       payload: playerMove(battle),
     })
 
@@ -91,6 +97,7 @@ describe('Submit Battle Action', () => {
 
     const result = await sut.execute({
       battleId: battle.id.toString(),
+      accountId: world.account.id.toString(),
       payload: {
         type: 'SKILL',
         skillKey: 'nao-existe',
@@ -104,6 +111,20 @@ describe('Submit Battle Action', () => {
     expect(battle.actions).toHaveLength(before)
   })
 
+  it('should not be able to play in the battle of another account', async () => {
+    const before = battle.actions.length
+
+    const result = await sut.execute({
+      battleId: battle.id.toString(),
+      accountId: 'outra-conta',
+      payload: playerMove(battle),
+    })
+
+    expect(result.isLeft()).toBe(true)
+    expect(result.value).toBeInstanceOf(NotAllowedError)
+    expect(battle.actions).toHaveLength(before)
+  })
+
   it('should be able to play until the end and give XP to the 4 characters', async () => {
     let current = battle
     let rewards: { characterId: string; xp: number }[] = []
@@ -111,6 +132,7 @@ describe('Submit Battle Action', () => {
     for (let i = 0; i < 400 && !current.isFinished; i++) {
       const result = await sut.execute({
         battleId: current.id.toString(),
+        accountId: world.account.id.toString(),
         payload: playerMove(current),
       })
       if (result.isLeft()) throw result.value
@@ -137,6 +159,7 @@ describe('Submit Battle Action', () => {
 
     const after = await sut.execute({
       battleId: current.id.toString(),
+      accountId: world.account.id.toString(),
       payload: { type: 'DEFEND' },
     })
     expect(after.isLeft()).toBe(true)

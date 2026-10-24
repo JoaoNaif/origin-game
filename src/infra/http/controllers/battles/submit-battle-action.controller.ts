@@ -1,6 +1,8 @@
 import { Body, Controller, HttpCode, Param, Post } from '@nestjs/common'
 import { z } from 'zod'
 import { SubmitBattleActionUseCase } from '@/domain/combat/applications/use-cases/submit-battle-action'
+import { CurrentUser } from '@/infra/auth/current-user.decorator'
+import { AccountPayload } from '@/infra/auth/jwt-strategy'
 import { battleHttpError } from '../../battle-errors'
 import { ZodValidationPipe } from '../../pipes/zod-validation-pipe'
 import { BattlePresenter } from '../../presenters/battle-presenter'
@@ -19,9 +21,14 @@ export class SubmitBattleActionController {
   async handle(
     @Param('id', new ZodValidationPipe(uuidParamSchema)) battleId: string,
     @Body(new ZodValidationPipe(battleActionSchema))
-    payload: BattleActionBodySchema
+    payload: BattleActionBodySchema,
+    @CurrentUser() user: AccountPayload
   ) {
-    const result = await this.submitBattleAction.execute({ battleId, payload })
+    const result = await this.submitBattleAction.execute({
+      battleId,
+      accountId: user.sub,
+      payload,
+    })
 
     if (result.isLeft()) throw battleHttpError(result.value)
 

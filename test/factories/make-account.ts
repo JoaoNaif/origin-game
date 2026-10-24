@@ -6,7 +6,12 @@ export function makeAccount(
   id?: UniqueEntityId
 ): Account {
   const result = Account.create(
-    { username: 'tester_01', displayName: 'Tester', ...override },
+    {
+      username: 'tester_01',
+      displayName: 'Tester',
+      passwordHash: '12345678-hashed',
+      ...override,
+    },
     id
   )
 

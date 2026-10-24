@@ -6,15 +6,21 @@ import { InvalidAccountError } from '../errors/invalid-account-error'
 export interface AccountProps {
   username: string
   displayName: string
+  /** Hash da senha (nunca a senha). Quem gera é a porta `HashGenerator`. */
+  passwordHash: string
 }
 
 const USERNAME_PATTERN = /^[a-z0-9_]{3,20}$/
 const DISPLAY_NAME_MIN = 2
 const DISPLAY_NAME_MAX = 30
 
+/** Senha em texto (antes do hash): 8 a 72 caracteres (o bcrypt ignora o que passa de 72 bytes). */
+export const PASSWORD_MIN = 8
+export const PASSWORD_MAX = 72
+
 /**
- * Conta do jogador (mínima no MVP): dona dos personagens e dos squads.
- * E-mail e senha entram com a autenticação; moeda, inventário, organização e ranking com as suas camadas.
+ * Conta do jogador: dona dos personagens e dos squads. Entra pelo username + senha (`data_model.md` 3.5);
+ * moeda, inventário, organização e ranking chegam com as suas camadas.
  */
 export class Account extends Entity<AccountProps> {
   get username() {
@@ -25,9 +31,24 @@ export class Account extends Entity<AccountProps> {
     return this.props.displayName
   }
 
+  get passwordHash() {
+    return this.props.passwordHash
+  }
+
   /** Normaliza o username (sem espaços nas pontas, minúsculo) antes de validar. */
   static normalizeUsername(username: string) {
     return username.trim().toLowerCase()
+  }
+
+  /** Regra da senha em texto, conferida antes de gerar o hash. `null` = válida. */
+  static passwordError(password: string): InvalidAccountError | null {
+    if (password.length < PASSWORD_MIN || password.length > PASSWORD_MAX) {
+      return new InvalidAccountError(
+        `senha com ${PASSWORD_MIN} a ${PASSWORD_MAX} caracteres`
+      )
+    }
+
+    return null
   }
 
   static create(
@@ -56,6 +77,15 @@ export class Account extends Entity<AccountProps> {
       )
     }
 
-    return right(new Account({ username, displayName }, id))
+    if (!props.passwordHash) {
+      return left(new InvalidAccountError('senha obrigatória'))
+    }
+
+    return right(
+      new Account(
+        { username, displayName, passwordHash: props.passwordHash },
+        id
+      )
+    )
   }
 }

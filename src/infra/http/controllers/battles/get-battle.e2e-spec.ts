@@ -1,8 +1,7 @@
 import { INestApplication } from '@nestjs/common'
 import { Test } from '@nestjs/testing'
-import request from 'supertest'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
-import { UNKNOWN_ID } from 'test/e2e/accounts'
+import { signUp, UNKNOWN_ID } from 'test/e2e/accounts'
 import { playerMove, startBattle } from 'test/e2e/battles'
 import { AppModule } from '@/infra/app.module'
 import { PrismaService } from '@/infra/database/prisma/prisma.service'
@@ -38,11 +37,13 @@ describe('Get Battle (e2e)', () => {
   })
 
   test('[GET] /battles/:id', async () => {
-    const { battleId, started } = await startBattle(app, prisma, 'ver_01')
-
-    const response = await request(app.getHttpServer()).get(
-      `/battles/${battleId}`
+    const { agent, battleId, started } = await startBattle(
+      app,
+      prisma,
+      'ver_01'
     )
+
+    const response = await agent.get(`/battles/${battleId}`)
 
     expect(response.statusCode).toBe(200)
     // refeita pelo replay, a batalha volta igual ao que o início mostrou
@@ -51,16 +52,14 @@ describe('Get Battle (e2e)', () => {
   })
 
   test('[GET] /battles/:id reveals an enemy skill only after it is used', async () => {
-    const { battleId } = await startBattle(app, prisma, 'ver_02')
+    const { agent, battleId } = await startBattle(app, prisma, 'ver_02')
     for (let i = 0; i < 6; i++) {
-      await request(app.getHttpServer())
+      await agent
         .post(`/battles/${battleId}/actions`)
         .send(playerMove((await battles.findById(battleId))!))
     }
 
-    const response = await request(app.getHttpServer()).get(
-      `/battles/${battleId}`
-    )
+    const response = await agent.get(`/battles/${battleId}`)
 
     const used = new Map<string, Set<string>>()
     for (const event of response.body.events) {
@@ -80,10 +79,19 @@ describe('Get Battle (e2e)', () => {
     }
   }, 60_000)
 
+  test('[GET] /battles/:id of another account fails', async () => {
+    const { battleId } = await startBattle(app, prisma, 'ver_03')
+    const other = await signUp(app, 'ver_04')
+
+    const response = await other.get(`/battles/${battleId}`)
+
+    expect(response.statusCode).toBe(403)
+  })
+
   test('[GET] /battles/:id of an unknown battle fails', async () => {
-    const response = await request(app.getHttpServer()).get(
-      `/battles/${UNKNOWN_ID}`
-    )
+    const agent = await signUp(app, 'ver_05')
+
+    const response = await agent.get(`/battles/${UNKNOWN_ID}`)
 
     expect(response.statusCode).toBe(404)
   })

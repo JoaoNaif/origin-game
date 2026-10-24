@@ -25,6 +25,7 @@ import {
 } from '../services/pve-session'
 
 interface StartPveBattleUseCaseRequest {
+  accountId: string
   draftId: string
   squadId: string
 }
@@ -59,11 +60,15 @@ export class StartPveBattleUseCase {
   ) {}
 
   async execute({
+    accountId,
     draftId,
     squadId,
   }: StartPveBattleUseCaseRequest): Promise<StartPveBattleUseCaseResponse> {
     const draft = await this.battleDraftsRepository.findById(draftId)
     if (!draft) return left(new ResourceNotFoundError('pré-batalha'))
+    if (draft.accountId.toString() !== accountId) {
+      return left(new NotAllowedError())
+    }
 
     const [account, squad, catalog] = await Promise.all([
       this.accountsRepository.findById(draft.accountId.toString()),

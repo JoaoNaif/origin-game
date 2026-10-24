@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common'
 import { AccountsRepository } from '@/domain/accounts/applications/repositories/accounts-repository'
+import { SessionsRepository } from '@/domain/accounts/applications/repositories/sessions-repository'
 import { CatalogRepository } from '@/domain/catalog/applications/repositories/catalog-repository'
 import { BattleDraftsRepository } from '@/domain/combat/applications/repositories/battle-drafts-repository'
 import { BattlesRepository } from '@/domain/combat/applications/repositories/battles-repository'
@@ -11,12 +12,14 @@ import { PrismaAccountsRepository } from './prisma/repositories/prisma-accounts-
 import { PrismaBattlesRepository } from './prisma/repositories/prisma-battles-repository'
 import { PrismaCatalogRepository } from './prisma/repositories/prisma-catalog-repository'
 import { PrismaCharactersRepository } from './prisma/repositories/prisma-characters-repository'
+import { PrismaSessionsRepository } from './prisma/repositories/prisma-sessions-repository'
 import { PrismaSquadsRepository } from './prisma/repositories/prisma-squads-repository'
 
 @Module({
   providers: [
     PrismaService,
     { provide: AccountsRepository, useClass: PrismaAccountsRepository },
+    { provide: SessionsRepository, useClass: PrismaSessionsRepository },
     { provide: CatalogRepository, useClass: PrismaCatalogRepository },
     { provide: CharactersRepository, useClass: PrismaCharactersRepository },
     { provide: SquadsRepository, useClass: PrismaSquadsRepository },
@@ -27,6 +30,7 @@ import { PrismaSquadsRepository } from './prisma/repositories/prisma-squads-repo
   exports: [
     PrismaService,
     AccountsRepository,
+    SessionsRepository,
     CatalogRepository,
     CharactersRepository,
     SquadsRepository,

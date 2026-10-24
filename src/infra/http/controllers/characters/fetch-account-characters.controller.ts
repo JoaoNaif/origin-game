@@ -1,19 +1,12 @@
-import {
-  BadRequestException,
-  Controller,
-  Get,
-  NotFoundException,
-  Param,
-} from '@nestjs/common'
-import { ResourceNotFoundError } from '@/core/errors/err/resource-not-found-error'
+import { Controller, Get } from '@nestjs/common'
 import { CatalogRepository } from '@/domain/catalog/applications/repositories/catalog-repository'
 import { FetchAccountCharactersUseCase } from '@/domain/characters/applications/use-cases/fetch-account-characters'
-import { ZodValidationPipe } from '../../pipes/zod-validation-pipe'
+import { CurrentUser } from '@/infra/auth/current-user.decorator'
+import { AccountPayload } from '@/infra/auth/jwt-strategy'
 import { CharacterPresenter } from '../../presenters/character-presenter'
-import { usernameParamSchema } from '../../schemas/common'
 
-/** GET /accounts/:username/characters */
-@Controller('accounts/:username/characters')
+/** GET /me/characters — os personagens da conta logada. */
+@Controller('me/characters')
 export class FetchAccountCharactersController {
   constructor(
     private fetchAccountCharacters: FetchAccountCharactersUseCase,
@@ -21,23 +14,10 @@ export class FetchAccountCharactersController {
   ) {}
 
   @Get()
-  async handle(
-    @Param('username', new ZodValidationPipe(usernameParamSchema))
-    username: string
-  ) {
-    const result = await this.fetchAccountCharacters.execute({ username })
-
-    if (result.isLeft()) {
-      const error = result.value
-
-      switch (error.constructor) {
-        case ResourceNotFoundError:
-          throw new NotFoundException(error.message)
-        default:
-          throw new BadRequestException(error.message)
-      }
-    }
-
+  async handle(@CurrentUser() user: AccountPayload) {
+    const result = await this.fetchAccountCharacters.execute({
+      accountId: user.sub,
+    })
     const catalog = await this.catalogRepository.load()
 
     return {

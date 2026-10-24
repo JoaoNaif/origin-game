@@ -1,15 +1,14 @@
 import { Either, left, right } from '@/core/either'
 import { ResourceNotFoundError } from '@/core/errors/err/resource-not-found-error'
 import { AccountsRepository } from '@/domain/accounts/applications/repositories/accounts-repository'
-import { Account } from '@/domain/accounts/entities/account'
 import { CharactersRepository } from '@/domain/characters/applications/repositories/characters-repository'
 import { Squad } from '../../entities/squad'
 import { InvalidSquadError } from '../../errors/invalid-squad-error'
 import { SquadsRepository } from '../repositories/squads-repository'
-import { loadSquadMembers, SquadMemberRequest } from './squad-members'
+import { loadSquadMembers, SquadMemberRequest } from '../services/squad-members'
 
 interface CreateSquadUseCaseRequest {
-  username: string
+  accountId: string
   name: string
   members: SquadMemberRequest[]
 }
@@ -28,18 +27,17 @@ export class CreateSquadUseCase {
   ) {}
 
   async execute({
-    username,
+    accountId,
     name,
     members,
   }: CreateSquadUseCaseRequest): Promise<CreateSquadUseCaseResponse> {
-    const account = await this.accountsRepository.findByUsername(
-      Account.normalizeUsername(username)
-    )
+    const account = await this.accountsRepository.findById(accountId)
     if (!account) return left(new ResourceNotFoundError('conta'))
 
     const loaded = await loadSquadMembers(this.charactersRepository, members)
     if (loaded.isLeft()) return left(loaded.value)
 
+    // personagem de outra conta: o Squad recusa ("só personagens da própria conta")
     const created = Squad.create({ account, name, members: loaded.value })
     if (created.isLeft()) return left(created.value)
 

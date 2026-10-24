@@ -1,5 +1,4 @@
 import { Provider } from '@nestjs/common'
-import { AccountsRepository } from '@/domain/accounts/applications/repositories/accounts-repository'
 import { CatalogRepository } from '@/domain/catalog/applications/repositories/catalog-repository'
 import { CharactersRepository } from '@/domain/characters/applications/repositories/characters-repository'
 import { AllocateFreePointsUseCase } from '@/domain/characters/applications/use-cases/allocate-free-points'
@@ -10,11 +9,9 @@ import { GetCharacterUseCase } from '@/domain/characters/applications/use-cases/
 export const charactersUseCases: Provider[] = [
   {
     provide: FetchAccountCharactersUseCase,
-    inject: [AccountsRepository, CharactersRepository],
-    useFactory: (
-      accounts: AccountsRepository,
-      characters: CharactersRepository
-    ) => new FetchAccountCharactersUseCase(accounts, characters),
+    inject: [CharactersRepository],
+    useFactory: (characters: CharactersRepository) =>
+      new FetchAccountCharactersUseCase(characters),
   },
   {
     provide: GetCharacterUseCase,

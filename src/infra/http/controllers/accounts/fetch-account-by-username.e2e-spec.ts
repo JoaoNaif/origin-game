@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common'
 import { Test } from '@nestjs/testing'
 import request from 'supertest'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
+import { signUp } from 'test/e2e/accounts'
 import { AppModule } from '@/infra/app.module'
 import { configureApp } from '@/infra/setup-app'
 
@@ -24,27 +25,34 @@ describe('Fetch Account By Username (e2e)', () => {
   })
 
   test('[GET] /accounts/:username', async () => {
-    const created = await request(app.getHttpServer())
-      .post('/accounts')
-      .send({ username: 'tester_01', displayName: 'Tester' })
+    await signUp(app, 'tester_01')
+    const searcher = await signUp(app, 'procura_01')
 
-    const response = await request(app.getHttpServer()).get(
-      '/accounts/Tester_01'
-    )
+    const response = await searcher.get('/accounts/Tester_01')
 
     expect(response.statusCode).toBe(200)
     expect(response.body).toEqual({
       account: {
-        id: created.body.account.id,
+        id: expect.any(String),
         username: 'tester_01',
-        displayName: 'Tester',
+        displayName: 'Jogador',
       },
     })
   })
 
   test('[GET] /accounts/:username with an unknown username fails', async () => {
-    const response = await request(app.getHttpServer()).get('/accounts/ninguem')
+    const searcher = await signUp(app, 'procura_02')
+
+    const response = await searcher.get('/accounts/ninguem')
 
     expect(response.statusCode).toBe(404)
+  })
+
+  test('[GET] /accounts/:username without being logged in fails', async () => {
+    const response = await request(app.getHttpServer()).get(
+      '/accounts/tester_01'
+    )
+
+    expect(response.statusCode).toBe(401)
   })
 })

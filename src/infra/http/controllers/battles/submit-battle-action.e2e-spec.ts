@@ -1,8 +1,7 @@
 import { INestApplication } from '@nestjs/common'
 import { Test } from '@nestjs/testing'
-import request from 'supertest'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
-import { UNKNOWN_ID } from 'test/e2e/accounts'
+import { signUp, UNKNOWN_ID } from 'test/e2e/accounts'
 import { playerMove, startBattle } from 'test/e2e/battles'
 import { AppModule } from '@/infra/app.module'
 import { PrismaService } from '@/infra/database/prisma/prisma.service'
@@ -35,10 +34,10 @@ describe('Submit Battle Action (e2e)', () => {
     playerMove((await battles.findById(battleId))!)
 
   test('[POST] /battles/:id/actions', async () => {
-    const { battleId } = await startBattle(app, prisma, 'jogada_01')
+    const { agent, battleId } = await startBattle(app, prisma, 'jogada_01')
     const before = await prisma.battleAction.count({ where: { battleId } })
 
-    const response = await request(app.getHttpServer())
+    const response = await agent
       .post(`/battles/${battleId}/actions`)
       .send(await move(battleId))
 
@@ -55,17 +54,15 @@ describe('Submit Battle Action (e2e)', () => {
   })
 
   test('[POST] /battles/:id/actions with an illegal action changes nothing', async () => {
-    const { battleId } = await startBattle(app, prisma, 'jogada_02')
+    const { agent, battleId } = await startBattle(app, prisma, 'jogada_02')
     const before = await prisma.battleAction.count({ where: { battleId } })
 
-    const response = await request(app.getHttpServer())
-      .post(`/battles/${battleId}/actions`)
-      .send({
-        type: 'SKILL',
-        skillKey: 'nao-existe',
-        targetSide: 'OPPONENT',
-        target: { row: 0, column: 0 },
-      })
+    const response = await agent.post(`/battles/${battleId}/actions`).send({
+      type: 'SKILL',
+      skillKey: 'nao-existe',
+      targetSide: 'OPPONENT',
+      target: { row: 0, column: 0 },
+    })
 
     expect(response.statusCode).toBe(400)
     expect(await prisma.battleAction.count({ where: { battleId } })).toBe(
@@ -74,17 +71,34 @@ describe('Submit Battle Action (e2e)', () => {
   })
 
   test('[POST] /battles/:id/actions with an action out of format fails', async () => {
-    const { battleId } = await startBattle(app, prisma, 'jogada_03')
+    const { agent, battleId } = await startBattle(app, prisma, 'jogada_03')
 
-    const response = await request(app.getHttpServer())
+    const response = await agent
       .post(`/battles/${battleId}/actions`)
       .send({ type: 'ATACAR' })
 
     expect(response.statusCode).toBe(400)
   })
 
+  test('[POST] /battles/:id/actions in the battle of another account fails', async () => {
+    const { battleId } = await startBattle(app, prisma, 'jogada_04')
+    const before = await prisma.battleAction.count({ where: { battleId } })
+    const other = await signUp(app, 'jogada_05')
+
+    const response = await other
+      .post(`/battles/${battleId}/actions`)
+      .send(await move(battleId))
+
+    expect(response.statusCode).toBe(403)
+    expect(await prisma.battleAction.count({ where: { battleId } })).toBe(
+      before
+    )
+  })
+
   test('[POST] /battles/:id/actions of an unknown battle fails', async () => {
-    const response = await request(app.getHttpServer())
+    const agent = await signUp(app, 'jogada_06')
+
+    const response = await agent
       .post(`/battles/${UNKNOWN_ID}/actions`)
       .send({ type: 'DEFEND' })
 
@@ -92,15 +106,15 @@ describe('Submit Battle Action (e2e)', () => {
   })
 
   test('[POST] /battles/:id/actions until the end gives XP', async () => {
-    const { battleId, started, squadCharacterIds } = await startBattle(
+    const { agent, battleId, started, squadCharacterIds } = await startBattle(
       app,
       prisma,
-      'jogada_04'
+      'jogada_07'
     )
 
     let last = started
     for (let i = 0; i < 400 && last.battle.status !== 'FINISHED'; i++) {
-      const response = await request(app.getHttpServer())
+      const response = await agent
         .post(`/battles/${battleId}/actions`)
         .send(await move(battleId))
       expect(response.statusCode).toBe(200)
@@ -125,7 +139,7 @@ describe('Submit Battle Action (e2e)', () => {
     ).toMatchObject({ status: 'FINISHED', winner: last.battle.result.winner })
 
     // batalha encerrada não aceita jogada
-    const after = await request(app.getHttpServer())
+    const after = await agent
       .post(`/battles/${battleId}/actions`)
       .send({ type: 'DEFEND' })
     expect(after.statusCode).toBe(409)

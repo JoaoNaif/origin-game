@@ -1,37 +1,25 @@
-import { Either, left, right } from '@/core/either'
-import { ResourceNotFoundError } from '@/core/errors/err/resource-not-found-error'
-import { AccountsRepository } from '@/domain/accounts/applications/repositories/accounts-repository'
-import { Account } from '@/domain/accounts/entities/account'
+import { Either, right } from '@/core/either'
 import { Character } from '../../entities/character'
 import { CharactersRepository } from '../repositories/characters-repository'
 
 interface FetchAccountCharactersUseCaseRequest {
-  username: string
+  accountId: string
 }
 
 type FetchAccountCharactersUseCaseResponse = Either<
-  ResourceNotFoundError,
+  never,
   { characters: Character[] }
 >
 
-/** Os personagens de uma conta (pelo username, normalizado como no cadastro). */
+/** Os personagens da conta logada. */
 export class FetchAccountCharactersUseCase {
-  constructor(
-    private accountsRepository: AccountsRepository,
-    private charactersRepository: CharactersRepository
-  ) {}
+  constructor(private charactersRepository: CharactersRepository) {}
 
   async execute({
-    username,
+    accountId,
   }: FetchAccountCharactersUseCaseRequest): Promise<FetchAccountCharactersUseCaseResponse> {
-    const account = await this.accountsRepository.findByUsername(
-      Account.normalizeUsername(username)
-    )
-    if (!account) return left(new ResourceNotFoundError('conta'))
-
-    const characters = await this.charactersRepository.findManyByAccountId(
-      account.id.toString()
-    )
+    const characters =
+      await this.charactersRepository.findManyByAccountId(accountId)
 
     return right({ characters })
   }

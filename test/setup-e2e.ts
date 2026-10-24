@@ -8,6 +8,10 @@ import { seedDatabase } from '../prisma/seed/seed-database'
 
 config({ path: '.env', override: false })
 
+// Os e2e fazem dezenas de cadastros e logins seguidos do mesmo IP: com o limite de requisições ligado, quase tudo
+// daria 429.
+process.env.RATE_LIMIT_ENABLED = 'false'
+
 // Cada arquivo e2e roda num schema próprio do Postgres, criado pelas migrations e apagado no fim.
 const schemaId = randomUUID()
 

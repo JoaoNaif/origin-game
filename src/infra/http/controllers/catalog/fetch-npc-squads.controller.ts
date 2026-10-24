@@ -1,4 +1,5 @@
 import { Controller, Get, Query } from '@nestjs/common'
+import { Public } from '@/infra/auth/public'
 import { z } from 'zod'
 import { AiDifficulty } from '@/domain/ai/enums/ai-difficulty'
 import { CatalogRepository } from '@/domain/catalog/applications/repositories/catalog-repository'
@@ -15,6 +16,7 @@ type FetchNpcSquadsQuerySchema = z.infer<typeof fetchNpcSquadsQuerySchema>
 
 /** GET /npc-squads?difficulty= — adversários do PvE (catálogo público), do mais fácil ao mais difícil. */
 @Controller('npc-squads')
+@Public()
 export class FetchNpcSquadsController {
   constructor(private catalogRepository: CatalogRepository) {}
 

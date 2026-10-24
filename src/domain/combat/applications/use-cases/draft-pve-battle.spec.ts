@@ -24,7 +24,7 @@ describe('Draft Pve Battle', () => {
 
   it('should be able to draw the field before the squad is chosen', async () => {
     const result = await sut.execute({
-      username: 'jogador_pve',
+      accountId: world.account.id.toString(),
       npcSquadKey: 'balanced-beginner',
     })
 
@@ -41,7 +41,7 @@ describe('Draft Pve Battle', () => {
 
   it('should be able to draw the same field for the same seed', async () => {
     const request = {
-      username: 'jogador_pve',
+      accountId: world.account.id.toString(),
       npcSquadKey: 'balanced-beginner',
     }
 
@@ -60,7 +60,7 @@ describe('Draft Pve Battle', () => {
 
   it('should not be able to draft against an unknown NPC squad', async () => {
     const result = await sut.execute({
-      username: 'jogador_pve',
+      accountId: world.account.id.toString(),
       npcSquadKey: 'ninguem',
     })
 

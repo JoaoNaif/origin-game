@@ -1,9 +1,11 @@
 import { Controller, Get } from '@nestjs/common'
+import { Public } from '@/infra/auth/public'
 import { CatalogRepository } from '@/domain/catalog/applications/repositories/catalog-repository'
 import { TemplatePresenter } from '../../presenters/template-presenter'
 
 /** GET /templates — catálogo público: leitura direta do repositório, sem caso de uso. */
 @Controller('templates')
+@Public()
 export class FetchTemplatesController {
   constructor(private catalogRepository: CatalogRepository) {}
 

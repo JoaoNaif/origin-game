@@ -6,6 +6,7 @@ import {
 import { InMemoryCharactersRepository } from 'test/repositories/in-memory-characters-repository'
 import { makeAccount } from 'test/factories/make-account'
 import { characterOf, makeRoster } from 'test/factories/make-roster'
+import { NotAllowedError } from '@/core/errors/err/not-allowed-error'
 import { ResourceNotFoundError } from '@/core/errors/err/resource-not-found-error'
 import { Character, EMPTY_FREE_POINTS } from '../../entities/character'
 import { InvalidCharacterError } from '../../errors/invalid-character-error'
@@ -13,13 +14,16 @@ import { AllocateFreePointsUseCase } from './allocate-free-points'
 
 let charactersRepository: InMemoryCharactersRepository
 let kael: Character
+let accountId: string
 let sut: AllocateFreePointsUseCase
 
 describe('Allocate Free Points', () => {
   beforeEach(async () => {
     const catalog = seedCatalog()
     // nível 20: 20 pontos livres
-    const roster = makeRoster(makeAccount(), catalog, 20)
+    const account = makeAccount()
+    accountId = account.id.toString()
+    const roster = makeRoster(account, catalog, 20)
     kael = characterOf(roster, catalog, 'kael-vaz')
 
     charactersRepository = new InMemoryCharactersRepository()
@@ -33,6 +37,7 @@ describe('Allocate Free Points', () => {
   it('should be able to allocate the free points of the level', async () => {
     const result = await sut.execute({
       characterId: kael.id.toString(),
+      accountId,
       freePoints: { ...EMPTY_FREE_POINTS, DEFENSE: 10, WILL: 10 },
     })
 
@@ -43,6 +48,7 @@ describe('Allocate Free Points', () => {
   it('should not be able to use more points than the level gives', async () => {
     const result = await sut.execute({
       characterId: kael.id.toString(),
+      accountId,
       freePoints: { ...EMPTY_FREE_POINTS, DEFENSE: 15, WILL: 10 },
     })
 
@@ -51,9 +57,21 @@ describe('Allocate Free Points', () => {
     expect(kael.freePoints).toEqual(EMPTY_FREE_POINTS)
   })
 
+  it('should not be able to allocate points of another account', async () => {
+    const result = await sut.execute({
+      characterId: kael.id.toString(),
+      accountId: 'outra-conta',
+      freePoints: EMPTY_FREE_POINTS,
+    })
+
+    expect(result.isLeft()).toBe(true)
+    expect(result.value).toBeInstanceOf(NotAllowedError)
+  })
+
   it('should not be able to allocate points of an unknown character', async () => {
     const result = await sut.execute({
       characterId: 'ninguem',
+      accountId,
       freePoints: EMPTY_FREE_POINTS,
     })
 

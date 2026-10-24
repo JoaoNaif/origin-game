@@ -2,14 +2,18 @@ import {
   BadRequestException,
   Body,
   Controller,
+  ForbiddenException,
   NotFoundException,
   Param,
   Put,
 } from '@nestjs/common'
 import { z } from 'zod'
+import { NotAllowedError } from '@/core/errors/err/not-allowed-error'
 import { ResourceNotFoundError } from '@/core/errors/err/resource-not-found-error'
 import { CatalogRepository } from '@/domain/catalog/applications/repositories/catalog-repository'
 import { EquipSkillsUseCase } from '@/domain/characters/applications/use-cases/equip-skills'
+import { CurrentUser } from '@/infra/auth/current-user.decorator'
+import { AccountPayload } from '@/infra/auth/jwt-strategy'
 import { ZodValidationPipe } from '../../pipes/zod-validation-pipe'
 import { CharacterPresenter } from '../../presenters/character-presenter'
 import { uuidParamSchema } from '../../schemas/common'
@@ -21,7 +25,7 @@ const equipSkillsBodySchema = z.object({
 
 type EquipSkillsBodySchema = z.infer<typeof equipSkillsBodySchema>
 
-/** PUT /characters/:id/build */
+/** PUT /characters/:id/build — só da conta logada. */
 @Controller('characters')
 export class EquipSkillsController {
   constructor(
@@ -33,10 +37,12 @@ export class EquipSkillsController {
   async handle(
     @Param('id', new ZodValidationPipe(uuidParamSchema)) characterId: string,
     @Body(new ZodValidationPipe(equipSkillsBodySchema))
-    body: EquipSkillsBodySchema
+    body: EquipSkillsBodySchema,
+    @CurrentUser() user: AccountPayload
   ) {
     const result = await this.equipSkills.execute({
       characterId,
+      accountId: user.sub,
       skillKeys: body.skillKeys,
     })
 
@@ -46,6 +52,8 @@ export class EquipSkillsController {
       switch (error.constructor) {
         case ResourceNotFoundError:
           throw new NotFoundException(error.message)
+        case NotAllowedError:
+          throw new ForbiddenException(error.message)
         default:
           throw new BadRequestException(error.message)
       }

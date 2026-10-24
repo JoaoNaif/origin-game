@@ -260,21 +260,39 @@ model Skill {
 // Jogador
 // ---------------------------------------------------------------------------
 
-// Conta (mínima no MVP): dona dos personagens e dos squads. `username` já chega
-// normalizado (minúsculo) pelo domínio. E-mail/senha entram com a autenticação;
-// moeda, inventário, organização e ranking com as suas camadas.
+// Conta: dona dos personagens e dos squads. Entra por username + senha (só o hash
+// fica aqui). `username` já chega normalizado (minúsculo) pelo domínio. Moeda,
+// inventário, organização e ranking entram com as suas camadas.
 model Account {
-  id          String   @id @default(uuid())
-  username    String   @unique
-  displayName String   @map("display_name")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id           String   @id @default(uuid())
+  username     String   @unique
+  displayName  String   @map("display_name")
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   characters Character[]
   squads     Squad[]
   battles    Battle[]
+  sessions   Session[]
 
   @@map("accounts")
+}
+
+// Sessão de login (refresh token com rotação). Só o hash do token fica no banco.
+model Session {
+  id        String    @id @default(uuid())
+  accountId String    @map("account_id")
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  userAgent String?   @map("user_agent")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@map("sessions")
 }
 
 // Instância do personagem (a Yuki da conta). Stats NÃO são guardados: o motor calcula a partir

@@ -3,6 +3,7 @@ import { InMemoryAccountsRepository } from 'test/repositories/in-memory-accounts
 import { InMemoryCatalogRepository } from 'test/repositories/in-memory-catalog-repository'
 import { InMemoryCharactersRepository } from 'test/repositories/in-memory-characters-repository'
 import { makeAccount } from 'test/factories/make-account'
+import { FakeHasher } from 'test/cryptography/fake-hasher'
 import { ResourceAlreadyExistsError } from '@/core/errors/err/resource-already-exists-error'
 import { InvalidAccountError } from '../../errors/invalid-account-error'
 import { CreateAccountUseCase } from './create-account'
@@ -20,7 +21,8 @@ describe('Create Account', () => {
     sut = new CreateAccountUseCase(
       accountsRepository,
       charactersRepository,
-      catalogRepository
+      catalogRepository,
+      new FakeHasher()
     )
   })
 
@@ -28,6 +30,7 @@ describe('Create Account', () => {
     const result = await sut.execute({
       username: 'joao_naif',
       displayName: 'João',
+      password: '12345678',
     })
 
     expect(result.isRight()).toBe(true)
@@ -42,6 +45,7 @@ describe('Create Account', () => {
     const result = await sut.execute({
       username: 'joao_naif',
       displayName: 'João',
+      password: '12345678',
     })
 
     expect(result.isRight()).toBe(true)
@@ -65,7 +69,11 @@ describe('Create Account', () => {
   })
 
   it('should be able to copy the family trait of the template', async () => {
-    await sut.execute({ username: 'joao_naif', displayName: 'João' })
+    await sut.execute({
+      username: 'joao_naif',
+      displayName: 'João',
+      password: '12345678',
+    })
 
     const catalog = await catalogRepository.load()
     const ecko = [...catalog.templates.values()].find(
@@ -81,7 +89,11 @@ describe('Create Account', () => {
   })
 
   it('should be able to save the username normalized', async () => {
-    await sut.execute({ username: '  Tester_01 ', displayName: 'Tester' })
+    await sut.execute({
+      username: '  Tester_01 ',
+      displayName: 'Tester',
+      password: '12345678',
+    })
 
     expect(accountsRepository.items[0].username).toBe('tester_01')
   })
@@ -90,6 +102,7 @@ describe('Create Account', () => {
     const result = await sut.execute({
       username: 'Joao Naif!',
       displayName: 'João',
+      password: '12345678',
     })
 
     expect(result.isLeft()).toBe(true)
@@ -104,11 +117,34 @@ describe('Create Account', () => {
     const result = await sut.execute({
       username: 'TESTER_01',
       displayName: 'Outro',
+      password: '12345678',
     })
 
     expect(result.isLeft()).toBe(true)
     expect(result.value).toBeInstanceOf(ResourceAlreadyExistsError)
     expect(accountsRepository.items).toHaveLength(1)
     expect(charactersRepository.items).toHaveLength(0)
+  })
+
+  it('should be able to keep only the password hash', async () => {
+    await sut.execute({
+      username: 'joao_naif',
+      displayName: 'João',
+      password: '12345678',
+    })
+
+    expect(accountsRepository.items[0].passwordHash).toBe('12345678-hashed')
+  })
+
+  it('should not be able to use a password shorter than 8 characters', async () => {
+    const result = await sut.execute({
+      username: 'joao_naif',
+      displayName: 'João',
+      password: '1234567',
+    })
+
+    expect(result.isLeft()).toBe(true)
+    expect(result.value).toBeInstanceOf(InvalidAccountError)
+    expect(accountsRepository.items).toHaveLength(0)
   })
 })

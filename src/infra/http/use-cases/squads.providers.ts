@@ -19,9 +19,9 @@ export const squadsUseCases: Provider[] = [
   },
   {
     provide: FetchAccountSquadsUseCase,
-    inject: [AccountsRepository, SquadsRepository],
-    useFactory: (accounts: AccountsRepository, squads: SquadsRepository) =>
-      new FetchAccountSquadsUseCase(accounts, squads),
+    inject: [SquadsRepository],
+    useFactory: (squads: SquadsRepository) =>
+      new FetchAccountSquadsUseCase(squads),
   },
   {
     provide: UpdateSquadFormationUseCase,

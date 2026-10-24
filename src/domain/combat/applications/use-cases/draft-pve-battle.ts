@@ -1,7 +1,6 @@
 import { Either, left, right } from '@/core/either'
 import { ResourceNotFoundError } from '@/core/errors/err/resource-not-found-error'
 import { AccountsRepository } from '@/domain/accounts/applications/repositories/accounts-repository'
-import { Account } from '@/domain/accounts/entities/account'
 import { CatalogRepository } from '@/domain/catalog/applications/repositories/catalog-repository'
 import { NpcSquad } from '@/domain/squads/entities/npc-squad'
 import { BattleDraft } from '../../entities/battle-draft'
@@ -13,7 +12,7 @@ import { BattleDraftsRepository } from '../repositories/battle-drafts-repository
 import { catalogFields, drawField } from '../services/pve-session'
 
 interface DraftPveBattleUseCaseRequest {
-  username: string
+  accountId: string
   npcSquadKey: string
 }
 
@@ -36,12 +35,10 @@ export class DraftPveBattleUseCase {
   ) {}
 
   async execute({
-    username,
+    accountId,
     npcSquadKey,
   }: DraftPveBattleUseCaseRequest): Promise<DraftPveBattleUseCaseResponse> {
-    const account = await this.accountsRepository.findByUsername(
-      Account.normalizeUsername(username)
-    )
+    const account = await this.accountsRepository.findById(accountId)
     if (!account) return left(new ResourceNotFoundError('conta'))
 
     const catalog = await this.catalogRepository.load()

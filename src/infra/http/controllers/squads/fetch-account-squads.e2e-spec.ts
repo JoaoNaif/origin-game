@@ -1,6 +1,5 @@
 import { INestApplication } from '@nestjs/common'
 import { Test } from '@nestjs/testing'
-import request from 'supertest'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 import { createAccount } from 'test/e2e/accounts'
 import { createSquad, membersOf } from 'test/e2e/squads'
@@ -25,14 +24,14 @@ describe('Fetch Account Squads (e2e)', () => {
     await app.close()
   })
 
-  test('[GET] /accounts/:username/squads', async () => {
-    const characters = await createAccount(app, 'lista_01')
-    await createSquad(app, 'lista_01', membersOf(characters), 'Muralha')
-    await createSquad(app, 'lista_01', membersOf(characters.slice(4)), 'Caçada')
+  test('[GET] /me/squads', async () => {
+    const { agent, characters } = await createAccount(app, 'lista_01')
+    await createSquad(agent, membersOf(characters), 'Muralha')
+    await createSquad(agent, membersOf(characters.slice(4)), 'Caçada')
+    const other = await createAccount(app, 'lista_outra')
+    await createSquad(other.agent, membersOf(other.characters), 'Alheio')
 
-    const response = await request(app.getHttpServer()).get(
-      '/accounts/lista_01/squads'
-    )
+    const response = await agent.get('/me/squads')
 
     expect(response.statusCode).toBe(200)
     expect(response.body.squads.map((s: { name: string }) => s.name)).toEqual([
@@ -42,22 +41,12 @@ describe('Fetch Account Squads (e2e)', () => {
     expect(response.body.squads[0].members).toHaveLength(4)
   })
 
-  test('[GET] /accounts/:username/squads of an account without squads', async () => {
-    await createAccount(app, 'lista_02')
+  test('[GET] /me/squads of an account without squads', async () => {
+    const { agent } = await createAccount(app, 'lista_02')
 
-    const response = await request(app.getHttpServer()).get(
-      '/accounts/lista_02/squads'
-    )
+    const response = await agent.get('/me/squads')
 
     expect(response.statusCode).toBe(200)
     expect(response.body.squads).toEqual([])
-  })
-
-  test('[GET] /accounts/:username/squads of an unknown account fails', async () => {
-    const response = await request(app.getHttpServer()).get(
-      '/accounts/ninguem/squads'
-    )
-
-    expect(response.statusCode).toBe(404)
   })
 })

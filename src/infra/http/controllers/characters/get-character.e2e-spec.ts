@@ -1,6 +1,5 @@
 import { INestApplication } from '@nestjs/common'
 import { Test } from '@nestjs/testing'
-import request from 'supertest'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 import { createAccount, UNKNOWN_ID } from 'test/e2e/accounts'
 import { AppModule } from '@/infra/app.module'
@@ -25,33 +24,40 @@ describe('Get Character (e2e)', () => {
   })
 
   test('[GET] /characters/:id', async () => {
-    const [first] = await createAccount(app, 'personagem_01')
+    const { agent, characters } = await createAccount(app, 'personagem_01')
 
-    const response = await request(app.getHttpServer()).get(
-      `/characters/${first.id}`
-    )
+    const response = await agent.get(`/characters/${characters[0].id}`)
 
     expect(response.statusCode).toBe(200)
     expect(response.body.character).toMatchObject({
-      id: first.id,
-      templateKey: first.templateKey,
+      id: characters[0].id,
+      templateKey: characters[0].templateKey,
       skills: expect.any(Array),
       traitKeys: expect.any(Array),
     })
   })
 
+  test('[GET] /characters/:id of another account fails', async () => {
+    const { characters } = await createAccount(app, 'personagem_02')
+    const { agent: other } = await createAccount(app, 'personagem_03')
+
+    const response = await other.get(`/characters/${characters[0].id}`)
+
+    expect(response.statusCode).toBe(403)
+  })
+
   test('[GET] /characters/:id with an unknown id fails', async () => {
-    const response = await request(app.getHttpServer()).get(
-      `/characters/${UNKNOWN_ID}`
-    )
+    const { agent } = await createAccount(app, 'personagem_04')
+
+    const response = await agent.get(`/characters/${UNKNOWN_ID}`)
 
     expect(response.statusCode).toBe(404)
   })
 
   test('[GET] /characters/:id with an id out of format fails', async () => {
-    const response = await request(app.getHttpServer()).get(
-      '/characters/nao-e-um-uuid'
-    )
+    const { agent } = await createAccount(app, 'personagem_05')
+
+    const response = await agent.get('/characters/nao-e-um-uuid')
 
     expect(response.statusCode).toBe(400)
   })

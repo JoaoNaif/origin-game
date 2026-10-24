@@ -5,7 +5,11 @@ import { Prisma, Account as PrismaAccount } from '@prisma/client'
 export class PrismaAccountMapper {
   static toDomain(raw: PrismaAccount): Account {
     const result = Account.create(
-      { username: raw.username, displayName: raw.displayName },
+      {
+        username: raw.username,
+        displayName: raw.displayName,
+        passwordHash: raw.passwordHash,
+      },
       new UniqueEntityId(raw.id)
     )
 
@@ -21,6 +25,7 @@ export class PrismaAccountMapper {
       id: account.id.toString(),
       username: account.username,
       displayName: account.displayName,
+      passwordHash: account.passwordHash,
     }
   }
 }

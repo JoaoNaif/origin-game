@@ -24,16 +24,19 @@ describe('Fetch Account Characters (e2e)', () => {
     await app.close()
   })
 
-  test('[GET] /accounts/:username/characters', async () => {
-    await createAccount(app, 'elenco_01')
-    await createAccount(app, 'elenco_outro')
+  test('[GET] /me/characters', async () => {
+    const { agent } = await createAccount(app, 'elenco_01')
+    const other = await createAccount(app, 'elenco_outro')
 
-    const response = await request(app.getHttpServer()).get(
-      '/accounts/Elenco_01/characters'
-    )
+    const response = await agent.get('/me/characters')
 
     expect(response.statusCode).toBe(200)
     expect(response.body.characters).toHaveLength(12)
+    // só os da conta logada
+    const ids = response.body.characters.map((c: { id: string }) => c.id)
+    expect(
+      ids.some((id: string) => other.characters.some((c) => c.id === id))
+    ).toBe(false)
 
     const kael = response.body.characters.find(
       (c: { templateKey: string }) => c.templateKey === 'kael-vaz'
@@ -49,11 +52,9 @@ describe('Fetch Account Characters (e2e)', () => {
     })
   })
 
-  test('[GET] /accounts/:username/characters of an unknown account fails', async () => {
-    const response = await request(app.getHttpServer()).get(
-      '/accounts/ninguem/characters'
-    )
+  test('[GET] /me/characters without being logged in fails', async () => {
+    const response = await request(app.getHttpServer()).get('/me/characters')
 
-    expect(response.statusCode).toBe(404)
+    expect(response.statusCode).toBe(401)
   })
 })

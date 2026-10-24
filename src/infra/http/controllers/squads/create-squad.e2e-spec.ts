@@ -28,12 +28,12 @@ describe('Create Squad (e2e)', () => {
     await app.close()
   })
 
-  test('[POST] /accounts/:username/squads', async () => {
-    const characters = await createAccount(app, 'squad_01')
+  test('[POST] /me/squads', async () => {
+    const { agent, characters } = await createAccount(app, 'squad_01')
     const members = membersOf(characters)
 
-    const response = await request(app.getHttpServer())
-      .post('/accounts/squad_01/squads')
+    const response = await agent
+      .post('/me/squads')
       .send({ name: '  Muralha ', members })
 
     expect(response.statusCode).toBe(201)
@@ -55,58 +55,56 @@ describe('Create Squad (e2e)', () => {
     expect(saved).toHaveLength(4)
   })
 
-  test('[POST] /accounts/:username/squads with characters of another account fails', async () => {
-    await createAccount(app, 'squad_02')
+  test('[POST] /me/squads with characters of another account fails', async () => {
+    const { agent } = await createAccount(app, 'squad_02')
     const others = await createAccount(app, 'squad_03')
 
-    const response = await request(app.getHttpServer())
-      .post('/accounts/squad_02/squads')
-      .send({ name: 'Emprestado', members: membersOf(others) })
+    const response = await agent
+      .post('/me/squads')
+      .send({ name: 'Emprestado', members: membersOf(others.characters) })
 
     expect(response.statusCode).toBe(400)
   })
 
-  test('[POST] /accounts/:username/squads with two characters in one cell fails', async () => {
-    const characters = await createAccount(app, 'squad_04')
+  test('[POST] /me/squads with two characters in one cell fails', async () => {
+    const { agent, characters } = await createAccount(app, 'squad_04')
     const members = membersOf(characters)
     members[1] = { ...members[1], row: 0, column: 0 }
 
-    const response = await request(app.getHttpServer())
-      .post('/accounts/squad_04/squads')
+    const response = await agent
+      .post('/me/squads')
       .send({ name: 'Empilhado', members })
 
     expect(response.statusCode).toBe(400)
   })
 
-  test('[POST] /accounts/:username/squads with 3 characters fails', async () => {
-    const characters = await createAccount(app, 'squad_05')
+  test('[POST] /me/squads with 3 characters fails', async () => {
+    const { agent, characters } = await createAccount(app, 'squad_05')
 
-    const response = await request(app.getHttpServer())
-      .post('/accounts/squad_05/squads')
+    const response = await agent
+      .post('/me/squads')
       .send({ name: 'Incompleto', members: membersOf(characters).slice(0, 3) })
 
     expect(response.statusCode).toBe(400)
   })
 
-  test('[POST] /accounts/:username/squads with an unknown character fails', async () => {
-    const characters = await createAccount(app, 'squad_06')
+  test('[POST] /me/squads with an unknown character fails', async () => {
+    const { agent, characters } = await createAccount(app, 'squad_06')
     const members = membersOf(characters)
     members[0] = { ...members[0], characterId: UNKNOWN_ID }
 
-    const response = await request(app.getHttpServer())
-      .post('/accounts/squad_06/squads')
+    const response = await agent
+      .post('/me/squads')
       .send({ name: 'Fantasma', members })
 
     expect(response.statusCode).toBe(404)
   })
 
-  test('[POST] /accounts/:username/squads of an unknown account fails', async () => {
-    const characters = await createAccount(app, 'squad_07')
-
+  test('[POST] /me/squads without being logged in fails', async () => {
     const response = await request(app.getHttpServer())
-      .post('/accounts/ninguem/squads')
-      .send({ name: 'Sem dono', members: membersOf(characters) })
+      .post('/me/squads')
+      .send({ name: 'Sem dono', members: [] })
 
-    expect(response.statusCode).toBe(404)
+    expect(response.statusCode).toBe(401)
   })
 })

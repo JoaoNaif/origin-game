@@ -5,6 +5,7 @@ import { InMemorySquadsRepository } from 'test/repositories/in-memory-squads-rep
 import { makeAccount } from 'test/factories/make-account'
 import { makeRoster } from 'test/factories/make-roster'
 import { makeSquad } from 'test/factories/make-squad'
+import { NotAllowedError } from '@/core/errors/err/not-allowed-error'
 import { ResourceNotFoundError } from '@/core/errors/err/resource-not-found-error'
 import { Character } from '@/domain/characters/entities/character'
 import { Squad } from '../../entities/squad'
@@ -49,7 +50,11 @@ describe('Update Squad Formation', () => {
       column: 2 - Math.floor(i / 3),
     }))
 
-    const result = await sut.execute({ squadId: squad.id.toString(), members })
+    const result = await sut.execute({
+      squadId: squad.id.toString(),
+      accountId: squad.accountId.toString(),
+      members,
+    })
 
     expect(result.isRight()).toBe(true)
     expect(squad.members.map((m) => m.characterId.toString())).toEqual(
@@ -62,6 +67,7 @@ describe('Update Squad Formation', () => {
 
     const result = await sut.execute({
       squadId: squad.id.toString(),
+      accountId: squad.accountId.toString(),
       members: roster.slice(4, 7).map((c, i) => ({
         characterId: c.id.toString(),
         row: i,
@@ -74,8 +80,23 @@ describe('Update Squad Formation', () => {
     expect(squad.members).toEqual(before)
   })
 
+  it('should not be able to update the squad of another account', async () => {
+    const result = await sut.execute({
+      squadId: squad.id.toString(),
+      accountId: 'outra-conta',
+      members: [],
+    })
+
+    expect(result.isLeft()).toBe(true)
+    expect(result.value).toBeInstanceOf(NotAllowedError)
+  })
+
   it('should not be able to update an unknown squad', async () => {
-    const result = await sut.execute({ squadId: 'ninguem', members: [] })
+    const result = await sut.execute({
+      squadId: 'ninguem',
+      accountId: 'qualquer',
+      members: [],
+    })
 
     expect(result.isLeft()).toBe(true)
     expect(result.value).toBeInstanceOf(ResourceNotFoundError)

@@ -1,18 +1,21 @@
 import { Either, left, right } from '@/core/either'
+import { NotAllowedError } from '@/core/errors/err/not-allowed-error'
 import { ResourceNotFoundError } from '@/core/errors/err/resource-not-found-error'
 import { CharactersRepository } from '@/domain/characters/applications/repositories/characters-repository'
 import { Squad } from '../../entities/squad'
 import { InvalidSquadError } from '../../errors/invalid-squad-error'
 import { SquadsRepository } from '../repositories/squads-repository'
-import { loadSquadMembers, SquadMemberRequest } from './squad-members'
+import { findOwnedSquad } from '../services/owned-squad'
+import { loadSquadMembers, SquadMemberRequest } from '../services/squad-members'
 
 interface UpdateSquadFormationUseCaseRequest {
   squadId: string
+  accountId: string
   members: SquadMemberRequest[]
 }
 
 type UpdateSquadFormationUseCaseResponse = Either<
-  ResourceNotFoundError | InvalidSquadError,
+  ResourceNotFoundError | NotAllowedError | InvalidSquadError,
   { squad: Squad }
 >
 
@@ -25,11 +28,17 @@ export class UpdateSquadFormationUseCase {
 
   async execute({
     squadId,
+    accountId,
     members,
   }: UpdateSquadFormationUseCaseRequest): Promise<UpdateSquadFormationUseCaseResponse> {
-    const squad = await this.squadsRepository.findById(squadId)
-    if (!squad) return left(new ResourceNotFoundError('squad'))
+    const found = await findOwnedSquad(
+      this.squadsRepository,
+      squadId,
+      accountId
+    )
+    if (found.isLeft()) return left(found.value)
 
+    const squad = found.value
     const loaded = await loadSquadMembers(this.charactersRepository, members)
     if (loaded.isLeft()) return left(loaded.value)
 

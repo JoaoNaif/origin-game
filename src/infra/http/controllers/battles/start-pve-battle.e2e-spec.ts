@@ -1,6 +1,5 @@
 import { INestApplication } from '@nestjs/common'
 import { Test } from '@nestjs/testing'
-import request from 'supertest'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 import { createAccount, UNKNOWN_ID } from 'test/e2e/accounts'
 import { prepareBattle } from 'test/e2e/battles'
@@ -37,13 +36,13 @@ describe('Start Pve Battle (e2e)', () => {
   })
 
   test('[POST] /battles', async () => {
-    const { draft, squadId, squadCharacterIds } = await prepareBattle(
+    const { agent, draft, squadId, squadCharacterIds } = await prepareBattle(
       app,
       prisma,
       'inicio_01'
     )
 
-    const response = await request(app.getHttpServer())
+    const response = await agent
       .post('/battles')
       .send({ draftId: draft.id, squadId })
 
@@ -67,17 +66,21 @@ describe('Start Pve Battle (e2e)', () => {
 
     const saved = await prisma.battle.findUnique({ where: { id: battle.id } })
     expect(saved).toMatchObject({ status: 'IN_PROGRESS', squadId })
-    const mine = battle.units.filter((u: UnitBody) => u.side === 'PLAYER')
     // as unidades seguem a formação gravada (linha, coluna), não a ordem do pedido
+    const mine = battle.units.filter((u: UnitBody) => u.side === 'PLAYER')
     expect(mine.map((u: UnitBody) => u.characterId).sort()).toEqual(
       [...squadCharacterIds].sort()
     )
   })
 
   test('[POST] /battles shows only what the player may know of the enemy', async () => {
-    const { draft, squadId } = await prepareBattle(app, prisma, 'inicio_02')
+    const { agent, draft, squadId } = await prepareBattle(
+      app,
+      prisma,
+      'inicio_02'
+    )
 
-    const response = await request(app.getHttpServer())
+    const response = await agent
       .post('/battles')
       .send({ draftId: draft.id, squadId })
 
@@ -98,24 +101,38 @@ describe('Start Pve Battle (e2e)', () => {
   })
 
   test('[POST] /battles uses the draft only once', async () => {
-    const { draft, squadId } = await prepareBattle(app, prisma, 'inicio_03')
-    await request(app.getHttpServer())
-      .post('/battles')
-      .send({ draftId: draft.id, squadId })
+    const { agent, draft, squadId } = await prepareBattle(
+      app,
+      prisma,
+      'inicio_03'
+    )
+    await agent.post('/battles').send({ draftId: draft.id, squadId })
 
-    const again = await request(app.getHttpServer())
+    const again = await agent
       .post('/battles')
       .send({ draftId: draft.id, squadId })
 
     expect(again.statusCode).toBe(404)
   })
 
-  test('[POST] /battles with a squad of another account fails', async () => {
+  test('[POST] /battles with the draft of another account fails', async () => {
     const { draft } = await prepareBattle(app, prisma, 'inicio_04')
-    const others = await createAccount(app, 'inicio_05')
-    const squad = await createSquad(app, 'inicio_05', membersOf(others))
+    const other = await createAccount(app, 'inicio_05')
+    const squad = await createSquad(other.agent, membersOf(other.characters))
 
-    const response = await request(app.getHttpServer())
+    const response = await other.agent
+      .post('/battles')
+      .send({ draftId: draft.id, squadId: squad.id })
+
+    expect(response.statusCode).toBe(403)
+  })
+
+  test('[POST] /battles with a squad of another account fails', async () => {
+    const { agent, draft } = await prepareBattle(app, prisma, 'inicio_06')
+    const other = await createAccount(app, 'inicio_07')
+    const squad = await createSquad(other.agent, membersOf(other.characters))
+
+    const response = await agent
       .post('/battles')
       .send({ draftId: draft.id, squadId: squad.id })
 
@@ -123,9 +140,9 @@ describe('Start Pve Battle (e2e)', () => {
   })
 
   test('[POST] /battles with an unknown squad fails', async () => {
-    const { draft } = await prepareBattle(app, prisma, 'inicio_06')
+    const { agent, draft } = await prepareBattle(app, prisma, 'inicio_08')
 
-    const response = await request(app.getHttpServer())
+    const response = await agent
       .post('/battles')
       .send({ draftId: draft.id, squadId: UNKNOWN_ID })
 
@@ -133,7 +150,9 @@ describe('Start Pve Battle (e2e)', () => {
   })
 
   test('[POST] /battles with an id out of format fails', async () => {
-    const response = await request(app.getHttpServer())
+    const { agent } = await prepareBattle(app, prisma, 'inicio_09')
+
+    const response = await agent
       .post('/battles')
       .send({ draftId: 'qualquer', squadId: 'qualquer' })
 

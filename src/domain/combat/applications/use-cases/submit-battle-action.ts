@@ -1,4 +1,5 @@
 import { Either, left, right } from '@/core/either'
+import { NotAllowedError } from '@/core/errors/err/not-allowed-error'
 import { ResourceNotFoundError } from '@/core/errors/err/resource-not-found-error'
 import { CharactersRepository } from '@/domain/characters/applications/repositories/characters-repository'
 import { BattleEngine } from '../../engine/battle-engine'
@@ -10,6 +11,7 @@ import { BattleActionPayload } from '../../value-objects/battle-action'
 import { Clock } from '@/core/gateways/clock'
 import { BattlesRepository } from '../repositories/battles-repository'
 import { CharacterReward, grantBattleXp } from '../services/battle-rewards'
+import { findOwnedBattle } from '../services/owned-battle'
 import {
   eventsSince,
   finishIfOver,
@@ -20,11 +22,15 @@ import {
 
 interface SubmitBattleActionUseCaseRequest {
   battleId: string
+  accountId: string
   payload: BattleActionPayload
 }
 
 type SubmitBattleActionUseCaseResponse = Either<
-  ResourceNotFoundError | InvalidBattleError | InvalidActionError,
+  | ResourceNotFoundError
+  | NotAllowedError
+  | InvalidBattleError
+  | InvalidActionError,
   {
     battle: Battle
     engine: BattleEngine
@@ -47,10 +53,17 @@ export class SubmitBattleActionUseCase {
 
   async execute({
     battleId,
+    accountId,
     payload,
   }: SubmitBattleActionUseCaseRequest): Promise<SubmitBattleActionUseCaseResponse> {
-    const battle = await this.battlesRepository.findById(battleId)
-    if (!battle) return left(new ResourceNotFoundError('batalha'))
+    const found = await findOwnedBattle(
+      this.battlesRepository,
+      battleId,
+      accountId
+    )
+    if (found.isLeft()) return left(found.value)
+
+    const battle = found.value
     if (battle.isFinished) {
       return left(new InvalidBattleError('a batalha já terminou'))
     }

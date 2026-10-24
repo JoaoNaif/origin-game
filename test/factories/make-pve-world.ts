@@ -1,6 +1,8 @@
 import { Account } from '@/domain/accounts/entities/account'
 import { GameCatalog } from '@/domain/catalog/applications/repositories/catalog-repository'
 import { Character } from '@/domain/characters/entities/character'
+import { DraftPveBattleUseCase } from '@/domain/combat/applications/use-cases/draft-pve-battle'
+import { StartPveBattleUseCase } from '@/domain/combat/applications/use-cases/start-pve-battle'
 import { Squad } from '@/domain/squads/entities/squad'
 import { FakeClock } from 'test/gateways/fake-clock'
 import { FakeSeedGenerator } from 'test/gateways/fake-seed-generator'
@@ -68,3 +70,34 @@ export async function makePveWorld(level = 18) {
 }
 
 export type PveWorld = Awaited<ReturnType<typeof makePveWorld>>
+
+/** Pré-batalha + início contra o Iniciante equilibrado: devolve a batalha parada na vez do jogador. */
+export async function startWorldBattle(world: PveWorld) {
+  const accountId = world.account.id.toString()
+
+  const drafted = await new DraftPveBattleUseCase(
+    world.accounts,
+    world.catalogRepository,
+    world.drafts,
+    world.seeds,
+    world.clock
+  ).execute({ accountId, npcSquadKey: 'balanced-beginner' })
+  if (drafted.isLeft()) throw drafted.value
+
+  const started = await new StartPveBattleUseCase(
+    world.accounts,
+    world.characters,
+    world.squads,
+    world.catalogRepository,
+    world.drafts,
+    world.battles,
+    world.clock
+  ).execute({
+    accountId,
+    draftId: drafted.value.draft.id.toString(),
+    squadId: world.squad.id.toString(),
+  })
+  if (started.isLeft()) throw started.value
+
+  return started.value
+}

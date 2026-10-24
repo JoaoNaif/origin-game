@@ -1,6 +1,8 @@
 import { Body, Controller, HttpCode, Post } from '@nestjs/common'
 import { z } from 'zod'
 import { StartPveBattleUseCase } from '@/domain/combat/applications/use-cases/start-pve-battle'
+import { CurrentUser } from '@/infra/auth/current-user.decorator'
+import { AccountPayload } from '@/infra/auth/jwt-strategy'
 import { battleHttpError } from '../../battle-errors'
 import { ZodValidationPipe } from '../../pipes/zod-validation-pipe'
 import { BattlePresenter } from '../../presenters/battle-presenter'
@@ -21,9 +23,13 @@ export class StartPveBattleController {
   @HttpCode(201)
   async handle(
     @Body(new ZodValidationPipe(startPveBattleBodySchema))
-    body: StartPveBattleBodySchema
+    body: StartPveBattleBodySchema,
+    @CurrentUser() user: AccountPayload
   ) {
-    const result = await this.startPveBattle.execute(body)
+    const result = await this.startPveBattle.execute({
+      accountId: user.sub,
+      ...body,
+    })
 
     if (result.isLeft()) throw battleHttpError(result.value)
 

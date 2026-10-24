@@ -1,8 +1,13 @@
 import { Module } from '@nestjs/common'
+import { CryptographyModule } from '../cryptography/cryptography.module'
 import { DatabaseModule } from '../database/database.module'
 import { GatewaysModule } from '../gateways/gateways.module'
 import { AllocateFreePointsController } from './controllers/characters/allocate-free-points.controller'
+import { AuthenticateController } from './controllers/accounts/authenticate.controller'
 import { CreateAccountController } from './controllers/accounts/create-account.controller'
+import { GetCurrentAccountController } from './controllers/accounts/get-current-account.controller'
+import { LogoutController } from './controllers/accounts/logout.controller'
+import { RefreshSessionController } from './controllers/accounts/refresh-session.controller'
 import { CreateSquadController } from './controllers/squads/create-squad.controller'
 import { DraftPveBattleController } from './controllers/battles/draft-pve-battle.controller'
 import { DeleteSquadController } from './controllers/squads/delete-squad.controller'
@@ -25,7 +30,7 @@ import { squadsUseCases } from './use-cases/squads.providers'
 
 // Controllers e use-cases (providers) de cada contexto entram aqui.
 @Module({
-  imports: [DatabaseModule, GatewaysModule],
+  imports: [DatabaseModule, GatewaysModule, CryptographyModule],
   controllers: [
     HealthController,
     // catálogo (leitura pública, direto do repositório)
@@ -33,6 +38,10 @@ import { squadsUseCases } from './use-cases/squads.providers'
     FetchNpcSquadsController,
     // accounts
     CreateAccountController,
+    AuthenticateController,
+    RefreshSessionController,
+    LogoutController,
+    GetCurrentAccountController,
     FetchAccountByUsernameController,
     // characters
     FetchAccountCharactersController,

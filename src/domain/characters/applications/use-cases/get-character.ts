@@ -1,14 +1,17 @@
 import { Either, left, right } from '@/core/either'
+import { NotAllowedError } from '@/core/errors/err/not-allowed-error'
 import { ResourceNotFoundError } from '@/core/errors/err/resource-not-found-error'
 import { Character } from '../../entities/character'
 import { CharactersRepository } from '../repositories/characters-repository'
+import { findOwnedCharacter } from '../services/owned-character'
 
 interface GetCharacterUseCaseRequest {
   characterId: string
+  accountId: string
 }
 
 type GetCharacterUseCaseResponse = Either<
-  ResourceNotFoundError,
+  ResourceNotFoundError | NotAllowedError,
   { character: Character }
 >
 
@@ -17,10 +20,15 @@ export class GetCharacterUseCase {
 
   async execute({
     characterId,
+    accountId,
   }: GetCharacterUseCaseRequest): Promise<GetCharacterUseCaseResponse> {
-    const character = await this.charactersRepository.findById(characterId)
-    if (!character) return left(new ResourceNotFoundError('personagem'))
+    const found = await findOwnedCharacter(
+      this.charactersRepository,
+      characterId,
+      accountId
+    )
+    if (found.isLeft()) return left(found.value)
 
-    return right({ character })
+    return right({ character: found.value })
   }
 }

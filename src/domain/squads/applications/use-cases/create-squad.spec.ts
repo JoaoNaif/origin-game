@@ -14,6 +14,7 @@ let accountsRepository: InMemoryAccountsRepository
 let charactersRepository: InMemoryCharactersRepository
 let squadsRepository: InMemorySquadsRepository
 let roster: Character[]
+let accountId: string
 let otherRoster: Character[]
 let sut: CreateSquadUseCase
 
@@ -33,6 +34,7 @@ describe('Create Squad', () => {
   beforeEach(async () => {
     const catalog = seedCatalog()
     const account = makeAccount({ username: 'joao_naif' })
+    accountId = account.id.toString()
     const other = makeAccount({ username: 'outra_conta' })
     roster = makeRoster(account, catalog)
     otherRoster = makeRoster(other, catalog)
@@ -53,7 +55,7 @@ describe('Create Squad', () => {
 
   it('should be able to create a squad with 4 characters of the account', async () => {
     const result = await sut.execute({
-      username: 'joao_naif',
+      accountId,
       name: 'Muralha',
       members: membersOf(roster),
     })
@@ -65,7 +67,7 @@ describe('Create Squad', () => {
 
   it('should not be able to use characters of another account', async () => {
     const result = await sut.execute({
-      username: 'joao_naif',
+      accountId,
       name: 'Emprestado',
       members: membersOf(otherRoster),
     })
@@ -80,7 +82,7 @@ describe('Create Squad', () => {
     members[1] = { ...members[1], row: 0, column: 0 }
 
     const result = await sut.execute({
-      username: 'joao_naif',
+      accountId,
       name: 'Empilhado',
       members,
     })
@@ -94,7 +96,7 @@ describe('Create Squad', () => {
     members[0] = { ...members[0], characterId: 'ninguem' }
 
     const result = await sut.execute({
-      username: 'joao_naif',
+      accountId,
       name: 'Fantasma',
       members,
     })

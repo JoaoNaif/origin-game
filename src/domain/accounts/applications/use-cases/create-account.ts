@@ -7,11 +7,13 @@ import { InvalidCharacterError } from '@/domain/characters/errors/invalid-charac
 import { startingRoster } from '@/domain/characters/services/starting-roster'
 import { Account } from '../../entities/account'
 import { InvalidAccountError } from '../../errors/invalid-account-error'
+import { HashGenerator } from '../cryptography/hash-generator'
 import { AccountsRepository } from '../repositories/accounts-repository'
 
 interface CreateAccountUseCaseRequest {
   username: string
   displayName: string
+  password: string
 }
 
 type CreateAccountUseCaseResponse = Either<
@@ -20,21 +22,30 @@ type CreateAccountUseCaseResponse = Either<
 >
 
 /**
- * Cria a conta do jogador (sem login no MVP: a autenticação entra depois, `data_model.md` 3.5) já com os personagens
- * iniciais (D133: um de cada modelo do catálogo).
+ * Cadastro (`data_model.md` 3.5): username + senha, já com os personagens iniciais (D133: um de cada modelo do
+ * catálogo). A senha só é guardada como hash.
  */
 export class CreateAccountUseCase {
   constructor(
     private accountsRepository: AccountsRepository,
     private charactersRepository: CharactersRepository,
-    private catalogRepository: CatalogRepository
+    private catalogRepository: CatalogRepository,
+    private hashGenerator: HashGenerator
   ) {}
 
   async execute({
     username,
     displayName,
+    password,
   }: CreateAccountUseCaseRequest): Promise<CreateAccountUseCaseResponse> {
-    const created = Account.create({ username, displayName })
+    const passwordError = Account.passwordError(password)
+    if (passwordError) return left(passwordError)
+
+    const created = Account.create({
+      username,
+      displayName,
+      passwordHash: await this.hashGenerator.hash(password),
+    })
     if (created.isLeft()) return left(created.value)
 
     const account = created.value

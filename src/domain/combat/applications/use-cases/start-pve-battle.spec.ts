@@ -20,7 +20,10 @@ describe('Start Pve Battle', () => {
       world.drafts,
       world.seeds,
       world.clock
-    ).execute({ username: 'jogador_pve', npcSquadKey: 'balanced-beginner' })
+    ).execute({
+      accountId: world.account.id.toString(),
+      npcSquadKey: 'balanced-beginner',
+    })
     if (drafted.isLeft()) throw drafted.value
     draftId = drafted.value.draft.id.toString()
 
@@ -37,6 +40,7 @@ describe('Start Pve Battle', () => {
 
   it('should be able to start the battle and stop on the player turn', async () => {
     const result = await sut.execute({
+      accountId: world.account.id.toString(),
       draftId,
       squadId: world.squad.id.toString(),
     })
@@ -60,17 +64,22 @@ describe('Start Pve Battle', () => {
   })
 
   it('should not be able to start with a squad of another account', async () => {
-    await world.accounts.create(makeAccount({ username: 'outra_conta' }))
+    const other = makeAccount({ username: 'outra_conta' })
+    await world.accounts.create(other)
     const otherDraft = await new DraftPveBattleUseCase(
       world.accounts,
       world.catalogRepository,
       world.drafts,
       world.seeds,
       world.clock
-    ).execute({ username: 'outra_conta', npcSquadKey: 'balanced-beginner' })
+    ).execute({
+      accountId: other.id.toString(),
+      npcSquadKey: 'balanced-beginner',
+    })
     if (otherDraft.isLeft()) throw otherDraft.value
 
     const result = await sut.execute({
+      accountId: other.id.toString(),
       draftId: otherDraft.value.draft.id.toString(),
       squadId: world.squad.id.toString(),
     })
@@ -79,8 +88,21 @@ describe('Start Pve Battle', () => {
     expect(result.value).toBeInstanceOf(NotAllowedError)
   })
 
+  it('should not be able to use the draft of another account', async () => {
+    const result = await sut.execute({
+      accountId: 'outra-conta',
+      draftId,
+      squadId: world.squad.id.toString(),
+    })
+
+    expect(result.isLeft()).toBe(true)
+    expect(result.value).toBeInstanceOf(NotAllowedError)
+    expect(world.drafts.items).toHaveLength(1)
+  })
+
   it('should not be able to start from an unknown draft', async () => {
     const result = await sut.execute({
+      accountId: world.account.id.toString(),
       draftId: 'ninguem',
       squadId: world.squad.id.toString(),
     })

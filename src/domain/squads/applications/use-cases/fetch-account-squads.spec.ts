@@ -1,28 +1,23 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { InMemoryAccountsRepository } from 'test/repositories/in-memory-accounts-repository'
 import { seedCatalog } from 'test/repositories/in-memory-catalog-repository'
 import { InMemorySquadsRepository } from 'test/repositories/in-memory-squads-repository'
 import { makeAccount } from 'test/factories/make-account'
 import { makeRoster } from 'test/factories/make-roster'
 import { makeSquad } from 'test/factories/make-squad'
-import { ResourceNotFoundError } from '@/core/errors/err/resource-not-found-error'
 import { FetchAccountSquadsUseCase } from './fetch-account-squads'
 
-let accountsRepository: InMemoryAccountsRepository
 let squadsRepository: InMemorySquadsRepository
 let sut: FetchAccountSquadsUseCase
 
 describe('Fetch Account Squads', () => {
   beforeEach(() => {
-    accountsRepository = new InMemoryAccountsRepository()
     squadsRepository = new InMemorySquadsRepository()
-    sut = new FetchAccountSquadsUseCase(accountsRepository, squadsRepository)
+    sut = new FetchAccountSquadsUseCase(squadsRepository)
   })
 
   it('should be able to fetch the squads of the account', async () => {
     const account = makeAccount({ username: 'joao_naif' })
     const roster = makeRoster(account, seedCatalog())
-    await accountsRepository.create(account)
     await squadsRepository.create(
       makeSquad({
         account,
@@ -35,7 +30,7 @@ describe('Fetch Account Squads', () => {
       })
     )
 
-    const result = await sut.execute({ username: 'joao_naif' })
+    const result = await sut.execute({ accountId: account.id.toString() })
 
     expect(result.isRight()).toBe(true)
     if (result.isRight()) {
@@ -43,10 +38,10 @@ describe('Fetch Account Squads', () => {
     }
   })
 
-  it('should not be able to fetch the squads of an unknown account', async () => {
-    const result = await sut.execute({ username: 'ninguem' })
+  it('should be able to fetch an empty list for an account without squads', async () => {
+    const result = await sut.execute({ accountId: 'sem-squads' })
 
-    expect(result.isLeft()).toBe(true)
-    expect(result.value).toBeInstanceOf(ResourceNotFoundError)
+    expect(result.isRight()).toBe(true)
+    if (result.isRight()) expect(result.value.squads).toEqual([])
   })
 })

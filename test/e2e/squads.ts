@@ -1,6 +1,4 @@
-import { INestApplication } from '@nestjs/common'
-import request from 'supertest'
-import { CharacterBody } from './accounts'
+import { Agent, CharacterBody } from './accounts'
 
 /** Squad "CORE" do seed (equilibrado). */
 export const CORE_SQUAD = [
@@ -32,16 +30,13 @@ export function membersOf(characters: CharacterBody[]) {
     .map((c, i) => ({ characterId: c.id, ...CELLS[i] }))
 }
 
-/** Salva um squad e devolve o corpo da resposta (`{ id, name, members }`). */
+/** Salva um squad da conta logada e devolve o corpo da resposta (`{ id, name, members }`). */
 export async function createSquad(
-  app: INestApplication,
-  username: string,
+  agent: Agent,
   members: { characterId: string; row: number; column: number }[],
   name = 'Muralha'
 ) {
-  const response = await request(app.getHttpServer())
-    .post(`/accounts/${username}/squads`)
-    .send({ name, members })
+  const response = await agent.post('/me/squads').send({ name, members })
 
   return response.body.squad as {
     id: string

@@ -1,36 +1,21 @@
-import { Either, left, right } from '@/core/either'
-import { ResourceNotFoundError } from '@/core/errors/err/resource-not-found-error'
-import { AccountsRepository } from '@/domain/accounts/applications/repositories/accounts-repository'
-import { Account } from '@/domain/accounts/entities/account'
+import { Either, right } from '@/core/either'
 import { Squad } from '../../entities/squad'
 import { SquadsRepository } from '../repositories/squads-repository'
 
 interface FetchAccountSquadsUseCaseRequest {
-  username: string
+  accountId: string
 }
 
-type FetchAccountSquadsUseCaseResponse = Either<
-  ResourceNotFoundError,
-  { squads: Squad[] }
->
+type FetchAccountSquadsUseCaseResponse = Either<never, { squads: Squad[] }>
 
+/** As formações salvas da conta logada. */
 export class FetchAccountSquadsUseCase {
-  constructor(
-    private accountsRepository: AccountsRepository,
-    private squadsRepository: SquadsRepository
-  ) {}
+  constructor(private squadsRepository: SquadsRepository) {}
 
   async execute({
-    username,
+    accountId,
   }: FetchAccountSquadsUseCaseRequest): Promise<FetchAccountSquadsUseCaseResponse> {
-    const account = await this.accountsRepository.findByUsername(
-      Account.normalizeUsername(username)
-    )
-    if (!account) return left(new ResourceNotFoundError('conta'))
-
-    const squads = await this.squadsRepository.findManyByAccountId(
-      account.id.toString()
-    )
+    const squads = await this.squadsRepository.findManyByAccountId(accountId)
 
     return right({ squads })
   }

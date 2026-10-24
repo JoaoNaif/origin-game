@@ -1,6 +1,5 @@
 import { INestApplication } from '@nestjs/common'
 import { Test } from '@nestjs/testing'
-import request from 'supertest'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 import { createAccount, setLevel, UNKNOWN_ID } from 'test/e2e/accounts'
 import { AppModule } from '@/infra/app.module'
@@ -39,12 +38,12 @@ describe('Allocate Free Points (e2e)', () => {
   })
 
   test('[PUT] /characters/:id/free-points', async () => {
-    const [first] = await createAccount(app, 'pontos_01')
+    const { agent, characters } = await createAccount(app, 'pontos_01')
     // nível 20: 20 pontos livres
-    await setLevel(prisma, [first], 20)
+    await setLevel(prisma, [characters[0]], 20)
 
-    const response = await request(app.getHttpServer())
-      .put(`/characters/${first.id}/free-points`)
+    const response = await agent
+      .put(`/characters/${characters[0].id}/free-points`)
       .send(points({ DEFENSE: 10, WILL: 10 }))
 
     expect(response.statusCode).toBe(200)
@@ -53,32 +52,47 @@ describe('Allocate Free Points (e2e)', () => {
       available: 20,
     })
 
-    const saved = await prisma.character.findUnique({ where: { id: first.id } })
+    const saved = await prisma.character.findUnique({
+      where: { id: characters[0].id },
+    })
     expect(saved).toMatchObject({ freeDefense: 10, freeWill: 10 })
   })
 
   test('[PUT] /characters/:id/free-points above the level fails', async () => {
-    const [first] = await createAccount(app, 'pontos_02')
+    const { agent, characters } = await createAccount(app, 'pontos_02')
 
-    const response = await request(app.getHttpServer())
-      .put(`/characters/${first.id}/free-points`)
+    const response = await agent
+      .put(`/characters/${characters[0].id}/free-points`)
       .send(points({ ATTACK: 5 }))
 
     expect(response.statusCode).toBe(400)
   })
 
   test('[PUT] /characters/:id/free-points without all the stats fails', async () => {
-    const [first] = await createAccount(app, 'pontos_03')
+    const { agent, characters } = await createAccount(app, 'pontos_03')
 
-    const response = await request(app.getHttpServer())
-      .put(`/characters/${first.id}/free-points`)
+    const response = await agent
+      .put(`/characters/${characters[0].id}/free-points`)
       .send({ ATTACK: 0 })
 
     expect(response.statusCode).toBe(400)
   })
 
+  test('[PUT] /characters/:id/free-points of another account fails', async () => {
+    const { characters } = await createAccount(app, 'pontos_04')
+    const { agent: other } = await createAccount(app, 'pontos_05')
+
+    const response = await other
+      .put(`/characters/${characters[0].id}/free-points`)
+      .send(points())
+
+    expect(response.statusCode).toBe(403)
+  })
+
   test('[PUT] /characters/:id/free-points of an unknown character fails', async () => {
-    const response = await request(app.getHttpServer())
+    const { agent } = await createAccount(app, 'pontos_06')
+
+    const response = await agent
       .put(`/characters/${UNKNOWN_ID}/free-points`)
       .send(points())
 

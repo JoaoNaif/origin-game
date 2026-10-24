@@ -4,14 +4,14 @@ import {
   Controller,
   HttpCode,
   NotFoundException,
-  Param,
   Post,
 } from '@nestjs/common'
 import { z } from 'zod'
 import { ResourceNotFoundError } from '@/core/errors/err/resource-not-found-error'
 import { DraftPveBattleUseCase } from '@/domain/combat/applications/use-cases/draft-pve-battle'
+import { CurrentUser } from '@/infra/auth/current-user.decorator'
+import { AccountPayload } from '@/infra/auth/jwt-strategy'
 import { ZodValidationPipe } from '../../pipes/zod-validation-pipe'
-import { usernameParamSchema } from '../../schemas/common'
 
 const draftPveBattleBodySchema = z.object({
   npcSquadKey: z.string(),
@@ -19,21 +19,20 @@ const draftPveBattleBodySchema = z.object({
 
 type DraftPveBattleBodySchema = z.infer<typeof draftPveBattleBodySchema>
 
-/** POST /accounts/:username/battle-drafts — escolhe o adversário e mostra o campo sorteado (D28, D112). */
-@Controller('accounts/:username/battle-drafts')
+/** POST /me/battle-drafts — escolhe o adversário e mostra o campo sorteado (D28, D112). */
+@Controller('me/battle-drafts')
 export class DraftPveBattleController {
   constructor(private draftPveBattle: DraftPveBattleUseCase) {}
 
   @Post()
   @HttpCode(201)
   async handle(
-    @Param('username', new ZodValidationPipe(usernameParamSchema))
-    username: string,
     @Body(new ZodValidationPipe(draftPveBattleBodySchema))
-    body: DraftPveBattleBodySchema
+    body: DraftPveBattleBodySchema,
+    @CurrentUser() user: AccountPayload
   ) {
     const result = await this.draftPveBattle.execute({
-      username,
+      accountId: user.sub,
       npcSquadKey: body.npcSquadKey,
     })
 

@@ -1,6 +1,5 @@
 import { INestApplication } from '@nestjs/common'
 import { Test } from '@nestjs/testing'
-import request from 'supertest'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 import { buildKeys, createAccount, UNKNOWN_ID } from 'test/e2e/accounts'
 import { AppModule } from '@/infra/app.module'
@@ -27,54 +26,67 @@ describe('Equip Skills (e2e)', () => {
     await app.close()
   })
 
-  test('[PUT] /characters/:id/build', async () => {
-    const [first] = await createAccount(app, 'build_01')
-    const reversed = buildKeys(first).reverse()
+  const savedBuild = async (characterId: string) =>
+    (
+      await prisma.characterSkill.findMany({
+        where: { characterId, buildSlot: { not: null } },
+        include: { skill: true },
+        orderBy: { buildSlot: 'asc' },
+      })
+    ).map((s) => s.skill.key)
 
-    const response = await request(app.getHttpServer())
-      .put(`/characters/${first.id}/build`)
+  test('[PUT] /characters/:id/build', async () => {
+    const { agent, characters } = await createAccount(app, 'build_01')
+    const reversed = buildKeys(characters[0]).reverse()
+
+    const response = await agent
+      .put(`/characters/${characters[0].id}/build`)
       .send({ skillKeys: reversed })
 
     expect(response.statusCode).toBe(200)
-
-    const saved = await prisma.characterSkill.findMany({
-      where: { characterId: first.id, buildSlot: { not: null } },
-      include: { skill: true },
-      orderBy: { buildSlot: 'asc' },
-    })
-    expect(saved.map((s) => s.skill.key)).toEqual(reversed)
+    expect(await savedBuild(characters[0].id)).toEqual(reversed)
   })
 
   test('[PUT] /characters/:id/build with 3 skills fails', async () => {
-    const [first] = await createAccount(app, 'build_02')
+    const { agent, characters } = await createAccount(app, 'build_02')
 
-    const response = await request(app.getHttpServer())
-      .put(`/characters/${first.id}/build`)
-      .send({ skillKeys: buildKeys(first).slice(0, 3) })
+    const response = await agent
+      .put(`/characters/${characters[0].id}/build`)
+      .send({ skillKeys: buildKeys(characters[0]).slice(0, 3) })
 
     expect(response.statusCode).toBe(400)
   })
 
-  test('[PUT] /characters/:id/build with a skill not learned fails', async () => {
-    const [first] = await createAccount(app, 'build_03')
-    const keys = buildKeys(first)
+  test('[PUT] /characters/:id/build with a skill not learned keeps the build', async () => {
+    const { agent, characters } = await createAccount(app, 'build_03')
+    const before = buildKeys(characters[0])
+    const keys = [...before]
     keys[0] = 'kael-vaz:nao-aprendida'
 
-    const response = await request(app.getHttpServer())
-      .put(`/characters/${first.id}/build`)
+    const response = await agent
+      .put(`/characters/${characters[0].id}/build`)
       .send({ skillKeys: keys })
 
     expect(response.statusCode).toBe(400)
+    expect(await savedBuild(characters[0].id)).toEqual(before)
+  })
 
-    // a build anterior continua
-    const saved = await prisma.characterSkill.count({
-      where: { characterId: first.id, buildSlot: { not: null } },
-    })
-    expect(saved).toBe(4)
+  test('[PUT] /characters/:id/build of another account fails', async () => {
+    const { characters } = await createAccount(app, 'build_04')
+    const { agent: other } = await createAccount(app, 'build_05')
+
+    const response = await other
+      .put(`/characters/${characters[0].id}/build`)
+      .send({ skillKeys: buildKeys(characters[0]).reverse() })
+
+    expect(response.statusCode).toBe(403)
+    expect(await savedBuild(characters[0].id)).toEqual(buildKeys(characters[0]))
   })
 
   test('[PUT] /characters/:id/build of an unknown character fails', async () => {
-    const response = await request(app.getHttpServer())
+    const { agent } = await createAccount(app, 'build_06')
+
+    const response = await agent
       .put(`/characters/${UNKNOWN_ID}/build`)
       .send({ skillKeys: ['a', 'b', 'c', 'd'] })
 
