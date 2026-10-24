@@ -1,7 +1,7 @@
 import { CharactersRepository } from '@/domain/characters/applications/repositories/characters-repository'
 import { BattleEngine } from '../../engine/battle-engine'
 import { Battle } from '../../entities/battle'
-import { BattleSide } from '../../enums/battle-enums'
+import { BattleSide, BattleStatus } from '../../enums/battle-enums'
 import { battleMetrics, battleXp, SAME_NPC_XP } from '../../services/battle-xp'
 import { BattlesRepository } from '../repositories/battles-repository'
 
@@ -28,17 +28,17 @@ export async function grantBattleXp(
   const [characters, accountCharacters, recent] = await Promise.all([
     charactersRepository.findManyByIds(units.map((u) => u.characterId!)),
     charactersRepository.findManyByAccountId(battle.accountId.toString()),
-    battlesRepository.findRecentFinishedByAccountId(
-      battle.accountId.toString(),
-      SAME_NPC_XP.window + 1
-    ),
+    battlesRepository.listByAccountId(battle.accountId.toString(), {
+      status: BattleStatus.FINISHED,
+      limit: SAME_NPC_XP.window + 1,
+    }),
   ])
 
   const sameNpcRepeats = recent
-    .filter((b) => !b.id.equals(battle.id))
+    .filter((b) => b.id !== battle.id.toString())
     .slice(0, SAME_NPC_XP.window)
     .filter(
-      (b) => battle.npcSquadId && b.npcSquadId?.equals(battle.npcSquadId)
+      (b) => battle.npcSquadId && b.npcSquadId === battle.npcSquadId.toString()
     ).length
   const accountAverageLevel =
     accountCharacters.reduce((sum, c) => sum + c.level, 0) /

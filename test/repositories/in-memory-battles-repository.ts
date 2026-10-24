@@ -1,4 +1,8 @@
-import { BattlesRepository } from '@/domain/combat/applications/repositories/battles-repository'
+import {
+  BattleListFilter,
+  BattleSummary,
+  BattlesRepository,
+} from '@/domain/combat/applications/repositories/battles-repository'
 import { Battle } from '@/domain/combat/entities/battle'
 import { BattleSnapshot } from '@/domain/combat/value-objects/battle-snapshot'
 
@@ -37,17 +41,35 @@ export class InMemoryBattlesRepository implements BattlesRepository {
     return battle ? copy(battle) : null
   }
 
-  async findRecentFinishedByAccountId(
+  async listByAccountId(
     accountId: string,
-    limit: number
-  ): Promise<Battle[]> {
+    filter: BattleListFilter
+  ): Promise<BattleSummary[]> {
     return this.items
       .filter(
-        (item) => item.accountId.toString() === accountId && item.isFinished
+        (item) =>
+          item.accountId.toString() === accountId &&
+          (!filter.status || item.status === filter.status)
       )
-      .sort((a, b) => b.finishedAt!.getTime() - a.finishedAt!.getTime())
-      .slice(0, limit)
-      .map(copy)
+      .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())
+      .slice(0, filter.limit)
+      .map((item) => ({
+        id: item.id.toString(),
+        mode: item.mode,
+        status: item.status,
+        squadId: item.squadId?.toString() ?? null,
+        npcSquadId: item.npcSquadId?.toString() ?? null,
+        opponent: {
+          name: item.snapshot.opponent.name,
+          profile: item.aiProfile,
+          difficulty: item.aiDifficulty,
+        },
+        winner: item.winner,
+        endReason: item.endReason,
+        rounds: item.rounds,
+        startedAt: item.startedAt,
+        finishedAt: item.finishedAt,
+      }))
   }
 
   async create(battle: Battle): Promise<void> {

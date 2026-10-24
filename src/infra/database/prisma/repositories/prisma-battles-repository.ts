@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common'
 import { Prisma } from '@prisma/client'
-import { BattlesRepository } from '@/domain/combat/applications/repositories/battles-repository'
+import {
+  BattleListFilter,
+  BattleSummary,
+  BattlesRepository,
+} from '@/domain/combat/applications/repositories/battles-repository'
 import { Battle } from '@/domain/combat/entities/battle'
 import {
   battleInclude,
@@ -21,18 +25,40 @@ export class PrismaBattlesRepository implements BattlesRepository {
     return row ? PrismaBattleMapper.toDomain(row) : null
   }
 
-  async findRecentFinishedByAccountId(
+  /** Sem a foto e sem o log: o nome do adversário vem do squad de NPC (ou "Máquina", se ele foi apagado). */
+  async listByAccountId(
     accountId: string,
-    limit: number
-  ): Promise<Battle[]> {
+    filter: BattleListFilter
+  ): Promise<BattleSummary[]> {
     const rows = await this.prisma.battle.findMany({
-      where: { accountId, status: 'FINISHED' },
-      include: battleInclude,
-      orderBy: { finishedAt: 'desc' },
-      take: limit,
+      where: { accountId, status: filter.status },
+      select: {
+        id: true,
+        mode: true,
+        status: true,
+        squadId: true,
+        npcSquadId: true,
+        aiProfile: true,
+        aiDifficulty: true,
+        winner: true,
+        endReason: true,
+        rounds: true,
+        startedAt: true,
+        finishedAt: true,
+        npcSquad: { select: { name: true } },
+      },
+      orderBy: { startedAt: 'desc' },
+      take: filter.limit,
     })
 
-    return rows.map(PrismaBattleMapper.toDomain)
+    return rows.map(({ npcSquad, aiProfile, aiDifficulty, ...row }) => ({
+      ...row,
+      opponent: {
+        name: npcSquad?.name ?? 'Máquina',
+        profile: aiProfile,
+        difficulty: aiDifficulty,
+      },
+    }))
   }
 
   async create(battle: Battle): Promise<void> {

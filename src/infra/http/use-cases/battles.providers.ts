@@ -7,6 +7,7 @@ import { SeedGenerator } from '@/domain/combat/applications/gateways/seed-genera
 import { BattleDraftsRepository } from '@/domain/combat/applications/repositories/battle-drafts-repository'
 import { BattlesRepository } from '@/domain/combat/applications/repositories/battles-repository'
 import { DraftPveBattleUseCase } from '@/domain/combat/applications/use-cases/draft-pve-battle'
+import { FetchAccountBattlesUseCase } from '@/domain/combat/applications/use-cases/fetch-account-battles'
 import { GetBattleUseCase } from '@/domain/combat/applications/use-cases/get-battle'
 import { GetTurnOptionsUseCase } from '@/domain/combat/applications/use-cases/get-turn-options'
 import { StartPveBattleUseCase } from '@/domain/combat/applications/use-cases/start-pve-battle'
@@ -74,6 +75,12 @@ export const battlesUseCases: Provider[] = [
     provide: GetBattleUseCase,
     inject: [BattlesRepository],
     useFactory: (battles: BattlesRepository) => new GetBattleUseCase(battles),
+  },
+  {
+    provide: FetchAccountBattlesUseCase,
+    inject: [BattlesRepository],
+    useFactory: (battles: BattlesRepository) =>
+      new FetchAccountBattlesUseCase(battles),
   },
   {
     provide: GetTurnOptionsUseCase,
