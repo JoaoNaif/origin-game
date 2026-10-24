@@ -66,6 +66,9 @@ peso = 1 + 0,30 × max(0, 1 − (nível atual − nível mínimo da skill) / 10)
 - Efeito pequeno de propósito: as novas aparecem um pouco mais (cerca de 3 a 5 pontos percentuais de chance a mais
   no conjunto), mas as antigas continuam saindo com frequência [PLACEHOLDER: 0,30 e janela de 10 níveis].
 
+**Na prática (D135):** o bloco oferece o que tiver (1 ou 2 com pool curto; nível sem nenhuma elegível não gera
+bloco), fica numa fila sem prazo e não dá para recusar.
+
 **Implicação para o admin:** cada variante precisa de um **pool grande** (algumas dezenas de skills), com skills de
 vários níveis mínimos, para que as ofertas sejam variadas.
 

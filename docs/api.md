@@ -26,7 +26,7 @@ o servidor é a autoridade do combate (D9): o cliente só envia a jogada e exibe
 | 401 | não está logado, token vencido ou inválido, ou username/senha errados |
 | 403 | recurso de outra conta, ou origem não permitida (CSRF) |
 | 404 | recurso não existe |
-| 409 | já existe (username), ou a batalha não aceita a jogada agora (já acabou, não é a vez do jogador) |
+| 409 | já existe (username), ou a batalha não aceita a jogada agora (já acabou, não é a vez do jogador, ou outra jogada entrou antes: clique duplo ou duas abas) |
 | 429 | limite de requisições |
 
 ## Fluxo de uma partida contra a máquina
@@ -39,7 +39,8 @@ o servidor é a autoridade do combate (D9): o cliente só envia a jogada e exibe
 6. Na vez do jogador: `GET /battles/:id/options` (o que dá para fazer, com a prévia) e `POST /battles/:id/actions`
    com uma das opções. Repete até `status: FINISHED`; no fim vem o XP (`rewards`, D134).
 
-Conta de teste do seed: `tester_01` / `origin123` (personagens no nível 18).
+Conta de teste do seed: `tester_01` / `origin123` (personagens no nível 18, com os blocos de skill do nível 5 do
+Derik, da Gaia e do Tank).
 
 ## Saúde
 
@@ -83,7 +84,14 @@ buildSlot }] }`. `stats` são os de fora da batalha (nível + pontos livres + tr
 | `PUT /characters/:id/build` `{ skillKeys: [4] }` | 200 `{ character }`; 400 (não aprendida, repetida, quantidade); 403 de outra conta |
 | `PUT /characters/:id/free-points` `{ HP, ATTACK, DEFENSE, SPEED, PRECISION, EVASION, WILL }` | 200 `{ character }`; 400 (acima do total do nível ou do teto da classe). 403 de outra conta. Troca a distribuição inteira (D48) |
 
-Aprender skill nova ainda não tem rota: vem com as ofertas a cada 5 níveis (D77).
+**Blocos de skill (D77, D135):** a cada 5 níveis o personagem ganha um bloco de até 3 skills e escolhe 1. O bloco
+nasce no fim da batalha (`rewards[].newSkillOffers` diz quantos abriram), fica numa fila sem prazo e não dá para
+recusar. A skill escolhida fica guardada; para usar, entra na build.
+
+| Rota | Respostas |
+|---|---|
+| `GET /me/skill-offers` | 200 `{ offers: [{ id, characterId, level, skills }] }`: os blocos pendentes, do mais antigo para o mais novo; `skills` no mesmo formato de `GET /templates` |
+| `POST /skill-offers/:id/choose` `{ skillKey }` | 200 `{ character }` com a skill aprendida (`source: OFFER`, `buildSlot: null`); 400 skill fora do bloco ou bloco já escolhido; 403 de outra conta; 404 |
 
 ## Squads (`squads`)
 
@@ -101,10 +109,11 @@ O squad: `{ id, name, members: [{ characterId, row, column }] }`. `row` 0 a 2 (l
 | Rota | Respostas |
 |---|---|
 | `POST /me/battle-drafts` `{ npcSquadKey }` | 201 `{ draft: { id, opponent: { key, name, profile, difficulty }, field } }`; 404 NPC. `field` traz `requiredTraitKeys` (quem tem qualquer um ganha o bônus, D98) e os dois bônus. Vale por 30 minutos |
-| `POST /battles` `{ draftId, squadId }` | 201 `{ battle, events, rewards }`; 403 pré-batalha ou squad de outra conta; 404 pré-batalha (já usada ou expirada) ou squad; 400 squad incompleto ou personagem sem build |
+| `POST /battles` `{ draftId, squadId }` | 201 `{ battle, events, rewards }`; 403 pré-batalha ou squad de outra conta; 404 pré-batalha (já usada, inclusive por um clique duplo, ou expirada) ou squad; 400 squad incompleto ou personagem sem build |
+| `GET /me/battles?status=` | 200 `{ battles }`: as batalhas da conta, da mais recente para a mais antiga (até 50), sem a foto e sem o log: `{ id, mode, status, squadId, npcSquadId, opponent: { name, profile, difficulty }, winner, endReason, rounds, startedAt, finishedAt }`. `status=IN_PROGRESS` acha a batalha para retomar (aba fechada, outro aparelho); `FINISHED` é o histórico |
 | `GET /battles/:id` | 200 `{ battle, events }` com **todos** os eventos (retomar a tela ou rever); 403 de outra conta |
 | `GET /battles/:id/options` | 200 `{ turn, options }`: as jogadas legais da vez do jogador (abaixo); 403 de outra conta; 409 se não é a vez do jogador ou a batalha acabou |
-| `POST /battles/:id/actions` (jogada) | 200 `{ battle, events, rewards }` com os eventos **desta** jogada e das vezes da máquina que vieram depois; 400 jogada ilegal (nada muda); 403 de outra conta; 409 batalha encerrada |
+| `POST /battles/:id/actions` (jogada) | 200 `{ battle, events, rewards }` com os eventos **desta** jogada e das vezes da máquina que vieram depois; 400 jogada ilegal (nada muda); 403 de outra conta; 409 batalha encerrada ou outra jogada entrou antes (nada desta fica gravado) |
 
 **Jogada** (`data_model.md` 3.11):
 
@@ -143,4 +152,8 @@ unidades vem tudo, com `ready` em cada skill (fora de recarga).
 **`events`:** a lista de `BattleEvent` (`src/domain/combat/engine/battle-events.ts`), em ordem: `TURN`, `SKILL`,
 `DAMAGE`, `HEAL`, `STATUS`, `MOVE`, `DEFEATED`, `BATTLE_END` e os demais. É o que a tela anima.
 
-**`rewards`** (só quando a batalha acaba): `[{ characterId, xp, levelsGained, level }]` dos 4 que entraram (D134).
+**`rewards`** (só quando a batalha acaba): `[{ characterId, xp, levelsGained, level, newSkillOffers }]` dos 4 que
+entraram (D134); `newSkillOffers` = blocos de skill que a subida abriu (D135).
+
+**Jogada enviada duas vezes** (clique duplo, duas abas): só a primeira entra. A outra recebe 409 e nada dela fica
+gravado, nem o XP. O front deve recarregar com `GET /battles/:id`.

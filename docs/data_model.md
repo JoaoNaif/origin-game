@@ -673,6 +673,12 @@ kael.learnSkill(steelStrike, kaelTemplate)
 **Domínio:** métodos em `src/domain/characters/entities/character.ts`; validação do kit em
 `src/domain/characters/services/basic-kit.ts`. Fábrica de teste do kit em `test/factories/make-basic-kit.ts`.
 
+**Blocos de skill (`SkillOffer`, tabela `skill_offers`, D77, D135):** um por personagem e nível (5, 10, ..., 100;
+`@@unique` personagem + nível), com as opções (`skillIds`, 1 a 3), a escolhida (`chosenSkillId`, nulo = pendente) e
+as datas. Nasce no fim da batalha (`skillOffersOnLevelUp`, sorte derivada da seed da batalha); a escolha chama
+`learnSkill` do personagem. Apagar o personagem apaga os blocos. Domínio: `src/domain/characters/entities/skill-offer.ts`
+e o sorteio em `services/skill-offer-draw.ts`.
+
 **Em aberto (pergunta ao usuário):** o D97 diz **quantas** skills do kit vêm de cada variante, mas não **quais papéis**
 (ex.: com 2 variantes, a principal dá `BASIC` e `ROLE`?). Hoje o domínio só valida a quantidade e exige um de cada papel.
 
@@ -1089,12 +1095,13 @@ A API está em [`api.md`](./api.md). O que a infra acrescenta ao modelo:
 - **Estado da batalha não é guardado** (decisão geral nº 2): cada requisição refaz o motor pelo replay (foto + seed +
   ações). A IA monta a decisão com uma sorte própria por jogada (`aiDecisionRng`: seed, lado e posição no log), então
   a mesma batalha dá sempre as mesmas jogadas da máquina, mesmo depois de reiniciar o servidor.
+- **Jogada enviada duas vezes:** o `save` da batalha recebe quantas ações havia na leitura e grava só as novas; a
+  chave (batalha + sequência) faz a segunda requisição falhar, e ela responde 409 sem gravar nem dar XP. A pré-batalha
+  só vira uma batalha: o `delete` diz se ela ainda estava lá.
 - **Versão do motor:** `ENGINE_VERSION` em `src/domain/combat/applications/services/pve-session.ts`. Mudou uma regra
   que altera o resultado das mesmas ações? Sobe a versão.
 
 ## 6. Próximos passos
 
 1. **Calibração** da IA com as squads do seed (`engine.md` 3.14).
-2. **Ofertas de skill a cada 5 níveis (D77):** com o XP, o personagem sobe de nível, mas ainda não ganha o bloco de 3
-   skills para escolher; até lá não há rota de aprender skill.
-3. **Tempo do turno (D38):** o Defender automático por tempo esgotado precisa do tempo limite em segundos.
+2. **Tempo do turno (D38):** o Defender automático por tempo esgotado precisa do tempo limite em segundos.
