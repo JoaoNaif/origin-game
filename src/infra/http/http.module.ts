@@ -18,6 +18,7 @@ import { FetchAccountCharactersController } from './controllers/characters/fetch
 import { FetchAccountSquadsController } from './controllers/squads/fetch-account-squads.controller'
 import { FetchPendingSkillOffersController } from './controllers/characters/fetch-pending-skill-offers.controller'
 import { FetchNpcSquadsController } from './controllers/catalog/fetch-npc-squads.controller'
+import { FetchTraitsController } from './controllers/catalog/fetch-traits.controller'
 import { FetchTemplatesController } from './controllers/catalog/fetch-templates.controller'
 import { FetchAccountBattlesController } from './controllers/battles/fetch-account-battles.controller'
 import { GetBattleController } from './controllers/battles/get-battle.controller'
@@ -40,6 +41,7 @@ import { squadsUseCases } from './use-cases/squads.providers'
     // catálogo (leitura pública, direto do repositório)
     FetchTemplatesController,
     FetchNpcSquadsController,
+    FetchTraitsController,
     // accounts
     CreateAccountController,
     AuthenticateController,
