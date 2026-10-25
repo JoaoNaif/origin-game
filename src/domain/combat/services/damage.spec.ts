@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 import {
   applyDamage,
   baseDamage,
+  damageScale,
   effectivePower,
   finalDamage,
   healAmount,
+  healShare,
 } from './damage'
 
 describe('Damage', () => {
@@ -32,6 +34,34 @@ describe('Damage', () => {
     it('should never reach zero against a huge defense', () => {
       expect(baseDamage(0.8, 10, 10_000)).toBeGreaterThan(0)
       expect(finalDamage(baseDamage(0.8, 10, 10_000))).toBe(1)
+    })
+  })
+
+  describe('Damage Scale', () => {
+    it('should be able to hit harder up to level 20', () => {
+      expect(damageScale(0)).toBe(1.2)
+      expect(damageScale(18)).toBe(1.2)
+      expect(damageScale(20)).toBe(1.2)
+    })
+
+    it('should be able to fall in a straight line to the full scale at level 40', () => {
+      expect(damageScale(30)).toBeCloseTo(0.95)
+      expect(damageScale(40)).toBe(0.7)
+      expect(damageScale(100)).toBe(0.7)
+    })
+
+    it('should be able to scale the base damage', () => {
+      expect(baseDamage(1, 100, 100, 1.2)).toBeCloseTo(60)
+      expect(baseDamage(1, 100, 100)).toBeCloseTo(35)
+    })
+  })
+
+  describe('Heal Share', () => {
+    it('should be able to heal 8% per power up to level 20 and 10% from level 40', () => {
+      expect(healShare(18)).toBe(0.08)
+      expect(healShare(30)).toBeCloseTo(0.09)
+      expect(healShare(40)).toBe(0.1)
+      expect(healAmount(1, 700, healShare(18))).toBe(56)
     })
   })
 

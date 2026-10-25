@@ -589,7 +589,8 @@ ações: é o efeito pretendido para o nível avançado.
 
 ### 12.3 Cura e escudo
 
-Poder 1,0 = **10% do HP máximo do alvo**, escalado pelo Poder da skill (não por stat do usuário).
+Poder 1,0 = **10% do HP máximo do alvo**, escalado pelo Poder da skill (não por stat do usuário). Nos níveis baixos
+rende menos, junto com o dano maior (D137): **8%** até o nível 20, subindo em linha reta até os 10% no nível 40.
 
 ### 12.4 Status (duração em turnos do afetado)
 

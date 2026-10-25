@@ -307,6 +307,11 @@ function report() {
       `squad que só segura venceu ${t.turtleWins} de ${t.battles} (${pct(t.turtleWins, t.battles)})`
     )
   }
+  if (MODE === 'versus') {
+    lines.push(
+      `squad tática venceu ${t.tacticWins} de ${t.battles} (${pct(t.tacticWins, t.battles)})`
+    )
+  }
 
   lines.push(
     '',

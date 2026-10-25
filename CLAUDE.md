@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-> O **design de jogo está fechado até o D136** (regras e valores iniciais do MVP). **Feito:** motor de combate, IA e
+> O **design de jogo está fechado até o D137** (regras e valores iniciais do MVP). **Feito:** motor de combate, IA e
 > simulação (D122 a D132), schema do Prisma, seed e o **servidor do MVP** (contas, catálogo, personagens, squads e
 > batalha contra a máquina, com XP no fim e as ações possíveis da vez), com login (username + senha). Contrato da API em [`docs/api.md`](./docs/api.md).
 > Contexto permanente do projeto para o Claude. Leia antes de mexer em qualquer coisa.
@@ -16,9 +16,9 @@ e **escrever a resposta no doc**. Não inventar regra de combate.
 
 ## Estado atual
 
-**As regras e os valores iniciais estão fechados** (registro das decisões D1 a D136 em
+**As regras e os valores iniciais estão fechados** (registro das decisões D1 a D137 em
 [`docs/game_design.md`](./docs/game_design.md)). Combate: fila em barra de ação (0 a 1000, Velocidade soma por tick),
-grade 3x3, 4 personagens com 4 skills cada, 7 stats, fórmula de dano `Poder × Ataque² / (Ataque + Defesa) × 0,7` (D131), Desgaste
+grade 3x3, 4 personagens com 4 skills cada, 7 stats, fórmula de dano `Poder × Ataque² / (Ataque + Defesa) × escala` (×1,2 até o nível 20, descendo até ×0,7 no 40; D131, D137), Desgaste
 como risco x retorno (piso de 80%), vitória por eliminação ou por dano causado na rodada 30 (D122). Os valores são **placeholders
 aprovados**, a calibrar por simulação (IA contra IA).
 

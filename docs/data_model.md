@@ -406,7 +406,7 @@ ou `SELF` (ex.: ataca e ganha um buff).
 | `type` | Campos | Observação |
 |---|---|---|
 | `DAMAGE` | `power` | 0 a 2,5 |
-| `HEAL` / `SHIELD` | `power` | 1,0 = 10% do HP máximo do alvo |
+| `HEAL` / `SHIELD` | `power` | 1,0 = 10% do HP máximo do alvo (8% até o nível 20, D137) |
 | `STAT_MODIFIER` | `stat`, `percent`, `duration` | buff (+) ou debuff (−) |
 | `APPLY_STATUS` | `status`, `duration`, `baseChance` | chance contra a Vontade (`skills_brief.md` 12.4) |
 | `REPOSITION` | `kind`: `PUSH`, `PULL`, `SWAP`, `MOVE_ALLY`, `DASH` | |

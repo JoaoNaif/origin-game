@@ -253,11 +253,14 @@ O teto de 90% garante que nenhum status é certo.
 **Dano** (`src/domain/combat/services/damage.ts`, D68):
 
 ```
-dano base = Poder × Ataque² / (Ataque + Defesa) × 0,7      (escala do D131)
+dano base = Poder × Ataque² / (Ataque + Defesa) × escala      (escala do D131 e do D137)
 ```
 
-- **Razão, não subtração:** o dano nunca zera e o equilíbrio é o mesmo em qualquer nível. Sem variação aleatória e sem
-  crítico.
+- **Escala pelo nível da batalha (D137):** **×1,2** até o nível 20, em linha reta até **×0,7** no nível 40, e ×0,7 dali
+  em diante (função `damageScale`). O nível da batalha é a média das 8 unidades, o mesmo para os dois lados; o motor
+  guarda a escala ao montar a batalha (campo `damageScale`, também lido pela IA). No começo só há o kit de Poder ~0,8 e a batalha
+  arrastava; do 40 em diante já há skills de Poder 1,4 a 1,6, e mais dano esmagaria a squad tática.
+- **Razão, não subtração:** o dano nunca zera. Sem variação aleatória e sem crítico.
 - **Ataque e Defesa já entram ajustados** (buffs, debuffs e Desgaste, peças 5 e 7).
 - **Poder efetivo:** skill aprimorada ganha **+15%** (D100). No ranqueado o ganho é limitado pela faixa (100% na
   Platina, 50% no Ouro, 0 no Bronze e na Prata, D99); no PvE vale inteiro.
@@ -268,8 +271,9 @@ dano base = Poder × Ataque² / (Ataque + Defesa) × 0,7      (escala do D131)
 **Escudo e HP (`applyDamage`):** o escudo absorve primeiro (é a única forma de "passar" do HP); o resto sai do HP, que
 não fica negativo. A passiva "ignora escudos" (ex.: Ecko, D83) pula o escudo.
 
-**Cura e escudo concedidos (`healAmount`, D92):** Poder 1,0 = **10% do HP máximo do alvo** (cura 2,0 em quem tem 420 de
-HP = 84). A cura não passa do HP máximo (8.3 do `skills_brief.md`), regra aplicada quando a cura entrar na resolução.
+**Cura e escudo concedidos (`healAmount`, D92, D137):** Poder 1,0 = **10% do HP máximo do alvo** do nível 40 em diante
+(cura 2,0 em quem tem 420 de HP = 84); **8%** até o nível 20, em linha reta entre os dois (`healShare`, pelo mesmo nível
+da batalha do dano). A cura não passa do HP máximo (8.3 do `skills_brief.md`), regra aplicada quando a cura entrar na resolução.
 
 **Conferido com a tabela de `classes_brief.md` 4** (Poder 1,0, nível 100, já com a escala de dano ×0,7 do D131; os perfis
 do Executor, Controlador e Tático mudaram no D122, a tabela usa os de antes):
@@ -710,8 +714,8 @@ dos Guardiões de cada lado é sorteada pela seed (D102).
 4. Para cada atingido: **teste de acerto** (3.4; skill de aliado ou si mesmo não testa). Errou: segue para o próximo.
 5. Efeitos em quem foi atingido:
    - **dano:** Poder (com aprimoramento) × potência → `Poder × Ataque² / (Ataque + Defesa)` × queda × Exaustão × Marcado ×
-     traço de dano pelo alcance → escudo → HP (ordem do D68);
-   - **cura e escudo:** 10% do HP máximo por Poder × potência × Exaustão; a cura não passa do máximo e alivia 20% do Desgaste;
+     traço de dano pelo alcance → escudo → HP (ordem do D68), com a escala do nível da batalha (D137);
+   - **cura e escudo:** 8 a 10% do HP máximo por Poder (pelo nível da batalha, D137) × potência × Exaustão; a cura não passa do máximo e alivia 20% do Desgaste;
    - **buff e debuff:** magnitude × potência (3.7);
    - **status:** teste contra a Vontade só se for hostil; Travado vai para a skill mais forte pronta (D110);
    - **reposicionamento:** empurrar, puxar e trocar inimigos com resistência da Vontade (D111); avançar e mover aliado

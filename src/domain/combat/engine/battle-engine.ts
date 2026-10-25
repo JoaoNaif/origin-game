@@ -45,9 +45,11 @@ import { SkillCooldowns } from '../services/cooldowns'
 import {
   applyDamage,
   baseDamage,
+  damageScale,
   effectivePower,
   finalDamage,
   healAmount,
+  healShare,
 } from '../services/damage'
 import { defend } from '../services/defend'
 import { DesgasteState, RELIEF } from '../services/desgaste'
@@ -255,6 +257,13 @@ export class BattleEngine {
     untilRound: number | null
   }
 
+  /**
+   * Escala do dano e rendimento da cura e do escudo no nível da batalha (a média das 8 unidades, D137): a mesma para
+   * os dois lados.
+   */
+  readonly damageScale: number
+  private readonly healShare: number
+
   /** Foto, sorte do início e ações já jogadas: bastam para reconstruir a batalha (`fork`). */
   private readonly initialRng: Rng
   private history: BattleActionPayload[] = []
@@ -265,6 +274,11 @@ export class BattleEngine {
     private readonly rng: Rng,
     source?: BattleEngine
   ) {
+    const all = [...snapshot.player.units, ...snapshot.opponent.units]
+    const level = all.reduce((sum, u) => sum + u.level, 0) / all.length
+    this.damageScale = damageScale(level)
+    this.healShare = healShare(level)
+
     if (source) {
       for (const [ref, u] of source.units) {
         this.units.set(ref, {
@@ -857,7 +871,8 @@ export class BattleEngine {
       baseDamage(
         PROTECT_COUNTER_POWER,
         this.stat(protector, Stat.ATTACK),
-        this.stat(attacker, Stat.DEFENSE)
+        this.stat(attacker, Stat.DEFENSE),
+        this.damageScale
       ) *
         damageMultiplier(round) *
         attacker.conditions.damageTakenMultiplier *
@@ -1471,7 +1486,8 @@ export class BattleEngine {
       baseDamage(
         power,
         this.stat(actor, Stat.ATTACK),
-        this.stat(target, Stat.DEFENSE)
+        this.stat(target, Stat.DEFENSE),
+        this.damageScale
       ) *
       falloff *
       damageMultiplier(round) *
@@ -1532,7 +1548,9 @@ export class BattleEngine {
         : 1
 
     return Math.round(
-      healAmount(power, target.desgaste.maxHp) * healMultiplier(round) * wound
+      healAmount(power, target.desgaste.maxHp, this.healShare) *
+        healMultiplier(round) *
+        wound
     )
   }
 

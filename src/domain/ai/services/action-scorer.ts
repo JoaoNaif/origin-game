@@ -245,7 +245,12 @@ export function incomingDanger(
   return window.reduce((total, turn) => {
     const enemy = engine.unit(turn.ref)
     if (enemy.side === allySide || !enemy.alive) return total
-    const hit = baseDamage(1, enemy.stats[Stat.ATTACK], defense)
+    const hit = baseDamage(
+      1,
+      enemy.stats[Stat.ATTACK],
+      defense,
+      engine.damageScale
+    )
     return total + (hit / ally.maxHp) * 100
   }, 0)
 }
