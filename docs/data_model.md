@@ -1082,8 +1082,10 @@ conquistado.
 
 **Conta de teste:** o seed também cria a `tester_01` (D133) pelo mesmo caso de uso do servidor, com os 12 personagens
 no nível 18 e a distribuição padrão dos pontos livres. Se ela já existe, fica como está (o progresso não é apagado).
-A gravação do conteúdo está em `prisma/seed/seed-database.ts` (usada também pelos testes e2e, um schema por arquivo) e
-a conta em `prisma/seed/seed-test-account.ts`.
+A conta `admin` também leva os personagens ao 18; se já existe, só sobe quem ainda está abaixo (os pontos livres
+padrão só entram em quem não distribuiu nenhum). A gravação do conteúdo está em `prisma/seed/seed-database.ts` (usada
+também pelos testes e2e, um schema por arquivo), as contas em `prisma/seed/seed-test-account.ts` e
+`seed-admin-account.ts`, e a subida ao 18 em `seed-character-level.ts`.
 
 ## 5. Servidor (infra)
 

@@ -40,8 +40,8 @@ o servidor é a autoridade do combate (D9): o cliente só envia a jogada e exibe
 6. Na vez do jogador: `GET /battles/:id/options` (o que dá para fazer, com a prévia) e `POST /battles/:id/actions`
    com uma das opções. Repete até `status: FINISHED`; no fim vem o XP (`rewards`, D134).
 
-Contas de teste do seed: `admin` / `origin123` (papel de admin) e `tester_01` / `origin123` (personagens no nível 18, com os blocos de skill do nível 5 do
-Derik, da Gaia e do Tank).
+Contas de teste do seed, as duas com os personagens no nível 18: `admin` / `origin123` (papel de admin) e `tester_01` /
+`origin123` (com os blocos de skill do nível 5 do Derik, da Gaia e do Tank).
 
 ## Saúde
 
