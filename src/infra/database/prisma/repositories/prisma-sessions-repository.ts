@@ -37,4 +37,10 @@ export class PrismaSessionsRepository implements SessionsRepository {
       data: { revokedAt: now },
     })
   }
+
+  async deleteAllByAccountId(accountId: UniqueEntityId): Promise<void> {
+    await this.prisma.session.deleteMany({
+      where: { accountId: accountId.toString() },
+    })
+  }
 }

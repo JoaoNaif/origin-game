@@ -62,6 +62,36 @@ export class Account extends Entity<AccountProps> {
     return null
   }
 
+  /** Regra do nome exibido (já sem espaços nas pontas). `null` = válido. */
+  static displayNameError(displayName: string): InvalidAccountError | null {
+    if (
+      displayName.length < DISPLAY_NAME_MIN ||
+      displayName.length > DISPLAY_NAME_MAX
+    ) {
+      return new InvalidAccountError(
+        `nome exibido com ${DISPLAY_NAME_MIN} a ${DISPLAY_NAME_MAX} caracteres`
+      )
+    }
+
+    return null
+  }
+
+  /** Troca o nome exibido, com a mesma regra do cadastro. O username não muda. */
+  rename(displayName: string): Either<InvalidAccountError, null> {
+    const trimmed = displayName.trim()
+    const error = Account.displayNameError(trimmed)
+    if (error) return left(error)
+
+    this.props.displayName = trimmed
+
+    return right(null)
+  }
+
+  /** O hash da senha nova (a regra da senha em texto é conferida antes, em `passwordError`). */
+  changePasswordHash(passwordHash: string) {
+    this.props.passwordHash = passwordHash
+  }
+
   static create(
     props: Omit<AccountProps, 'role'> & { role?: AccountRole },
     id?: UniqueEntityId
@@ -77,16 +107,8 @@ export class Account extends Entity<AccountProps> {
       )
     }
 
-    if (
-      displayName.length < DISPLAY_NAME_MIN ||
-      displayName.length > DISPLAY_NAME_MAX
-    ) {
-      return left(
-        new InvalidAccountError(
-          `nome exibido com ${DISPLAY_NAME_MIN} a ${DISPLAY_NAME_MAX} caracteres`
-        )
-      )
-    }
+    const displayNameError = Account.displayNameError(displayName)
+    if (displayNameError) return left(displayNameError)
 
     if (!props.passwordHash) {
       return left(new InvalidAccountError('senha obrigatória'))

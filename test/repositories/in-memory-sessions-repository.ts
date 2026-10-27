@@ -27,4 +27,8 @@ export class InMemorySessionsRepository implements SessionsRepository {
       if (session.accountId.equals(accountId)) session.revoke(now)
     }
   }
+
+  async deleteAllByAccountId(accountId: UniqueEntityId): Promise<void> {
+    this.items = this.items.filter((item) => !item.accountId.equals(accountId))
+  }
 }

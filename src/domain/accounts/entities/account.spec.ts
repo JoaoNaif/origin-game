@@ -5,6 +5,17 @@ import { Account } from './account'
 
 const passwordHash = 'hash-da-senha'
 
+function makeValidAccount() {
+  const result = Account.create({
+    username: 'joao_naif',
+    displayName: 'João',
+    passwordHash,
+  })
+  if (result.isLeft()) throw result.value
+
+  return result.value
+}
+
 describe('Create Account', () => {
   it('should be able to create an account', () => {
     const sut = Account.create({
@@ -92,6 +103,16 @@ describe('Create Account', () => {
 
     expect(sut.isRight() && sut.value.role).toBe(AccountRole.PLAYER)
     expect(sut.isRight() && sut.value.isAdmin).toBe(false)
+  })
+
+  it('should be able to rename with the display name rule', () => {
+    const sut = makeValidAccount()
+
+    expect(sut.rename('  Novo Nome ').isRight()).toBe(true)
+    expect(sut.displayName).toBe('Novo Nome')
+
+    expect(sut.rename('J').isLeft()).toBe(true)
+    expect(sut.displayName).toBe('Novo Nome')
   })
 
   it('should be able to keep the admin role of an account', () => {

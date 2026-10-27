@@ -496,6 +496,11 @@ máquina **não é uma conta**: o adversário do PvE vem do `NpcSquad` (modelo n
 
 **Regras (domínio, `InvalidAccountError`):** formato do `username`, tamanho do `displayName` e da senha.
 
+**Editar a conta (`PATCH /me`):** o próprio jogador muda o `displayName` e a senha (esta só com a senha atual); o
+`username` e o `role` não mudam pela API. Trocar a senha **apaga** todas as sessões da conta e abre uma nova para quem
+trocou. Apagar, e não revogar: um refresh token revogado que reaparece é tratado como roubo e derrubaria também a
+sessão nova.
+
 **Fica para depois** (cada um com a sua migração):
 
 | Quando | Campos |

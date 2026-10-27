@@ -1,10 +1,10 @@
 import { Either, left, right } from '@/core/either'
 import { Clock } from '@/core/gateways/clock'
-import { Session } from '../../entities/session'
 import { Encrypter } from '../cryptography/encrypter'
 import { RefreshTokenGenerator } from '../cryptography/refresh-token-generator'
 import { InvalidSessionError } from '../errors/invalid-session-error'
 import { SessionsRepository } from '../repositories/sessions-repository'
+import { openSession } from '../services/open-session'
 
 interface RefreshSessionUseCaseRequest {
   refreshToken: string
@@ -47,21 +47,17 @@ export class RefreshSessionUseCase {
     session.revoke(now)
     await this.sessionsRepository.save(session)
 
-    const accessToken = await this.encrypter.encrypt({
-      sub: session.accountId.toString(),
-    })
-    const newRefreshToken = this.refreshTokenGenerator.generate()
-
-    await this.sessionsRepository.create(
-      Session.create({
-        accountId: session.accountId,
-        tokenHash: this.refreshTokenGenerator.hash(newRefreshToken),
-        expiresAt: Session.expiresAtFrom(now),
-        userAgent: userAgent ?? session.userAgent,
-        createdAt: now,
-      })
+    const tokens = await openSession(
+      {
+        sessionsRepository: this.sessionsRepository,
+        encrypter: this.encrypter,
+        refreshTokenGenerator: this.refreshTokenGenerator,
+      },
+      session.accountId,
+      now,
+      userAgent ?? session.userAgent
     )
 
-    return right({ accessToken, refreshToken: newRefreshToken })
+    return right(tokens)
   }
 }

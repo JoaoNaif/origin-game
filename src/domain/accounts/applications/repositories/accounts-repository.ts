@@ -14,4 +14,6 @@ export abstract class AccountsRepository {
   /** Todas as contas, pelo username (tela do admin). */
   abstract listSummaries(): Promise<AccountSummary[]>
   abstract create(account: Account): Promise<void>
+  /** Grava o nome exibido e o hash da senha (o papel só muda pelo banco). */
+  abstract save(account: Account): Promise<void>
 }

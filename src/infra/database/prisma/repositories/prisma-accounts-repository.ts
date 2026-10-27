@@ -43,4 +43,14 @@ export class PrismaAccountsRepository implements AccountsRepository {
       data: PrismaAccountMapper.toPrisma(account),
     })
   }
+
+  async save(account: Account): Promise<void> {
+    await this.prisma.account.update({
+      where: { id: account.id.toString() },
+      data: {
+        displayName: account.displayName,
+        passwordHash: account.passwordHash,
+      },
+    })
+  }
 }

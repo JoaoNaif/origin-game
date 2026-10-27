@@ -19,7 +19,8 @@ o servidor é a autoridade do combate (D9): o cliente só envia a jogada e exibe
   precisa ficar no mesmo *site* da API (ex.: `app.dominio` e `api.dominio`).
 - **Admin:** as rotas `/admin/...` exigem o papel `ADMIN` (403 sem ele; seção Admin no fim). Ninguém vira admin
   pela API.
-- **Limite de requisições por IP:** 300/min no geral; cadastro e login 5/min; refresh 30/min (429 ao passar).
+- **Limite de requisições por IP:** 300/min no geral; cadastro, login e `PATCH /me` 5/min; refresh 30/min (429 ao
+  passar).
 - **A seed nunca sai do servidor** (D33).
 
 | Status | Quando |
@@ -72,6 +73,7 @@ A conta: `{ id, username, displayName }` (a senha nunca sai, nem como hash).
 | `POST /sessions/refresh` (pública, lê o cookie) | 204 com cookies novos (o refresh antigo deixa de valer); 401 sem cookie ou sessão inválida. Refresh já usado aparecendo de novo derruba **todas** as sessões da conta (token roubado) |
 | `DELETE /sessions` (pública) | 204: revoga a sessão e apaga os cookies (funciona mesmo com o token de acesso vencido) |
 | `GET /me` | 200 `{ account }` da conta logada, com o `role` (`PLAYER` ou `ADMIN`): é por ele que o front mostra as telas de admin. Os outros jogadores nunca veem o papel |
+| `PATCH /me` `{ displayName?, currentPassword?, newPassword? }` | 200 `{ account }` (como no `GET /me`). Muda o nome exibido e/ou a senha; a senha só com `currentPassword`. O username e o papel não mudam (outro campo no corpo dá 400). Trocar a senha **encerra todas as sessões** da conta (os outros aparelhos voltam para o login) e manda cookies novos para este. 400 nome ou senha nova fora da regra, senha atual errada (400, não 401, para o front não tentar o refresh) ou corpo vazio; se uma parte falha, nada muda. 5/min por IP |
 | `GET /accounts/:username` | 200 `{ account }`; 404 (busca exata, normalizada) |
 
 ## Personagens (`characters`)

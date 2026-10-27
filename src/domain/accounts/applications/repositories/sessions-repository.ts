@@ -10,4 +10,9 @@ export abstract class SessionsRepository {
     accountId: UniqueEntityId,
     now: Date
   ): Promise<void>
+  /**
+   * Apaga todas as sessões da conta (troca de senha). Apagar, e não revogar: um token revogado que reaparece é
+   * tratado como roubo e derrubaria também a sessão nova.
+   */
+  abstract deleteAllByAccountId(accountId: UniqueEntityId): Promise<void>
 }

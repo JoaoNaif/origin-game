@@ -38,6 +38,7 @@ import { GetCharacterController } from './controllers/characters/get-character.c
 import { HealthController } from './controllers/health.controller'
 import { StartPveBattleController } from './controllers/battles/start-pve-battle.controller'
 import { SubmitBattleActionController } from './controllers/battles/submit-battle-action.controller'
+import { UpdateAccountController } from './controllers/accounts/update-account.controller'
 import { UpdateSquadFormationController } from './controllers/squads/update-squad-formation.controller'
 import { adminUseCases } from './use-cases/admin.providers'
 import { battlesUseCases } from './use-cases/battles.providers'
@@ -60,6 +61,7 @@ import { squadsUseCases } from './use-cases/squads.providers'
     RefreshSessionController,
     LogoutController,
     GetCurrentAccountController,
+    UpdateAccountController,
     FetchAccountByUsernameController,
     // characters
     FetchAccountCharactersController,

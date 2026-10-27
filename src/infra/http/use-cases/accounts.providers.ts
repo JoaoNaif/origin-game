@@ -12,6 +12,7 @@ import { FetchAccountByUsernameUseCase } from '@/domain/accounts/applications/us
 import { GetCurrentAccountUseCase } from '@/domain/accounts/applications/use-cases/get-current-account'
 import { LogoutUseCase } from '@/domain/accounts/applications/use-cases/logout'
 import { RefreshSessionUseCase } from '@/domain/accounts/applications/use-cases/refresh-session'
+import { UpdateAccountUseCase } from '@/domain/accounts/applications/use-cases/update-account'
 import { CatalogRepository } from '@/domain/catalog/applications/repositories/catalog-repository'
 import { CharactersRepository } from '@/domain/characters/applications/repositories/characters-repository'
 
@@ -90,5 +91,35 @@ export const accountsUseCases: Provider[] = [
     inject: [AccountsRepository],
     useFactory: (accounts: AccountsRepository) =>
       new GetCurrentAccountUseCase(accounts),
+  },
+  {
+    provide: UpdateAccountUseCase,
+    inject: [
+      AccountsRepository,
+      SessionsRepository,
+      HashCompare,
+      HashGenerator,
+      Encrypter,
+      RefreshTokenGenerator,
+      Clock,
+    ],
+    useFactory: (
+      accounts: AccountsRepository,
+      sessions: SessionsRepository,
+      hashCompare: HashCompare,
+      hashGenerator: HashGenerator,
+      encrypter: Encrypter,
+      refreshTokens: RefreshTokenGenerator,
+      clock: Clock
+    ) =>
+      new UpdateAccountUseCase(
+        accounts,
+        sessions,
+        hashCompare,
+        hashGenerator,
+        encrypter,
+        refreshTokens,
+        clock
+      ),
   },
 ]

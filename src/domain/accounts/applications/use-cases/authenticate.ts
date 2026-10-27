@@ -1,13 +1,13 @@
 import { Either, left, right } from '@/core/either'
 import { Clock } from '@/core/gateways/clock'
 import { Account } from '../../entities/account'
-import { Session } from '../../entities/session'
 import { Encrypter } from '../cryptography/encrypter'
 import { HashCompare } from '../cryptography/hash-compare'
 import { RefreshTokenGenerator } from '../cryptography/refresh-token-generator'
 import { WrongCredentialsError } from '../errors/wrong-credentials-error'
 import { AccountsRepository } from '../repositories/accounts-repository'
 import { SessionsRepository } from '../repositories/sessions-repository'
+import { openSession } from '../services/open-session'
 
 interface AuthenticateUseCaseRequest {
   username: string
@@ -49,24 +49,17 @@ export class AuthenticateUseCase {
     )
     if (!isPasswordValid) return left(new WrongCredentialsError())
 
-    const accessToken = await this.encrypter.encrypt({
-      sub: account.id.toString(),
-    })
-
-    // o token puro só existe na resposta; no banco fica apenas o hash
-    const refreshToken = this.refreshTokenGenerator.generate()
-    const now = this.clock.now()
-
-    await this.sessionsRepository.create(
-      Session.create({
-        accountId: account.id,
-        tokenHash: this.refreshTokenGenerator.hash(refreshToken),
-        expiresAt: Session.expiresAtFrom(now),
-        userAgent,
-        createdAt: now,
-      })
+    const tokens = await openSession(
+      {
+        sessionsRepository: this.sessionsRepository,
+        encrypter: this.encrypter,
+        refreshTokenGenerator: this.refreshTokenGenerator,
+      },
+      account.id,
+      this.clock.now(),
+      userAgent ?? null
     )
 
-    return right({ accessToken, refreshToken })
+    return right(tokens)
   }
 }
