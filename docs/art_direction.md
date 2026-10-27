@@ -25,7 +25,7 @@
 **Cores que precisam de atenção** (parecidas de longe):
 
 - **Sunna e Rolf** (os dois brancos): a Sunna é branco **frio** com azul-gelo forte e cabelo prateado longo; o Rolf é
-  branco **quente**, sem azul, loiro, com o rifle nas costas.
+  branco **quente**, sem azul, loiro, com a bandana nos olhos e o rifle nas costas.
 - **Ecko e Nox** (os dois com preto): o Ecko é alto com **prata**; a Nox é pequena com **roxo**.
 - **Gaia, Tank e Tyir** (os três neutros): a Gaia é terra quente com detalhes de planta; o Tank é bege claro com
   bandagens; o Tyir é cinza. Quem os separa é a silhueta (acolhedora, compacta, pesada) e o objeto.
@@ -263,15 +263,17 @@ Expression: focused and humble, the look of someone still learning.
 
 ### Rolf Eidvar · `rolf-eidvar.png`
 
-Atirador, alma; rastreador e batedor. Arma **(decidido)**: rifle longo com luneta nas costas.
+Atirador, alma; rastreador e batedor. **Cego**: usa uma bandana sobre os olhos e rastreia pela alma, não pela vista.
+Arma **(decidido)**: rifle longo com luneta nas costas. Bandana **(decidido)**: tecido branco quente, igual ao casaco.
 
 ```
-Character: Rolf Eidvar, adult man, CORE's best tracker and scout. Gentle, calm, obsessed with cleanliness and driven
-by guilt.
-Appearance: blond hair neatly combed, impeccable, spotless clothes, hands too well kept.
+Character: Rolf Eidvar, adult man, CORE's best tracker and scout. He is blind: he senses people and places through
+the soul, not through sight. Gentle, calm, obsessed with cleanliness and driven by guilt.
+Appearance: blond hair neatly combed, a clean warm white cloth blindfold tied over his eyes, the knot at the back of
+his head, the eyes never visible. Impeccable, spotless clothes, hands too well kept.
 Silhouette: tall and thin, slow measured posture.
 Clothing: immaculate warm white long coat with light tactical straps, a long scoped rifle slung on his back.
 Signature color: warm white #F2EFE8 (no blue at all, so he never reads like Sunna).
 Signature object: a white handkerchief in his hands, wiping his fingers.
-Expression: a sad peace, eyes lowered, someone who weighs every word.
+Expression: a sad peace, head slightly tilted as if listening, someone who weighs every word.
 ```
