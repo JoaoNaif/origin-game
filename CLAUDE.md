@@ -39,6 +39,7 @@ aprovados**, a calibrar por simulação (IA contra IA).
 | Modelo de dados (Prisma e entidades) | [`docs/data_model.md`](./docs/data_model.md) |
 | Motor de combate (fórmulas e peças) | [`docs/engine.md`](./docs/engine.md) |
 | API HTTP (contrato para o front; atualizar ao mudar rota) | [`docs/api.md`](./docs/api.md) |
+| Arte dos personagens (estilo e prompts das imagens por IA) | [`docs/art_direction.md`](./docs/art_direction.md) |
 
 O `skills_brief.md` lista o que já é **enraizado** (risco x retorno, sem vantagem entre linhagens, ranged nunca
 superior ao melee, etc.; o custo do movimento mudou para meio turno no D123). Dados de **conteúdo** (famílias, campos, catálogo de

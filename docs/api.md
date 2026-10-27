@@ -145,7 +145,7 @@ sai da seed. Em mover, trocar e defender, `preview` é nulo.
 | `status`, `mode`, `opponent` | `IN_PROGRESS` / `FINISHED`; `PVE`; nome, perfil e dificuldade da máquina |
 | `round`, `turn`, `timeline` | rodada (até 30); de quem é a vez (`{ ref, side }`, nulo no fim); as próximas 8 vezes |
 | `field`, `fields` | o campo valendo (`key`, `untilRound`, `isInitial`) e o catálogo para as trocas |
-| `units` | as 8 unidades (`PLAYER:0..3`, `OPPONENT:0..3`): HP, escudo, posição, status, Provocado/Protegido, Engajado, classe, nível e traços |
+| `units` | as 8 unidades (`PLAYER:0..3`, `OPPONENT:0..3`): modelo (`templateKey`, também o nome da imagem em `origin-front/public/characters/`), HP, escudo, posição, status, Provocado/Protegido, Engajado, classe, nível e traços |
 | `result` | no fim: `winner`, `endReason` (`ELIMINATION`, `ROUND_LIMIT` ou `ABANDON`), `rounds` e `rewards` (o XP entregue, o mesmo da resposta da última jogada; vazio na desistência) |
 
 **O que o jogador vê do inimigo** (`pvp_brief.md` 3): classe, nível, traços e o estado em campo. **Não** vê os
