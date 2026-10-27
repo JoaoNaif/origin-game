@@ -2,6 +2,16 @@ import { Module } from '@nestjs/common'
 import { CryptographyModule } from '../cryptography/cryptography.module'
 import { DatabaseModule } from '../database/database.module'
 import { GatewaysModule } from '../gateways/gateways.module'
+import { CreateCatalogEntryController } from './controllers/admin/create-catalog-entry.controller'
+import { DeleteCatalogEntryController } from './controllers/admin/delete-catalog-entry.controller'
+import { FetchAccountsController } from './controllers/admin/fetch-accounts.controller'
+import { FetchAdminCatalogController } from './controllers/admin/fetch-admin-catalog.controller'
+import { FetchAdminOptionsController } from './controllers/admin/fetch-admin-options.controller'
+import { FetchBattlesByUsernameController } from './controllers/admin/fetch-battles-by-username.controller'
+import { FetchCharactersByUsernameController } from './controllers/admin/fetch-characters-by-username.controller'
+import { GetSkillReferenceController } from './controllers/admin/get-skill-reference.controller'
+import { GrantCharacterController } from './controllers/admin/grant-character.controller'
+import { UpdateCatalogEntryController } from './controllers/admin/update-catalog-entry.controller'
 import { AllocateFreePointsController } from './controllers/characters/allocate-free-points.controller'
 import { AuthenticateController } from './controllers/accounts/authenticate.controller'
 import { ChooseSkillOfferController } from './controllers/characters/choose-skill-offer.controller'
@@ -29,6 +39,7 @@ import { HealthController } from './controllers/health.controller'
 import { StartPveBattleController } from './controllers/battles/start-pve-battle.controller'
 import { SubmitBattleActionController } from './controllers/battles/submit-battle-action.controller'
 import { UpdateSquadFormationController } from './controllers/squads/update-squad-formation.controller'
+import { adminUseCases } from './use-cases/admin.providers'
 import { battlesUseCases } from './use-cases/battles.providers'
 import { accountsUseCases } from './use-cases/accounts.providers'
 import { charactersUseCases } from './use-cases/characters.providers'
@@ -70,12 +81,24 @@ import { squadsUseCases } from './use-cases/squads.providers'
     GetBattleController,
     GetTurnOptionsController,
     ForfeitBattleController,
+    // admin (papel ADMIN): as rotas fixas antes das de `:collection`
+    FetchAdminCatalogController,
+    FetchAdminOptionsController,
+    GetSkillReferenceController,
+    FetchAccountsController,
+    FetchCharactersByUsernameController,
+    FetchBattlesByUsernameController,
+    GrantCharacterController,
+    CreateCatalogEntryController,
+    UpdateCatalogEntryController,
+    DeleteCatalogEntryController,
   ],
   providers: [
     ...accountsUseCases,
     ...charactersUseCases,
     ...squadsUseCases,
     ...battlesUseCases,
+    ...adminUseCases,
   ],
 })
 export class HttpModule {}

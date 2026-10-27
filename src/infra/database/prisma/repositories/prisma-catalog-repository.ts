@@ -1,11 +1,17 @@
 import { createHash } from 'node:crypto'
 import { Injectable } from '@nestjs/common'
-import { Either } from '@/core/either'
+import { Prisma } from '@prisma/client'
+import { Either, left, right } from '@/core/either'
 import { UniqueEntityId } from '@/core/entities/unique-entity-id'
+import { ResourceInUseError } from '@/core/errors/err/resource-in-use-error'
 import {
+  CatalogEntry,
+  CatalogKind,
   CatalogRepository,
   GameCatalog,
 } from '@/domain/catalog/applications/repositories/catalog-repository'
+import { InvalidCatalogError } from '@/domain/catalog/errors/invalid-catalog-error'
+import { catalogIntegrityError } from '@/domain/catalog/services/catalog-integrity'
 import { CharacterTemplate } from '@/domain/characters/entities/character-template'
 import { Trait } from '@/domain/characters/entities/trait'
 import { Variant } from '@/domain/characters/entities/variant'
@@ -16,11 +22,17 @@ import { Skill } from '@/domain/skills/entities/skill'
 import { SkillEffect } from '@/domain/skills/value-objects/skill-effect'
 import { NpcSquad } from '@/domain/squads/entities/npc-squad'
 import { PrismaService } from '../prisma.service'
+import { deleteCatalogRow, writeCatalogRow } from './prisma-catalog-writes'
 
-/** O banco só guarda conteúdo que já passou pelo domínio (seed): inválido aqui é erro de dado, não de regra. */
+/**
+ * Conteúdo do banco que não passa pelo domínio. Na leitura é erro de dado (o banco só guarda o que já passou pelo
+ * domínio); na escrita do admin, desfaz a mudança.
+ */
+class CatalogDataError extends Error {}
+
 function unwrap<T>(result: Either<Error, T>, what: string): T {
   if (result.isLeft()) {
-    throw new Error(`catálogo: ${what}: ${result.value.message}`)
+    throw new CatalogDataError(`${what}: ${result.value.message}`)
   }
 
   return result.value
@@ -28,9 +40,12 @@ function unwrap<T>(result: Either<Error, T>, what: string): T {
 
 const id = (value: string) => new UniqueEntityId(value)
 
+/** O cliente normal ou o da transação (a escrita do admin relê o catálogo dentro dela). */
+type Db = Prisma.TransactionClient
+
 /**
- * Lê o catálogo inteiro uma vez e guarda em memória: no MVP o conteúdo só muda pelo seed, então rodar o seed de novo
- * pede reiniciar o servidor. Cada linha volta pelo `create` do domínio, que valida o conteúdo outra vez.
+ * Lê o catálogo inteiro uma vez e guarda em memória; a escrita do admin limpa a memória (rodar o seed de novo pede
+ * reiniciar o servidor). Cada linha volta pelo `create` do domínio, que valida o conteúdo outra vez.
  */
 @Injectable()
 export class PrismaCatalogRepository implements CatalogRepository {
@@ -39,7 +54,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   load(): Promise<GameCatalog> {
-    this.cached ??= this.read().catch((error: unknown) => {
+    this.cached ??= this.read(this.prisma).catch((error: unknown) => {
       this.cached = null
       throw error
     })
@@ -47,7 +62,58 @@ export class PrismaCatalogRepository implements CatalogRepository {
     return this.cached
   }
 
-  private async read(): Promise<GameCatalog> {
+  async save(entry: CatalogEntry): Promise<Either<InvalidCatalogError, void>> {
+    return this.write((tx) => writeCatalogRow(tx, entry))
+  }
+
+  async delete(
+    kind: CatalogKind,
+    entryId: string
+  ): Promise<Either<InvalidCatalogError | ResourceInUseError, void>> {
+    try {
+      return await this.write((tx) => deleteCatalogRow(tx, kind, entryId))
+    } catch (error) {
+      // chave estrangeira (onDelete: Restrict): personagem, skill aprendida ou traço de um jogador
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
+        return left(new ResourceInUseError(entryId, ['dado de jogador']))
+      }
+      throw error
+    }
+  }
+
+  /**
+   * Grava numa transação e relê o catálogo inteiro dentro dela: se um item deixou de passar pelo domínio (ex.: a build
+   * de um NPC com a skill editada) ou o catálogo quebrou (`catalogIntegrityError`), desfaz tudo.
+   */
+  private async write(
+    change: (tx: Db) => Promise<void>
+  ): Promise<Either<InvalidCatalogError, void>> {
+    try {
+      await this.prisma.$transaction(
+        async (tx) => {
+          await change(tx)
+
+          const error = catalogIntegrityError(await this.read(tx))
+          if (error) throw new CatalogDataError(error)
+        },
+        { timeout: 30_000 }
+      )
+    } catch (error) {
+      if (error instanceof CatalogDataError) {
+        return left(new InvalidCatalogError(error.message))
+      }
+      throw error
+    } finally {
+      this.cached = null
+    }
+
+    return right(undefined)
+  }
+
+  private async read(db: Db): Promise<GameCatalog> {
     const [
       variantRows,
       traitRows,
@@ -56,18 +122,18 @@ export class PrismaCatalogRepository implements CatalogRepository {
       fieldRows,
       npcRows,
     ] = await Promise.all([
-      this.prisma.variant.findMany({ orderBy: { key: 'asc' } }),
-      this.prisma.trait.findMany({ orderBy: { key: 'asc' } }),
-      this.prisma.characterTemplate.findMany({
+      db.variant.findMany({ orderBy: { key: 'asc' } }),
+      db.trait.findMany({ orderBy: { key: 'asc' } }),
+      db.characterTemplate.findMany({
         include: { variants: true },
         orderBy: { key: 'asc' },
       }),
-      this.prisma.skill.findMany({ orderBy: { key: 'asc' } }),
-      this.prisma.battleField.findMany({
+      db.skill.findMany({ orderBy: { key: 'asc' } }),
+      db.battleField.findMany({
         include: { requiredTraits: true },
         orderBy: { key: 'asc' },
       }),
-      this.prisma.npcSquad.findMany({
+      db.npcSquad.findMany({
         include: {
           members: {
             include: {
@@ -88,7 +154,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
       const index = pending.findIndex(
         (v) => !v.awakensFromId || variants.has(v.awakensFromId)
       )
-      if (index < 0) throw new Error('catálogo: variante despertada sem base')
+      if (index < 0) throw new CatalogDataError('variante despertada sem base')
 
       const [row] = pending.splice(index, 1)
       variants.set(

@@ -2,7 +2,8 @@
 
 > O **design de jogo está fechado até o D137** (regras e valores iniciais do MVP). **Feito:** motor de combate, IA e
 > simulação (D122 a D132), schema do Prisma, seed e o **servidor do MVP** (contas, catálogo, personagens, squads e
-> batalha contra a máquina, com XP no fim e as ações possíveis da vez), com login (username + senha). Contrato da API em [`docs/api.md`](./docs/api.md).
+> batalha contra a máquina, com XP no fim e as ações possíveis da vez), com login (username + senha), e as **rotas de
+> admin** (editar o catálogo, ver contas, dar personagem). Contrato da API em [`docs/api.md`](./docs/api.md).
 > Contexto permanente do projeto para o Claude. Leia antes de mexer em qualquer coisa.
 
 ## O que é Origin
@@ -80,7 +81,7 @@ src/
     ai/                       IA da máquina: pontuação, sorteio com Rng, log do jogador
     squads/                   formação (4 personagens na grade 3x3)
     accounts/                 conta do jogador, login (sessões, portas de criptografia)
-    catalog/                  porta do catálogo do admin (modelos, skills, traços, campos, squads de NPC)
+    catalog/                  porta do catálogo (modelos, skills, traços, campos, squads de NPC) e a edição do admin
   infra/
     auth/                     JWT (estratégia, guard global, @Public, @CurrentUser)
     cryptography/             bcrypt, JWT e refresh token (portas de accounts)
@@ -112,14 +113,16 @@ test/                         factories, in-memory repositories, fakes (incluind
   id conferem o dono (`findOwned...`, outra conta = `NotAllowedError` → 403). Tokens só em cookies httpOnly
   (`http/auth-cookies.ts`); CSRF por `SameSite=Strict` + checagem de `Origin`. Chaves no `.env` (`npm run keys:generate`).
   Rota de admin: `@Admin()` (papel `ADMIN`, lido no banco); admin só pelo seed ou `npm run admin:promote <username>`.
-- Catálogo público (`GET /templates`, `GET /npc-squads`): controller lê direto do `CatalogRepository`, sem caso de
-  uso (dado público, como no help-invest).
+- Catálogo público (`GET /templates`, `GET /npc-squads`) e `GET /admin/catalog`: controller lê direto do
+  `CatalogRepository`, sem caso de uso (como no help-invest). A escrita do admin (`/admin/:collection`) passa por três
+  casos de uso genéricos (criar, editar, apagar) e o repositório grava numa transação que revalida o catálogo inteiro
+  (`data_model.md` 3.5).
 - Repositório Prisma em `infra/database/prisma/repositories/`, com mapper Prisma ↔ domínio em `prisma/mappers/`;
   registrado no `DatabaseModule` como `{ provide: Porta, useClass: PrismaX }`.
 - Casos de uso entram no Nest por `useFactory` em `infra/http/use-cases/<contexto>.providers.ts` (o domínio não tem
   decorators); a classe do caso de uso é o token de DI.
 - Um controller por caso de uso em `infra/http/controllers/<contexto>/` (`accounts`, `catalog`, `characters`, `squads`,
-  `battles`; o `health` fica na raiz), com o `*.e2e-spec.ts` ao lado. Validação no
+  `battles`, `admin`; o `health` fica na raiz), com o `*.e2e-spec.ts` ao lado. Validação no
   `@Body(new ZodValidationPipe(schema))`; erro do `Either` vira exceção HTTP num `switch (error.constructor)`; saída
   sempre por presenter (`infra/http/presenters/`). Schemas reaproveitados em `infra/http/schemas/`.
 - e2e: `npm run test:e2e` (precisa do Postgres: `npm run services:up`); cada arquivo roda num schema próprio

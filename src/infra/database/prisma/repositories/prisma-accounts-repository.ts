@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common'
 import { Account } from '@/domain/accounts/entities/account'
-import { AccountsRepository } from '@/domain/accounts/applications/repositories/accounts-repository'
+import {
+  AccountSummary,
+  AccountsRepository,
+} from '@/domain/accounts/applications/repositories/accounts-repository'
 import { PrismaService } from '../prisma.service'
 import { PrismaAccountMapper } from '../mappers/prisma-account-mapper'
 
@@ -20,6 +23,19 @@ export class PrismaAccountsRepository implements AccountsRepository {
     })
 
     return account ? PrismaAccountMapper.toDomain(account) : null
+  }
+
+  async listSummaries(): Promise<AccountSummary[]> {
+    const rows = await this.prisma.account.findMany({
+      include: { _count: { select: { characters: true, battles: true } } },
+      orderBy: { username: 'asc' },
+    })
+
+    return rows.map(({ _count, ...row }) => ({
+      account: PrismaAccountMapper.toDomain(row),
+      characters: _count.characters,
+      battles: _count.battles,
+    }))
   }
 
   async create(account: Account): Promise<void> {

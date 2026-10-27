@@ -17,7 +17,8 @@ o servidor é a autoridade do combate (D9): o cliente só envia a jogada e exibe
   der 401, volta para o login.
 - **CSRF:** além do `SameSite=Strict`, POST/PUT/DELETE vindos de uma origem fora de `CORS_ORIGINS` dão 403. O front
   precisa ficar no mesmo *site* da API (ex.: `app.dominio` e `api.dominio`).
-- **Admin:** as rotas de admin (ainda nenhuma) exigem o papel `ADMIN` (403 sem ele). Ninguém vira admin pela API.
+- **Admin:** as rotas `/admin/...` exigem o papel `ADMIN` (403 sem ele; seção Admin no fim). Ninguém vira admin
+  pela API.
 - **Limite de requisições por IP:** 300/min no geral; cadastro e login 5/min; refresh 30/min (429 ao passar).
 - **A seed nunca sai do servidor** (D33).
 
@@ -27,7 +28,7 @@ o servidor é a autoridade do combate (D9): o cliente só envia a jogada e exibe
 | 401 | não está logado, token vencido ou inválido, ou username/senha errados |
 | 403 | recurso de outra conta, ou origem não permitida (CSRF) |
 | 404 | recurso não existe |
-| 409 | já existe (username), ou a batalha não aceita a jogada agora (já acabou, não é a vez do jogador, ou outra jogada entrou antes: clique duplo ou duas abas) |
+| 409 | já existe (username, `key` do catálogo), item do catálogo em uso, ou a batalha não aceita a jogada agora (já acabou, não é a vez do jogador, ou outra jogada entrou antes: clique duplo ou duas abas) |
 | 429 | limite de requisições |
 
 ## Fluxo de uma partida contra a máquina
@@ -161,3 +162,79 @@ entraram (D134); `newSkillOffers` = blocos de skill que a subida abriu (D135). F
 
 **Jogada enviada duas vezes** (clique duplo, duas abas): só a primeira entra. A outra recebe 409 e nada dela fica
 gravado, nem o XP. O front deve recarregar com `GET /battles/:id`.
+
+## Admin (`/admin/...`, papel `ADMIN`)
+
+Toda rota daqui dá 403 para quem não é admin (401 sem login). O front mostra as telas pelo `role` de `GET /me`.
+
+### Leitura e apoio
+
+| Rota | Resposta |
+|---|---|
+| `GET /admin/catalog` | 200 `{ catalog: { version, variants, traits, templates, skills, fields, npcSquads } }`: tudo, pela `key`, inclusive a formação e as skills dos NPCs (que o jogador não vê). Cada item vem **no formato do corpo da edição** (abaixo) mais campos só de leitura, então a tela pode editar e devolver o mesmo objeto |
+| `GET /admin/options` | 200 `{ options }`: as listas dos selects (linhagens, classes, raridades, periculosidade, exclusividade, stats, categorias e origens de traço, tiers, alvos, alcances, áreas, papéis do kit, status, perfis e dificuldades da IA), os tipos de efeito (`effectTypes.trait`, `.skill`, `.passiveTrigger`, `.passiveEffect`) e as regras (`rules`: orçamento por classe e tolerância, referência por tier, Poder máximo, nível do despertar, faixa de nível dos NPCs por dificuldade, limites de traços, variantes e campos) |
+| `GET /admin/skills/reference?tier=&target=&range=&area=&isNone=` | 200 `{ reference: { power, desgastePercent, cooldown, minLevel } }`: os valores de referência do tipo + forma (D16, D92) enquanto o admin monta a skill. `range` só em skill de inimigo; `isNone=true` para skill sem variante |
+
+Campos só de leitura no `GET /admin/catalog`: modelo `skillKeys` (as skills dele, kit primeiro); skill `lineage`,
+`isAwakened`, `templateKey` e `reference`; squad de NPC `level`. No `PUT` eles são ignorados.
+
+### Criar, editar e apagar
+
+`:collection` = `variants`, `traits`, `templates`, `skills`, `fields` ou `npc-squads` (outro valor dá 400).
+
+| Rota | Respostas |
+|---|---|
+| `POST /admin/:collection` `{ key, ...corpo }` | 201 `{ entry, version }`; 400 formato ou regra (do item ou do catálogo inteiro); 404 ligação (`variantKey`, `traitKeys`...) que não existe; 409 `key` já usada |
+| `PUT /admin/:collection/:key` `{ ...corpo }` | 200 `{ entry, version }`; troca o item **inteiro** (a `key` não muda); 400, 404 (item ou ligação) como acima |
+| `DELETE /admin/:collection/:key` | 204; 404; 409 em uso (a mensagem diz quem usa: outro item do catálogo ou "jogadores") |
+
+`key`: minúsculas, números e `-`, até 80; nas skills, `:` separa o modelo (`kael-vaz:detonacao`). **As skills de um
+modelo são as de `key` com o prefixo dele** (o kit básico e o pool de ofertas, D77, D92).
+
+**O catálogo fica válido inteiro.** Cada gravação relê tudo pelo domínio: se a mudança quebra outro item, dá 400 e
+nada muda. Exemplos: subir o `minLevel` de uma skill acima do nível do NPC que a usa; um modelo sem as 4 skills do
+kit (sem elas a conta nova não recebe o personagem, D133). Por isso, para um **modelo novo**: crie antes as 4 skills
+do kit (`key` com o prefixo do modelo, `kitClass` = classe dele, um de cada `kitSlot`, divididas pelas variantes como
+no D97) e depois o modelo. Para **apagar um modelo**: apague antes as skills dele (e tire-o dos NPCs).
+
+**Quando vale:** na hora, para todas as contas (os stats saem do modelo) e para as batalhas novas. A batalha em
+andamento segue com a foto do início. `version` muda a cada gravação. **Rodar o seed de novo grava por cima**, pela
+`key`, o que o admin editou.
+
+**Corpo de cada tipo** (as regras finas são do domínio; ver `data_model.md` 3):
+
+```jsonc
+// variants
+{ "name": "Vento", "lineage": "ELEMENTAL", "description": null, "awakensFromKey": null }
+// traits (efeitos: STAT_MODIFIER { stat, percent }, SKILL_DAMAGE_MODIFIER { range, percent },
+//         LINEAGE_COST_MODIFIER { percent }, GEAR_REQUIREMENT_WAIVER { count }, EXTRA_BEAST_SLOT { count })
+{ "name": "Veterano", "description": null, "category": "COMBAT", "source": "CONQUERED", "variantKey": null,
+  "effects": [{ "type": "STAT_MODIFIER", "stat": "WILL", "percent": 3 }] }
+// templates (stats = perfil no nível 100; passiva: src/domain/characters/value-objects/passive.ts)
+{ "name": "...", "description": null, "characterClass": "VANGUARD", "rarity": "C", "initialDanger": "DISCRETE",
+  "exclusivity": "NONE", "variants": [{ "variantKey": "explosao", "isPrimary": true }], "familyTraitKey": null,
+  "stats": { "HP": 0, "ATTACK": 0, "DEFENSE": 0, "SPEED": 0, "PRECISION": 0, "EVASION": 0, "WILL": 0 },
+  "passive": { "name": "...", "description": "...", "trigger": { "type": "ON_HIT" }, "effects": [...] } }
+// skills (efeitos: src/domain/skills/value-objects/skill-effect.ts; todos aceitam "appliesTo": "TARGET" | "SELF")
+{ "name": "...", "description": null, "variantKey": "explosao", "tier": "STANDARD", "target": "ENEMY",
+  "range": "MELEE", "area": "SINGLE", "cooldown": 1, "desgastePercent": 1.5, "baseHitChance": 0.9, "minLevel": 0,
+  "kitClass": null, "kitSlot": null, "effects": [{ "type": "DAMAGE", "power": 1 }] }
+// fields
+{ "name": "Arena", "description": null, "requiredTraitKeys": ["berserker", "impeto"], "primaryStat": "ATTACK",
+  "secondaryStat": "SPEED", "primaryPercent": 6, "secondaryPercent": 4 }
+// npc-squads (4 membros; skillKeys = a build, na ordem; o traço de família do modelo entra sozinho se faltar)
+{ "name": "...", "description": null, "profile": "BALANCED", "difficulty": "BEGINNER",
+  "members": [{ "templateKey": "kael-vaz", "level": 18, "row": 0, "column": 0, "awakenedVariantKey": null,
+                "skillKeys": ["...", "...", "...", "..."], "traitKeys": [] }] }
+```
+
+### Contas
+
+Nenhuma rota muda o papel. O username da URL é normalizado como no cadastro.
+
+| Rota | Respostas |
+|---|---|
+| `GET /admin/accounts` | 200 `{ accounts: [{ id, username, displayName, role, characters, battles }] }`, pelo username (`characters` e `battles` = quantos tem) |
+| `GET /admin/accounts/:username/characters` | 200 `{ characters }` (formato de `GET /me/characters`); 404 conta |
+| `GET /admin/accounts/:username/battles?status=` | 200 `{ battles }` (formato de `GET /me/battles`); 404 conta |
+| `POST /admin/accounts/:username/characters` `{ templateKey }` | 201 `{ character }`: dá o personagem como no cadastro (nível 0, kit na build, traço de família), por exemplo de um modelo criado depois da conta; 404 conta ou modelo; 409 a conta já tem esse modelo |

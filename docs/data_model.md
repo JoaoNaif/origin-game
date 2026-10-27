@@ -514,11 +514,18 @@ puro só existe na resposta), `expiresAt`, `revokedAt` e o `userAgent`. Cada ref
 a sessão é revogada e outra é criada. Um token já usado aparecendo de novo é sinal de roubo e revoga **todas** as
 sessões da conta. Apagar a conta apaga as sessões. Domínio: `src/domain/accounts/entities/session.ts`.
 
-**Papel (`AccountRole`):** o admin cuida do conteúdo (catálogo). Por enquanto só o papel existe: nenhuma rota de
-admin ainda (o conteúdo segue pelo seed). Uma conta vira admin **pelo seed** (conta `admin` / `origin123`) ou **pelo
-banco** (`npm run admin:promote <username>`, e `-- --demote` para voltar a jogador); nenhuma rota dá o papel. As
-rotas de admin, quando vierem, usam o `@Admin()` (`src/infra/auth/admin.ts`), que lê o papel no banco a cada
-requisição: quem é rebaixado perde o acesso na hora.
+**Papel (`AccountRole`):** o admin cuida do conteúdo (catálogo) pelas rotas `/admin/...` (`api.md`, Admin). Uma conta
+vira admin **pelo seed** (conta `admin` / `origin123`) ou **pelo banco** (`npm run admin:promote <username>`, e
+`-- --demote` para voltar a jogador); nenhuma rota dá o papel. As rotas de admin usam o `@Admin()`
+(`src/infra/auth/admin.ts`), que lê o papel no banco a cada requisição: quem é rebaixado perde o acesso na hora.
+
+**Edição do catálogo pelo admin** (`src/domain/catalog/applications/use-cases/`): cria, troca ou apaga um item pela
+`key`, que não muda depois. A gravação (`PrismaCatalogRepository`) roda numa transação que relê o catálogo
+**inteiro** pelo domínio e confere `catalogIntegrityError` (todo modelo com kit básico válido): se a mudança quebra
+outro item (a build de um NPC, o kit de um modelo), nada fica gravado. Apagar não leva nada em cascata: item usado
+no catálogo (`catalogUsages`) ou por um jogador (a chave estrangeira recusa) dá 409. A edição vale na hora para os
+personagens das contas (os stats saem do modelo); a batalha em andamento segue com a foto do início (D8). Rodar o
+seed de novo grava por cima, pela `key`, o que o admin editou.
 
 **Contas de antes do login:** a migração `auth_sessions` deixou o hash vazio nelas, e assim elas não entram. O seed
 dá à `tester_01` a senha de teste `origin123`.
