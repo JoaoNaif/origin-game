@@ -5,7 +5,7 @@ import { seedTestAccount } from './seed/seed-test-account'
 
 /**
  * Seed do MVP (`npx prisma db seed`): grava o conteúdo de `prisma/seed/content` (variantes, traços, 12 personagens,
- * skills, 6 campos e 20 squads de NPC) e as contas de teste `tester_01` (jogador) e `admin` (admin). Idempotente:
+ * skills, 8 campos e 20 squads de NPC) e as contas de teste `tester_01` (jogador) e `admin` (admin). Idempotente:
  * atualiza pela `key`, recria as ligações e mantém as contas de teste se elas já existem.
  */
 const prisma = new PrismaService()

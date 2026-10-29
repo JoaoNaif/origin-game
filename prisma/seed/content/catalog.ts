@@ -227,7 +227,7 @@ export function buildTraits(
 }
 
 // ---------------------------------------------------------------------------
-// Campos de batalha (MVP: 6 campos, 3 traços cada, `skills_brief.md` 12.7)
+// Campos de batalha (MVP: 8 campos, 3 traços cada, `skills_brief.md` 12.7)
 // ---------------------------------------------------------------------------
 
 const FIELDS: {
@@ -285,6 +285,23 @@ const FIELDS: {
     traits: ['passo-leve', 'hyperion', 'mira-firme'],
     primary: Stat.SPEED,
     secondary: Stat.EVASION,
+  },
+  {
+    key: 'vale-vulcanico',
+    name: 'Vale Vulcânico',
+    description:
+      'Calor e chão instável no centro de Omega: aguenta quem tem corpo.',
+    traits: ['berserker', 'impeto', 'sangue-frio'],
+    primary: Stat.HP,
+    secondary: Stat.ATTACK,
+  },
+  {
+    key: 'canions-de-gamma',
+    name: 'Cânions de Gamma',
+    description: 'Paredões e passagens estreitas: quem segura a passagem.',
+    traits: ['muralha-viva', 'olho-de-aguia', 'nocthar'],
+    primary: Stat.DEFENSE,
+    secondary: Stat.PRECISION,
   },
 ]
 

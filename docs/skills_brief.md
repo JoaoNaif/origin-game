@@ -642,7 +642,7 @@ conhecer o que cada número pesa). **[PLACEHOLDER aprovado]**.
 - **Bônus:** **+6% em um stat e +4% em outro** (10 pontos, igual ao DOM intermediário). Vale depois dos tetos e **não
   conta** nas 2 fontes de buff por stat (é ambiental). Multiplicativo: +6% de Ataque dá ~+9% de dano.
 - **Traços exigidos:** cada campo lista **2 a 4 traços** de categorias diferentes (Combate, Postura, Origem); quem tem
-  **qualquer um** recebe o bônus. Meta do admin: ~35 a 45% dos personagens qualificam. MVP (`seed.ts`): 6 campos, 3
+  **qualquer um** recebe o bônus. Meta do admin: ~35 a 45% dos personagens qualificam. MVP (`seed.ts`): 8 campos, 3
   traços cada.
 - **Troca por skill** (contada em **rodadas**, o campo é global; a skill não tem Poder, só custo e cooldown):
 
