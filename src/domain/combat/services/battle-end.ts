@@ -1,24 +1,27 @@
 import { Rng } from '@/core/rng/rng'
 import { BattleEndReason, BattleSide, MAX_ROUNDS } from '../enums/battle-enums'
 
-/** A Exaustão começa depois desta rodada (11.8, D92, D119): a partir da 16. */
-export const EXHAUSTION_AFTER_ROUND = 15
+/**
+ * A Exaustão começa depois desta rodada (11.8, D92, D119, D138): a partir da 4. Pressão crescente para a batalha
+ * fechar em ~12 rodadas (era a partir da 16, com 15 a 21 rodadas).
+ */
+export const EXHAUSTION_AFTER_ROUND = 3
 
-/** Por rodada de Exaustão: cura −10% e dano +5% (12.5, placeholders aprovados). */
-export const EXHAUSTION_HEAL_STEP = 0.1
-export const EXHAUSTION_DAMAGE_STEP = 0.05
+/** Por rodada de Exaustão: cura −10% e dano +12% (12.5, D138, placeholders aprovados). */
+export const EXHAUSTION_HEAL_STEP = 0.05
+export const EXHAUSTION_DAMAGE_STEP = 0.12
 
-/** Quantas rodadas de Exaustão já valem (0 até a 15; 1 na 16; 15 na 30). */
+/** Quantas rodadas de Exaustão já valem (0 até a 3; 1 na 4; 27 na 30). */
 export function exhaustionStep(round: number): number {
   return Math.max(0, round - EXHAUSTION_AFTER_ROUND)
 }
 
-/** Multiplicador da cura (e do escudo concedido) na rodada: chega a 0 na 25. */
+/** Multiplicador da cura (e do escudo concedido) na rodada: chega a 0 na 13. */
 export function healMultiplier(round: number): number {
   return Math.max(0, 1 - EXHAUSTION_HEAL_STEP * exhaustionStep(round))
 }
 
-/** Multiplicador do dano na rodada: +75% na 30. */
+/** Multiplicador do dano na rodada: +60% na 8, +108% na 12. */
 export function damageMultiplier(round: number): number {
   return 1 + EXHAUSTION_DAMAGE_STEP * exhaustionStep(round)
 }

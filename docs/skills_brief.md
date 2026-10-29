@@ -505,11 +505,11 @@ queda 100/60/30, Desgaste, Defender menor que dano, perfurante e flanco. Somam-s
 
 | Rodada | Regra [PLACEHOLDER] |
 |---|---|
-| Até a 20 | Normal (a meta de duração é 10 a 15, podendo passar) |
-| A partir da 16 (D119) | **Exaustão:** a cada rodada a **cura rende menos** (~-10%) e o **dano rende mais** (~+5%) |
+| Até a 3 | Normal (a meta de duração é ~12 rodadas, D138) |
+| A partir da 4 (D138; era a 16) | **Exaustão:** a cada rodada a **cura rende menos** (~-10%) e o **dano rende mais** (~+12%) |
 | 30 | **Fim forçado:** vence quem **causou mais dano** em % do HP total do inimigo (D122; era % de HP) |
 
-Só aparece depois do tempo normal: não pesa para o iniciante, só para quem tenta travar o jogo.
+Desde o D138 é pressão crescente para toda batalha fechar em ~12 rodadas, não só contra quem tenta travar o jogo.
 
 ### 11.9 Status e Vontade [ENRAIZADO]
 
@@ -621,7 +621,7 @@ da linha diante de um corpo a corpo (Vanguarda, Guardião, Executor), mover ou t
 - **Fontes por stat: 2 buffs e 2 debuffs** (era 3). Magnitudes **10% / 15% / 20%**. Máximo ~+44% e ~−36%.
 - **Defender:** +50% de Defesa efetiva até o próximo turno do personagem, fora do limite de fontes, mais ~10% de alívio
   de Desgaste. Reduz 13% (Executor) a 19% (Vanguarda) do dano recebido.
-- **Exaustão:** a partir da **rodada 16** (D119; era 21), cura −10% e dano +5% por rodada (cura zera na 25, dano +75% na 30), fim forçado na 30.
+- **Exaustão:** a partir da **rodada 4** (D138; era 16), cura −10% e dano +12% por rodada (cura zera na 13, dano +108% na 12), fim forçado na 30.
 
 ### 12.6 Kit básico e marcos
 

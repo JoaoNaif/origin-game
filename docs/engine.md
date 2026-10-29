@@ -186,7 +186,7 @@ a sua ação. Aí começa a próxima. Quem é mais rápido pode agir **mais de u
 - Uma unidade que entra no meio (besta invocada) precisa agir antes de a rodada fechar.
 - A duração de uma rodada depende do mais lento em campo (um squad com Artilharia tem rodadas mais longas), mas vale
   igual para os dois lados, porque conta todas as unidades da batalha.
-- A rodada conta para a **Exaustão** (a partir da 16, D119), o **fim forçado** (30) e o **Interceptar** (1 vez por rodada).
+- A rodada conta para a **Exaustão** (a partir da 4, D138), o **fim forçado** (30) e o **Interceptar** (1 vez por rodada).
 
 **Exemplo** (Executor 115 contra Artilharia 65):
 
@@ -253,10 +253,10 @@ O teto de 90% garante que nenhum status é certo.
 **Dano** (`src/domain/combat/services/damage.ts`, D68):
 
 ```
-dano base = Poder × Ataque² / (Ataque + Defesa) × escala      (escala do D131 e do D137)
+dano base = Poder × Ataque² / (Ataque + Defesa) × escala      (escala do D131, D137 e D138)
 ```
 
-- **Escala pelo nível da batalha (D137):** **×1,2** até o nível 20, em linha reta até **×0,7** no nível 40, e ×0,7 dali
+- **Escala pelo nível da batalha (D137):** **×1,2** até o nível 20, em linha reta até **×0,8** no nível 40 (D138; era ×0,7), e ×0,8 dali
   em diante (função `damageScale`). O nível da batalha é a média das 8 unidades, o mesmo para os dois lados; o motor
   guarda a escala ao montar a batalha (campo `damageScale`, também lido pela IA). No começo só há o kit de Poder ~0,8 e a batalha
   arrastava; do 40 em diante já há skills de Poder 1,4 a 1,6, e mais dano esmagaria a squad tática.
@@ -275,15 +275,15 @@ não fica negativo. A passiva "ignora escudos" (ex.: Ecko, D83) pula o escudo.
 (cura 2,0 em quem tem 420 de HP = 84); **8%** até o nível 20, em linha reta entre os dois (`healShare`, pelo mesmo nível
 da batalha do dano). A cura não passa do HP máximo (8.3 do `skills_brief.md`), regra aplicada quando a cura entrar na resolução.
 
-**Conferido com a tabela de `classes_brief.md` 4** (Poder 1,0, nível 100, já com a escala de dano ×0,7 do D131; os perfis
+**Conferido com a tabela de `classes_brief.md` 4** (Poder 1,0, nível 100, já com a escala de dano ×0,8 do D138; os perfis
 do Executor, Controlador e Tático mudaram no D122, a tabela usa os de antes):
 
 | Ataque → Alvo | Ataque | Defesa do alvo | HP do alvo | Dano | % do HP |
 |---|---|---|---|---|---|
-| Vanguarda → Vanguarda | 100 | 120 | 700 | 32 | 4,5% |
-| Executor → Atirador | 140 | 60 | 420 | 69 | 16,3% |
-| Atirador → Executor | 125 | 55 | 400 | 61 | 15,2% |
-| Guardião → Guardião | 60 | 140 | 780 | 13 | 1,6% |
+| Vanguarda → Vanguarda | 100 | 120 | 700 | 36 | 5,2% |
+| Executor → Atirador | 140 | 60 | 420 | 78 | 18,7% |
+| Atirador → Executor | 125 | 55 | 400 | 69 | 17,4% |
+| Guardião → Guardião | 60 | 140 | 780 | 14 | 1,8% |
 
 ```ts
 const chance = hitChance(skill.baseHitChance, attacker.PRECISION, target.EVASION)
@@ -627,22 +627,24 @@ um aliado cai) e Rolf (ao cair, aliados adiantam 30%).
 
 Funções em `src/domain/combat/services/battle-end.ts` (11.8, 12.5, D31, D72, `pvp_brief.md` 6).
 
-**Exaustão** (pressão contra o turtling, só depois do tempo normal; não pesa para o iniciante):
+**Exaustão** (pressão crescente para a batalha fechar em ~12 rodadas, D138; antes era só contra o turtling):
 
 ```
-passo = rodada − 15   (0 até a rodada 15; D119, era 20)
-cura × (1 − 0,10 × passo)      dano × (1 + 0,05 × passo)
+passo = rodada − 3    (0 até a rodada 3; D138, era 15)
+cura × (1 − 0,10 × passo)      dano × (1 + 0,12 × passo)
 ```
 
 | Rodada | Cura (e escudo concedido) | Dano |
 |---|---|---|
-| até 15 | 100% | 100% |
-| 16 | 90% | 105% |
-| 20 | 50% | 125% |
-| 25 | **0%** | 150% |
-| 30 | 0% | **175%** |
+| até 3 | 100% | 100% |
+| 4 | 90% | 112% |
+| 8 | 50% | 160% |
+| 12 | 10% | 208% |
+| 13 | **0%** | 220% |
+| 30 | 0% | 424% |
 
-**Por que a 16 (D119):** com a Exaustão na 21, só 27% das batalhas acabavam por eliminação (simulação, 3.14); a
+**Por que a 4 (D138):** com a Exaustão na 16, a batalha levava 15 a 21 rodadas (~55 a 79 decisões do jogador);
+na 4 com +12%, fica em 11 a 13. Antes, **por que a 16 (D119):** com a Exaustão na 21, só 27% das batalhas acabavam por eliminação (simulação, 3.14); a
 batalha virava tanque contra tanque com o Desgaste no piso. Junto com o piso de potência de 70% (3.5), sobe para ~68%.
 
 O multiplicador de dano entra nos "modificadores de dano" da ordem do D68 (3.4); o de cura multiplica o `healAmount`.

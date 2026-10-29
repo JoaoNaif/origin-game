@@ -19,12 +19,13 @@ export function effectivePower(
 /**
  * Escala do dano (D131): ×0,7 para dar tempo à tática (com um personagem caindo em 1 ou 2 turnos de foco, não havia
  * tempo para preparar e executar; na simulação, a squad tática passou de 35% para 60% contra a de força bruta).
+ * Subiu para ×0,8 no D138, junto com a Exaustão a partir da rodada 4, para a batalha fechar em ~12 rodadas.
  */
-export const DAMAGE_SCALE = 0.7
+export const DAMAGE_SCALE = 0.8
 
 /**
  * Níveis baixos (D137): até o nível 20 o dano é ×1,2 e a cura e o escudo rendem 8% por Poder (só com o kit de Poder
- * ~0,8, a batalha arrastava em ~24 rodadas); daí em linha reta até a escala cheia (×0,7 e 10%) no nível 40, onde já
+ * ~0,8, a batalha arrastava em ~24 rodadas); daí em linha reta até a escala cheia (×0,8 e 10%) no nível 40, onde já
  * há skills de Poder 1,4 a 1,6 e mais dano esmagaria a squad tática.
  */
 export const LOW_LEVEL_DAMAGE_SCALE = 1.2
@@ -39,7 +40,7 @@ function lowLevelWeight(level: number): number {
   return Math.min(1, Math.max(0, (FULL_SCALE_FROM_LEVEL - level) / span))
 }
 
-/** Escala do dano no nível da batalha (D131, D137): ×1,2 até o nível 20, ×0,7 do 40 em diante. */
+/** Escala do dano no nível da batalha (D131, D137): ×1,2 até o nível 20, ×0,8 do 40 em diante (D138). */
 export function damageScale(level: number): number {
   const weight = lowLevelWeight(level)
 
@@ -59,7 +60,7 @@ export function healShare(level: number): number {
 /**
  * Dano base (D68, D131): `Poder × Ataque² / (Ataque + Defesa) × escala`. Razão, não subtração: nunca zera. Sem variação
  * aleatória nem crítico. Ataque e Defesa já com buffs, debuffs e Desgaste. A escala vem do nível da batalha
- * (`damageScale`, D137); sem ela, a cheia (×0,7). Depois deste valor vêm, nesta ordem: queda da linha, modificadores de
+ * (`damageScale`, D137); sem ela, a cheia (×0,8). Depois deste valor vêm, nesta ordem: queda da linha, modificadores de
  * dano, Defender, escudo e HP (D68).
  */
 export function baseDamage(
