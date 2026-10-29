@@ -1,4 +1,5 @@
 import { SeededRng } from '@/core/rng/seeded-rng'
+import { Stat } from '@/domain/characters/enums/stat'
 import { BattleEngine } from '@/domain/combat/engine/battle-engine'
 import { BattleSide } from '@/domain/combat/enums/battle-enums'
 import { BattleActionPayload } from '@/domain/combat/value-objects/battle-action'
@@ -126,6 +127,47 @@ describe('Machine AI', () => {
       fresh.nextTurn()
       expect(fresh.act(payload).isRight()).toBe(true)
     }
+  })
+
+  it('should be able to offer the field change once per field of the catalog', () => {
+    const snapshot = makeMixedSnapshot()
+    const field = (key: string) => ({
+      key,
+      name: key,
+      requiredTraitKeys: [],
+      primaryStat: Stat.ATTACK,
+      secondaryStat: Stat.SPEED,
+      primaryPercent: 6,
+      secondaryPercent: 4,
+    })
+    snapshot.field = {
+      initial: null,
+      catalog: [field('arena'), field('forest')],
+    }
+    const engine = new BattleEngine(snapshot, new SeededRng(1))
+    const turn = engine.nextTurn()!
+    const actor = [...snapshot.player.units, ...snapshot.opponent.units].find(
+      (u) => u.ref === turn.ref
+    )!
+    actor.skills[0] = {
+      ...actor.skills[0],
+      key: 'change-field',
+      target: SkillTarget.SELF,
+      range: null,
+      area: SkillArea.SINGLE,
+      baseHitChance: null,
+      cooldown: 4,
+      effects: [{ type: 'CHANGE_FIELD', duration: 2, multiplier: 1.5 }],
+    }
+    const sut = new BattleEngine(snapshot, new SeededRng(1))
+    sut.nextTurn()
+
+    const fieldKeys = generateCandidates(sut, turn.ref)
+      .map((c) => c.payload)
+      .filter((p) => p.type === 'SKILL' && p.skillKey === 'change-field')
+      .map((p) => (p.type === 'SKILL' ? p.fieldKey : null))
+
+    expect(fieldKeys).toEqual(['arena', 'forest'])
   })
 
   it('should be able to finish a target in reach as a grandmaster', () => {

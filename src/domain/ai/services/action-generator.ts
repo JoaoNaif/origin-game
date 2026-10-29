@@ -62,6 +62,9 @@ export function generateCandidates(
         ? [actor.position!]
         : ALL_CELLS
     const seen = new Set<string>()
+    // trocar campo exige um campo para validar; a prévia usa o primeiro e `withExtras` abre um por campo
+    const changesField = skill.effects.some((e) => e.type === 'CHANGE_FIELD')
+    if (changesField && engine.fields.length === 0) continue
 
     for (const cell of cells) {
       const base: SkillPayload = {
@@ -69,6 +72,7 @@ export function generateCandidates(
         skillKey: skill.key,
         targetSide,
         target: cell,
+        ...(changesField ? { fieldKey: engine.fields[0].key } : {}),
       }
       const preview = engine.previewSkill(actorRef, base)
       if (preview.isLeft() || preview.value.hits.length === 0) continue
