@@ -17,6 +17,8 @@ import { npcBuild } from '../../prisma/seed/content/npc-squads'
 export interface DuelMember extends GridPosition {
   /** `key` do modelo no seed. */
   key: string
+  /** Build fora da prioridade do NPC (`key` completas das skills); sem ela, `npcBuild`. */
+  skills?: readonly string[]
 }
 
 /** Quem vai na frente numa formação automática: tanques, depois corpo a corpo, depois quem bate de longe. */
@@ -80,7 +82,7 @@ function side(
     name: battleSide === BattleSide.PLAYER ? 'Lado A' : 'Lado B',
     profile: AiProfile.BALANCED,
     difficulty: difficultyFor(level),
-    members: members.map(({ key, row, column }) => {
+    members: members.map(({ key, row, column, skills }) => {
       const character = content.characters.find((c) => c.spec.key === key)!
       const family = character.spec.familyTrait
       return {
@@ -88,7 +90,9 @@ function side(
         level,
         row,
         column,
-        skills: npcBuild(character, level),
+        skills: skills
+          ? skills.map((k) => character.skills.find((s) => s.key === k)!)
+          : npcBuild(character, level),
         traits: [
           ...(family ? [content.traits.get(family)!] : []),
           content.traits.get(character.spec.npcTrait)!,

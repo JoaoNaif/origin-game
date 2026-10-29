@@ -25,7 +25,7 @@ import { loadSeedContent } from '../prisma/seed/content'
 
 /**
  * Balanceamento do combate (`engine.md` 3.15). Rodar com `npm run balance`. Variáveis:
- * - `BAL_MODE`: `formations` (12 aberturas de cada squad do seed; `BAL_BATTLES` por abertura), `versus` (squad tática contra squad de força bruta, mesma IA), `random` (padrão; squads sorteadas, estatística por personagem e classe) ou `turtle` (squad que só cura,
+ * - `BAL_MODE`: `formations` (12 aberturas de cada squad do seed; `BAL_BATTLES` por abertura), `versus` (squad tática contra squad de força bruta, mesma IA), `random` (padrão; squads sorteadas, estatística por personagem e classe), `skills` (squads e builds sorteadas; vitória de quem equipou cada skill) ou `turtle` (squad que só cura,
  *   protege e Defende contra as composições do seed);
  * - `BAL_BATTLES` (padrão 200), `BAL_FIRST_SEED` (padrão 1), `BAL_LEVEL` (padrão 58);
  * - `BAL_DIFFICULTY` (padrão MASTER) e `BAL_PROFILE` (padrão BALANCED) da IA;
@@ -110,6 +110,8 @@ interface Totals {
   style: Record<string, number>
   /** Usos de cada skill (`modelo:skill`). */
   skills: Record<string, number>
+  /** Modo skills: por skill, batalhas em que estava equipada e vitórias de quem a equipou. */
+  equipped: Record<string, { picks: number; wins: number }>
 }
 
 const content = loadSeedContent()
@@ -132,6 +134,7 @@ const totals: Totals = {
   formations: {},
   characters: {},
   skills: {},
+  equipped: {},
   style: {},
 }
 
@@ -489,6 +492,55 @@ it(`balance ${MODE}`, { timeout: 0 }, async () => {
       if (outcome.winner === turtleSide) {
         totals.turtleWins += 1
         if (outcome.byLessDamage) totals.turtleWinsByLessDamage += 1
+      }
+      await new Promise((resolve) => setImmediate(resolve))
+    }
+  } else if (MODE === 'skills') {
+    // builds sorteadas (4 skills quaisquer já liberadas no nível): vitória de quem equipou cada skill
+    const randomBuild = (key: string, draw: SeededRng) => {
+      const pool = content.characters
+        .find((c) => c.spec.key === key)!
+        .skills.filter((s) => s.minLevel <= LEVEL)
+        .map((s) => s.key)
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = draw.int(0, i)
+        ;[pool[i], pool[j]] = [pool[j], pool[i]]
+      }
+      return pool.slice(0, 4)
+    }
+    for (let i = 0; i < BATTLES; i += 2) {
+      const seed = FIRST_SEED + i
+      const draw = new SeededRng(seed * 7919)
+      const squad = () =>
+        autoFormation(content, randomSquadKeys(content, draw)).map((m) => ({
+          ...m,
+          skills: randomBuild(m.key, draw),
+        }))
+      const a = squad()
+      const b = squad()
+      for (const [k, [player, opponent]] of [
+        [a, b],
+        [b, a],
+      ].entries()) {
+        const s = seed + k
+        const outcome = play(
+          makeDuelSnapshot(content, player, opponent, LEVEL, fieldFor(s)),
+          s,
+          {
+            PLAYER: aiPolicy(BattleSide.PLAYER, s),
+            OPPONENT: aiPolicy(BattleSide.OPPONENT, s),
+          }
+        )
+        for (const [members, side] of [
+          [player, BattleSide.PLAYER],
+          [opponent, BattleSide.OPPONENT],
+        ] as const) {
+          for (const skill of members.flatMap((m) => m.skills)) {
+            const stats = (totals.equipped[skill] ??= { picks: 0, wins: 0 })
+            stats.picks += 1
+            if (outcome.winner === side) stats.wins += 1
+          }
+        }
       }
       await new Promise((resolve) => setImmediate(resolve))
     }
