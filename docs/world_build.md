@@ -368,7 +368,7 @@ Na geração de Ecko só **dois** indivíduos chegaram a Caótico. Combinado com
 | Gaia   | Defesa territorial                    | Terra                                               |
 | Rolf   | Rastreador/batedor                    | Alma                                                |
 | Kara   | Interrogatório/suporte                | Ilusão                                              |
-| Tyir   | Estratégia de guerra, mais experiente | Resistência física e mental                         |
+| Tyir   | Estratégia de guerra, mais experiente | Ossos (proteção; resistência física e mental)       |
 | Isis   | Combate aéreo/longa distância         | Telecinese                                          |
 | Tank   | O mais jovem, futuro da CORE          | **Sem variante**, DOM                               |
 
