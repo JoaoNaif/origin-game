@@ -33,10 +33,10 @@ const COMPOSITIONS: Record<
   CAUTIOUS: {
     name: 'Muralha da CORE',
     members: [
-      { key: 'gaia', row: 0, column: 0 },
-      { key: 'tank-valen', row: 1, column: 0 },
-      { key: 'rolf-eidvar', row: 0, column: 1 },
-      { key: 'kara', row: 1, column: 1 },
+      { key: 'tank-valen', row: 0, column: 0 },
+      { key: 'kara', row: 1, column: 0 },
+      { key: 'gaia', row: 0, column: 1 },
+      { key: 'rolf-eidvar', row: 1, column: 2 },
     ],
   },
   FINISHER: {
@@ -51,10 +51,10 @@ const COMPOSITIONS: Record<
   BALANCED: {
     name: 'CORE',
     members: [
-      { key: 'gaia', row: 0, column: 0 },
-      { key: 'kael-vaz', row: 1, column: 0 },
+      { key: 'kael-vaz', row: 0, column: 0 },
+      { key: 'tyir-ossvald', row: 1, column: 0 },
       { key: 'lucky', row: 0, column: 1 },
-      { key: 'kara', row: 1, column: 1 },
+      { key: 'gaia', row: 1, column: 2 },
     ],
   },
 }

@@ -30,7 +30,7 @@ describe('Choose Skill Offer (e2e)', () => {
   async function gaiaWithOffer(username: string) {
     const { agent, characters } = await createAccount(app, username)
     const gaia = characters.find((c) => c.templateKey === 'gaia')!
-    const offer = await openSkillOffer(prisma, gaia.id, 5, ['gaia:desafio'])
+    const offer = await openSkillOffer(prisma, gaia.id, 5, ['gaia:raizes'])
 
     return { agent, gaia, offer }
   }
@@ -40,13 +40,13 @@ describe('Choose Skill Offer (e2e)', () => {
 
     const response = await agent
       .post(`/skill-offers/${offer.id}/choose`)
-      .send({ skillKey: 'gaia:desafio' })
+      .send({ skillKey: 'gaia:raizes' })
 
     expect(response.statusCode).toBe(200)
     // aprendeu e ficou guardada, fora da build
     expect(response.body.character.skills).toContainEqual(
       expect.objectContaining({
-        key: 'gaia:desafio',
+        key: 'gaia:raizes',
         source: 'OFFER',
         buildSlot: null,
       })
@@ -55,7 +55,7 @@ describe('Choose Skill Offer (e2e)', () => {
 
     // e já pode entrar na build
     const build = buildKeys(gaia)
-    build[3] = 'gaia:desafio'
+    build[3] = 'gaia:raizes'
     const equipped = await agent
       .put(`/characters/${gaia.id}/build`)
       .send({ skillKeys: build })
@@ -66,11 +66,11 @@ describe('Choose Skill Offer (e2e)', () => {
     const { agent, offer } = await gaiaWithOffer('escolha_02')
     await agent
       .post(`/skill-offers/${offer.id}/choose`)
-      .send({ skillKey: 'gaia:desafio' })
+      .send({ skillKey: 'gaia:raizes' })
 
     const again = await agent
       .post(`/skill-offers/${offer.id}/choose`)
-      .send({ skillKey: 'gaia:desafio' })
+      .send({ skillKey: 'gaia:raizes' })
 
     expect(again.statusCode).toBe(400)
   })
@@ -95,7 +95,7 @@ describe('Choose Skill Offer (e2e)', () => {
 
     const response = await other.agent
       .post(`/skill-offers/${offer.id}/choose`)
-      .send({ skillKey: 'gaia:desafio' })
+      .send({ skillKey: 'gaia:raizes' })
 
     expect(response.statusCode).toBe(403)
   })
@@ -105,7 +105,7 @@ describe('Choose Skill Offer (e2e)', () => {
 
     const response = await agent
       .post(`/skill-offers/${UNKNOWN_ID}/choose`)
-      .send({ skillKey: 'gaia:desafio' })
+      .send({ skillKey: 'gaia:raizes' })
 
     expect(response.statusCode).toBe(404)
   })

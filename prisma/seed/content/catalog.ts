@@ -98,10 +98,10 @@ const VARIANTS: {
     description: 'Engana os sentidos.',
   },
   {
-    key: 'resistencia',
-    name: 'Resistência',
+    key: 'ossos',
+    name: 'Ossos',
     lineage: Lineage.BIOLOGICAL,
-    description: 'Corpo e mente que não cedem.',
+    description: 'Molda e endurece os próprios ossos: armadura e lâmina.',
   },
   {
     key: 'telecinese',

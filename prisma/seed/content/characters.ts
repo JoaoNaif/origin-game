@@ -125,22 +125,35 @@ const status = (s: StatusType): SkillEffect => ({
 const modifier = (
   stat: Stat,
   percent: number,
-  appliesTo?: 'SELF'
+  appliesTo?: 'SELF',
+  duration = 2
 ): SkillEffect => ({
   type: 'STAT_MODIFIER',
   stat,
   percent,
-  duration: 2,
+  duration,
   ...(appliesTo ? { appliesTo } : {}),
 })
+
+/**
+ * Suporte puro (D139): cura e escudo sem dano junto rendem ×1,5 do Poder de referência, e buff sem dano junto dura
+ * 3 turnos. Um turno de suporte tem de valer um golpe do mesmo tipo: a cura só conta no aliado ferido e o buff de
+ * Defesa de 10 a 20% só tira ~5 a 9% do dano recebido.
+ */
+const SUPPORT_BONUS = 1.5
+const BUFF_DURATION = 3
 
 /** Dano com efeito lateral (assinatura: ~0,8 do Poder + efeito pequeno, 12.6). */
 const damageWith =
   (multiplier: number, ...extra: SkillEffect[]): Effects =>
   (power) => [{ type: 'DAMAGE', power: r2(power * multiplier) }, ...extra]
 
-const heal: Effects = (power) => [{ type: 'HEAL', power }]
-const shield: Effects = (power) => [{ type: 'SHIELD', power }]
+const heal: Effects = (power) => [
+  { type: 'HEAL', power: r2(power * SUPPORT_BONUS) },
+]
+const shield: Effects = (power) => [
+  { type: 'SHIELD', power: r2(power * SUPPORT_BONUS) },
+]
 const only =
   (...effects: SkillEffect[]): Effects =>
   () =>
@@ -193,12 +206,19 @@ const { ALLY, SELF } = SkillTarget
 const { LINE, COLUMN, GRID } = SkillArea
 const K = SkillKitSlot
 
+/**
+ * Os 12 da CORE (fichas em `art_direction.md` 4). Entre eles, o elenco cobre tudo o que o motor sabe fazer, para testar
+ * o front com poucos personagens: as 8 classes, as 6 linhagens, os 4 alcances, as 4 áreas, os 7 status, os 5
+ * reposicionamentos, adiantar e atrasar, Comando, Proteger, trocar campo, Recuperar, executar, cura, escudo, buff e
+ * debuff (de um e da squad), e uma passiva por gatilho (só o `ON_HEAL` fica de fora). Conferido em
+ * `test/seed/seed-content.spec.ts`.
+ */
 export const CHARACTERS: CharacterSpec[] = [
   {
     key: 'ecko-nocthar',
     name: 'Ecko Nocthar',
     description:
-      'Comandante. Controle absoluto por fora, instabilidade silenciosa por dentro. Lidera por inevitabilidade.',
+      'Líder da CORE, criado desde criança como guerreiro e assassino. Um rei que caminha na frente do seu povo, de presença intimidadora; harpe e antimatéria, a curta distância, fechando a luta.',
     characterClass: CharacterClass.EXECUTOR,
     rarity: Rarity.SS,
     danger: DangerLevel.CHAOTIC,
@@ -207,12 +227,13 @@ export const CHARACTERS: CharacterSpec[] = [
     npcTrait: 'berserker',
     npcPriority: [
       'aniquilacao-total',
-      'salto-de-aniquilacao',
-      'intangivel',
-      'infiltracao',
+      'sentenca',
+      'presenca-do-rei',
+      'gancho-da-harpe',
       'apagar',
-      'corte-de-antimateria',
-      'toque-do-vazio',
+      'infiltracao',
+      'golpe-de-antimateria',
+      'corte-da-harpe',
     ],
     passive: {
       name: 'Aniquilação',
@@ -223,8 +244,8 @@ export const CHARACTERS: CharacterSpec[] = [
     },
     skills: [
       {
-        key: 'toque-do-vazio',
-        name: 'Toque do Vazio',
+        key: 'corte-da-harpe',
+        name: 'Corte da Harpe',
         variant: 'antimateria',
         tier: BASIC,
         slot: K.BASIC,
@@ -232,8 +253,8 @@ export const CHARACTERS: CharacterSpec[] = [
         effects: damage(),
       },
       {
-        key: 'corte-de-antimateria',
-        name: 'Corte de Antimatéria',
+        key: 'golpe-de-antimateria',
+        name: 'Golpe de Antimatéria',
         variant: 'antimateria',
         tier: STANDARD,
         slot: K.STANDARD,
@@ -259,21 +280,40 @@ export const CHARACTERS: CharacterSpec[] = [
         effects: damageWith(0.8, status(StatusType.EXPOSE)),
       },
       {
-        key: 'intangivel',
-        name: 'Intangível',
+        key: 'gancho-da-harpe',
+        name: 'Gancho da Harpe',
         variant: 'antimateria',
         tier: REINFORCED,
-        range: MELEE,
-        effects: damageWith(0.9, modifier(Stat.EVASION, 15, 'SELF')),
+        range: FLANK,
+        // o gancho alcança o fundo da linha e puxa o alvo para a frente
+        effects: damageWith(0.8, { type: 'REPOSITION', kind: 'PULL' }),
       },
       {
-        key: 'salto-de-aniquilacao',
-        name: 'Salto de Aniquilação',
+        key: 'presenca-do-rei',
+        name: 'Presença do Rei',
+        variant: 'antimateria',
+        tier: REINFORCED,
+        range: RANGED,
+        area: GRID,
+        // intimidação: debuff de squad (magnitude ×0,7, 12.8)
+        effects: only(modifier(Stat.ATTACK, -10)),
+      },
+      {
+        key: 'sentenca',
+        name: 'Sentença',
         variant: 'antimateria',
         tier: STRONG,
-        range: FLANK,
-        // golpeia pelo flanco e avança para uma célula adjacente
-        effects: damageWith(1, { type: 'REPOSITION', kind: 'DASH' }),
+        range: MELEE,
+        // executar (D125): ×1,5 em alvo Exposto, e a guarda aberta se fecha
+        effects: (power) => [
+          { type: 'DAMAGE', power },
+          {
+            type: 'EXPLOIT',
+            status: StatusType.EXPOSE,
+            multiplier: 1.5,
+            consume: true,
+          },
+        ],
       },
       {
         key: 'aniquilacao-total',
@@ -289,7 +329,7 @@ export const CHARACTERS: CharacterSpec[] = [
     key: 'kael-vaz',
     name: 'Kael Vaz',
     description:
-      'Mão direita. Disciplina militar em guerra constante; teme ser inútil mais do que morrer.',
+      'Mão direita. Cumpre regras, leal e de grande coração, mas impiedoso em campo. Híbrido perfeito: explode áreas grandes na linha de frente e o endurecimento o protege das próprias explosões.',
     characterClass: CharacterClass.VANGUARD,
     rarity: Rarity.A,
     danger: DangerLevel.DIFFERENTIABLE,
@@ -297,32 +337,22 @@ export const CHARACTERS: CharacterSpec[] = [
     npcTrait: 'muralha-viva',
     npcPriority: [
       'detonacao-total',
-      'colosso',
-      'grito-de-guerra',
+      'pilar-de-explosao',
       'onda-de-choque',
+      'escudo-de-aco',
       'detonacao',
+      'blindagem',
       'punho-de-aco',
       'soco-explosivo',
-      'blindagem',
     ],
     passive: {
-      name: 'Disciplina de Guerra',
+      name: 'Híbrido Perfeito',
       description:
-        'Quando um aliado cai, +20% de Ataque até o fim do próximo turno (D124).',
-      trigger: { type: 'ON_ALLY_DEFEATED' },
-      effects: [{ type: 'STAT_MODIFIER', stat: Stat.ATTACK, percent: 20 }],
+        'Ao causar dano, a explosão o endurece: +10% de Defesa até o fim do próximo turno.',
+      trigger: { type: 'ON_ATTACK' },
+      effects: [{ type: 'STAT_MODIFIER', stat: Stat.DEFENSE, percent: 10 }],
     },
     skills: [
-      {
-        key: 'grito-de-guerra',
-        name: 'Grito de Guerra',
-        variant: 'endurecimento',
-        tier: REINFORCED,
-        range: MELEE,
-        area: LINE,
-        // Provocar Reforçada (D124): uma linha
-        effects: only(status(StatusType.TAUNT)),
-      },
       {
         key: 'soco-explosivo',
         name: 'Soco Explosivo',
@@ -331,15 +361,6 @@ export const CHARACTERS: CharacterSpec[] = [
         slot: K.BASIC,
         range: MELEE,
         effects: damage(),
-      },
-      {
-        key: 'detonacao',
-        name: 'Detonação',
-        variant: 'explosao',
-        tier: STANDARD,
-        slot: K.SIGNATURE,
-        range: MELEE,
-        effects: damageWith(0.8, { type: 'REPOSITION', kind: 'PUSH' }),
       },
       {
         key: 'punho-de-aco',
@@ -351,13 +372,34 @@ export const CHARACTERS: CharacterSpec[] = [
         effects: damage(),
       },
       {
-        key: 'blindagem',
-        name: 'Blindagem',
+        key: 'escudo-de-aco',
+        name: 'Escudo de Aço',
         variant: 'endurecimento',
         tier: STANDARD,
         slot: K.ROLE,
+        target: ALLY,
+        // Proteger (D124): o golpe no aliado adjacente cai no Kael
+        effects: only({ type: 'PROTECT' }),
+      },
+      {
+        key: 'detonacao',
+        name: 'Detonação',
+        variant: 'explosao',
+        tier: STANDARD,
+        slot: K.SIGNATURE,
+        range: MELEE,
+        effects: damageWith(0.8, { type: 'REPOSITION', kind: 'PUSH' }),
+      },
+      {
+        key: 'blindagem',
+        name: 'Blindagem',
+        variant: 'endurecimento',
+        tier: REINFORCED,
         target: SELF,
-        effects: only(modifier(Stat.DEFENSE, 10)),
+        effects: (power) => [
+          modifier(Stat.DEFENSE, 20, undefined, BUFF_DURATION),
+          { type: 'SHIELD', power: r2(power * 0.6) },
+        ],
       },
       {
         key: 'onda-de-choque',
@@ -369,12 +411,13 @@ export const CHARACTERS: CharacterSpec[] = [
         effects: damage(),
       },
       {
-        key: 'colosso',
-        name: 'Colosso',
-        variant: 'endurecimento',
+        key: 'pilar-de-explosao',
+        name: 'Pilar de Explosão',
+        variant: 'explosao',
         tier: STRONG,
         range: MELEE,
-        effects: damageWith(0.9, modifier(Stat.DEFENSE, 20, 'SELF')),
+        area: COLUMN,
+        effects: damage(),
       },
       {
         key: 'detonacao-total',
@@ -382,6 +425,7 @@ export const CHARACTERS: CharacterSpec[] = [
         variant: 'explosao',
         tier: FINAL,
         range: MELEE,
+        area: GRID,
         effects: damage(),
       },
     ],
@@ -390,7 +434,7 @@ export const CHARACTERS: CharacterSpec[] = [
     key: 'derik-okoro',
     name: 'Derik Okoro',
     description:
-      'Mão esquerda. O palhaço do grupo; quando o sorriso some, a coisa é séria. O que não pode ser morto.',
+      'Mão esquerda e o palhaço do grupo. Luta de um jeito louco, sem ligar para dano, porque se cura: vem como um trator, nos punhos. Duas Desert Eagles para longe. Viciado em cigarro e álcool.',
     characterClass: CharacterClass.VANGUARD,
     rarity: Rarity.A,
     danger: DangerLevel.DIFFERENTIABLE,
@@ -398,13 +442,13 @@ export const CHARACTERS: CharacterSpec[] = [
     npcTrait: 'berserker',
     npcPriority: [
       'moedor-de-carne',
-      'atrito',
-      'corpo-de-escudo',
-      'sangue-que-volta',
-      'golpe-do-corpo',
       'nao-morre',
+      'trator',
+      'vem-pra-cima',
+      'sangue-que-volta',
+      'desert-eagles',
+      'golpe-do-corpo',
       'pancada',
-      'pele-viva',
     ],
     passive: {
       name: 'Imortal',
@@ -413,15 +457,6 @@ export const CHARACTERS: CharacterSpec[] = [
       effects: [{ type: 'HEAL', percentOfMaxHp: 2 }],
     },
     skills: [
-      {
-        key: 'corpo-de-escudo',
-        name: 'Corpo de Escudo',
-        variant: 'regeneracao',
-        tier: STANDARD,
-        target: ALLY,
-        // Proteger (D124): o que não pode ser morto segura o golpe
-        effects: only({ type: 'PROTECT' }),
-      },
       {
         key: 'pancada',
         name: 'Pancada',
@@ -441,13 +476,14 @@ export const CHARACTERS: CharacterSpec[] = [
         effects: damage(),
       },
       {
-        key: 'pele-viva',
-        name: 'Pele Viva',
+        key: 'vem-pra-cima',
+        name: 'Vem pra Cima',
         variant: 'regeneracao',
         tier: STANDARD,
         slot: K.ROLE,
-        target: SELF,
-        effects: only(modifier(Stat.DEFENSE, 10)),
+        range: RANGED,
+        // Provocar Padrão (D124): 1 inimigo
+        effects: only(status(StatusType.TAUNT)),
       },
       {
         key: 'sangue-que-volta',
@@ -463,13 +499,21 @@ export const CHARACTERS: CharacterSpec[] = [
         }),
       },
       {
-        key: 'atrito',
-        name: 'Atrito',
+        key: 'desert-eagles',
+        name: 'Desert Eagles',
+        variant: 'regeneracao',
+        tier: STANDARD,
+        range: RANGED,
+        effects: damage(),
+      },
+      {
+        key: 'trator',
+        name: 'Trator',
         variant: 'regeneracao',
         tier: REINFORCED,
         range: MELEE,
-        area: LINE,
-        effects: damage(),
+        // golpeia e avança para uma célula adjacente
+        effects: damageWith(1, { type: 'REPOSITION', kind: 'DASH' }),
       },
       {
         key: 'nao-morre',
@@ -477,7 +521,11 @@ export const CHARACTERS: CharacterSpec[] = [
         variant: 'regeneracao',
         tier: STRONG,
         target: SELF,
-        effects: heal,
+        // skill de recuperação (9.4b, D120): cura e alivia 50% do Desgaste
+        effects: (power) => [
+          { type: 'HEAL', power: r2(power * SUPPORT_BONUS) },
+          { type: 'RECOVER' },
+        ],
       },
       {
         key: 'moedor-de-carne',
@@ -485,6 +533,7 @@ export const CHARACTERS: CharacterSpec[] = [
         variant: 'regeneracao',
         tier: FINAL,
         range: MELEE,
+        area: LINE,
         effects: damage(),
       },
     ],
@@ -493,7 +542,7 @@ export const CHARACTERS: CharacterSpec[] = [
     key: 'lucky',
     name: 'Lucky',
     description:
-      'Carismático, leve e protetor. Herói cansado de ser símbolo; quer uma revolução pelas linhagens caçadas.',
+      'Irmão do Ecko e o melhor artista marcial da CORE. Katana canalizando o relâmpago, e o tempo: versátil de perto e de longe. Gentil e sentimental, o contraste com o irmão.',
     characterClass: CharacterClass.MARKSMAN,
     rarity: Rarity.SS,
     danger: DangerLevel.NON_LINEAR,
@@ -502,12 +551,13 @@ export const CHARACTERS: CharacterSpec[] = [
     npcTrait: 'olho-de-aguia',
     npcPriority: [
       'instante-parado',
-      'trovao',
+      'iaijutsu',
+      'trovao-perfurante',
       'corrente',
-      'marcar-o-instante',
       'passo-adiante',
+      'marcar-o-instante',
       'raio',
-      'faisca',
+      'corte-relampago',
     ],
     passive: {
       name: 'Fluxo do Tempo',
@@ -517,12 +567,12 @@ export const CHARACTERS: CharacterSpec[] = [
     },
     skills: [
       {
-        key: 'faisca',
-        name: 'Faísca',
+        key: 'corte-relampago',
+        name: 'Corte Relâmpago',
         variant: 'relampago',
         tier: BASIC,
         slot: K.BASIC,
-        range: RANGED,
+        range: MELEE,
         effects: damage(),
       },
       {
@@ -549,7 +599,7 @@ export const CHARACTERS: CharacterSpec[] = [
         variant: 'tempo',
         tier: STANDARD,
         slot: K.SIGNATURE,
-        range: RANGED,
+        range: MELEE,
         effects: damageWith(0.8, {
           type: 'TURN_SHIFT',
           percent: 25,
@@ -566,12 +616,21 @@ export const CHARACTERS: CharacterSpec[] = [
         effects: damage(),
       },
       {
-        key: 'trovao',
-        name: 'Trovão',
+        key: 'trovao-perfurante',
+        name: 'Trovão Perfurante',
+        variant: 'relampago',
+        tier: REINFORCED,
+        range: PIERCING,
+        effects: damage(),
+      },
+      {
+        key: 'iaijutsu',
+        name: 'Iaijutsu',
         variant: 'relampago',
         tier: STRONG,
-        range: RANGED,
-        effects: damage(),
+        range: MELEE,
+        // o saque da katana: golpeia e avança para uma célula adjacente
+        effects: damageWith(1, { type: 'REPOSITION', kind: 'DASH' }),
       },
       {
         key: 'instante-parado',
@@ -579,7 +638,8 @@ export const CHARACTERS: CharacterSpec[] = [
         variant: 'tempo',
         tier: FINAL,
         range: RANGED,
-        effects: damageWith(0.9, status(StatusType.STUN)),
+        // atrasa a vez do alvo (12.8); o alvo fica imune a novo atraso até agir
+        effects: damageWith(0.9, { type: 'TURN_SHIFT', percent: -30 }),
       },
     ],
   },
@@ -587,7 +647,7 @@ export const CHARACTERS: CharacterSpec[] = [
     key: 'sunna',
     name: 'Sunna',
     description:
-      'A mulher mais forte de Carmesin e a de maior controle de variante. Elegante, irônica e controladora.',
+      'A mulher mais forte de Carmesin e o maior controle de variante da CORE: faz quase tudo com o gelo, e o florete. Treinada com o Ecko, mata com a mesma facilidade. Direta, orgulhosa e irritada, mas carismática; pelo Ecko, destruiria uma cidade.',
     characterClass: CharacterClass.CONTROLLER,
     rarity: Rarity.S,
     danger: DangerLevel.NON_LINEAR,
@@ -595,52 +655,35 @@ export const CHARACTERS: CharacterSpec[] = [
     npcTrait: 'sangue-frio',
     npcPriority: [
       'superionico',
-      'zero-absoluto',
+      'nevasca',
       'estilhacar',
-      'congelar',
       'grilhao',
-      'muralha-de-gelo',
+      'congelar',
+      'inverno-eterno',
       'lanca-de-gelo',
-      'estilhaco',
+      'estocada',
     ],
     passive: {
-      name: 'Controle Absoluto',
-      description: 'Ao causar dano, 20% de chance de Prender o alvo.',
-      trigger: { type: 'ON_ATTACK' },
+      name: 'Toque Gélido',
+      description: 'Ao receber dano, 25% de chance de Prender quem a atingiu.',
+      trigger: { type: 'ON_HIT' },
       effects: [
         {
           type: 'APPLY_STATUS',
           status: StatusType.ROOT,
-          target: 'TARGET',
-          chance: 0.2,
+          target: 'ATTACKER',
+          chance: 0.25,
         },
       ],
     },
     skills: [
       {
-        key: 'estilhacar',
-        name: 'Estilhaçar',
-        variant: 'gelo-superionico',
-        tier: REINFORCED,
-        range: RANGED,
-        // executar (D125): ×1,5 em alvo Preso, e o gelo quebra (o Preso acaba)
-        effects: (power) => [
-          { type: 'DAMAGE', power },
-          {
-            type: 'EXPLOIT',
-            status: StatusType.ROOT,
-            multiplier: 1.5,
-            consume: true,
-          },
-        ],
-      },
-      {
-        key: 'estilhaco',
-        name: 'Estilhaço',
+        key: 'estocada',
+        name: 'Estocada',
         variant: 'gelo-superionico',
         tier: BASIC,
         slot: K.BASIC,
-        range: RANGED,
+        range: MELEE,
         effects: damage(),
       },
       {
@@ -671,29 +714,47 @@ export const CHARACTERS: CharacterSpec[] = [
         effects: damageWith(0.8, status(StatusType.ROOT)),
       },
       {
-        key: 'muralha-de-gelo',
-        name: 'Muralha de Gelo',
+        key: 'estilhacar',
+        name: 'Estilhaçar',
         variant: 'gelo-superionico',
         tier: REINFORCED,
-        range: RANGED,
-        area: COLUMN,
-        effects: damage(),
+        range: MELEE,
+        // executar (D125): ×1,5 em alvo Preso, e o gelo quebra (o Preso acaba)
+        effects: (power) => [
+          { type: 'DAMAGE', power },
+          {
+            type: 'EXPLOIT',
+            status: StatusType.ROOT,
+            multiplier: 1.5,
+            consume: true,
+          },
+        ],
       },
       {
-        key: 'zero-absoluto',
-        name: 'Zero Absoluto',
+        key: 'inverno-eterno',
+        name: 'Inverno Eterno',
+        variant: 'gelo-superionico',
+        tier: STRONG,
+        target: SELF,
+        // troca o campo (12.7): Forte = 2 rodadas, bônus ×1,5, cooldown 4
+        cooldown: 4,
+        effects: only({ type: 'CHANGE_FIELD', duration: 2, multiplier: 1.5 }),
+      },
+      {
+        key: 'nevasca',
+        name: 'Nevasca',
         variant: 'gelo-superionico',
         tier: STRONG,
         range: RANGED,
         area: GRID,
-        effects: damage(),
+        effects: damageWith(1, status(StatusType.LOCK)),
       },
       {
         key: 'superionico',
         name: 'Superiônico',
         variant: 'gelo-superionico',
         tier: FINAL,
-        range: RANGED,
+        range: PIERCING,
         effects: damageWith(0.9, status(StatusType.STUN)),
       },
     ],
@@ -702,7 +763,7 @@ export const CHARACTERS: CharacterSpec[] = [
     key: 'nox',
     name: 'Nox',
     description:
-      'Espionagem, rastreio e controle de sombra. Introspectiva e curiosa; busca entendimento, não poder.',
+      'A mais rápida da CORE: se move pela sombra. Infiltração, furtividade e ataque surpresa; paralisa segurando a sombra do inimigo, com duas adagas de assassina. Quieta, gentil, gosta de ler e do céu estrelado; odeia que invadam o espaço dela.',
     characterClass: CharacterClass.EXECUTOR,
     rarity: Rarity.A,
     danger: DangerLevel.DIFFERENTIABLE,
@@ -710,14 +771,13 @@ export const CHARACTERS: CharacterSpec[] = [
     familyTrait: 'hyperion',
     npcTrait: 'passo-leve',
     npcPriority: [
-      'eclipse',
-      'execucao',
-      'assassinato-silencioso',
-      'compressao',
-      'travamento',
-      'pela-sombra',
+      'assassinato',
+      'emboscada',
+      'manto-de-sombra',
+      'agarrar-a-sombra',
+      'passo-sombrio',
       'golpe-da-sombra',
-      'lamina-de-sombra',
+      'adagas-gemeas',
     ],
     passive: {
       name: 'Visão Sombria',
@@ -727,25 +787,8 @@ export const CHARACTERS: CharacterSpec[] = [
     },
     skills: [
       {
-        key: 'execucao',
-        name: 'Execução',
-        variant: 'sombra',
-        tier: STRONG,
-        range: MELEE,
-        // executar (D125): ×1,5 em alvo Atordoado (não tira o Atordoado)
-        effects: (power) => [
-          { type: 'DAMAGE', power },
-          {
-            type: 'EXPLOIT',
-            status: StatusType.STUN,
-            multiplier: 1.5,
-            consume: false,
-          },
-        ],
-      },
-      {
-        key: 'lamina-de-sombra',
-        name: 'Lâmina de Sombra',
+        key: 'adagas-gemeas',
+        name: 'Adagas Gêmeas',
         variant: 'sombra',
         tier: BASIC,
         slot: K.BASIC,
@@ -762,45 +805,59 @@ export const CHARACTERS: CharacterSpec[] = [
         effects: damage(),
       },
       {
-        key: 'pela-sombra',
-        name: 'Pela Sombra',
+        key: 'passo-sombrio',
+        name: 'Passo Sombrio',
         variant: 'sombra',
         tier: STANDARD,
         slot: K.ROLE,
         range: FLANK,
-        effects: damage(),
+        // sai da sombra no fundo da linha e avança para uma célula adjacente
+        effects: damageWith(0.9, { type: 'REPOSITION', kind: 'DASH' }),
       },
       {
-        key: 'travamento',
-        name: 'Travamento',
+        key: 'agarrar-a-sombra',
+        name: 'Agarrar a Sombra',
         variant: 'sombra',
         tier: STANDARD,
         slot: K.SIGNATURE,
-        range: MELEE,
-        effects: damageWith(0.8, status(StatusType.LOCK)),
+        range: RANGED,
+        effects: damageWith(0.8, status(StatusType.ROOT)),
       },
       {
-        key: 'compressao',
-        name: 'Compressão',
+        key: 'manto-de-sombra',
+        name: 'Manto de Sombra',
         variant: 'sombra',
         tier: REINFORCED,
-        range: MELEE,
-        effects: damageWith(0.8, status(StatusType.DOT)),
+        target: SELF,
+        // as tatuagens viram sombra
+        effects: only(
+          modifier(Stat.EVASION, 20, undefined, BUFF_DURATION),
+          modifier(Stat.SPEED, 10, undefined, BUFF_DURATION)
+        ),
       },
       {
-        key: 'assassinato-silencioso',
-        name: 'Assassinato Silencioso',
+        key: 'emboscada',
+        name: 'Emboscada',
         variant: 'sombra',
         tier: STRONG,
-        range: FLANK,
-        effects: damage(),
+        range: MELEE,
+        // executar (D125): ×1,5 em alvo Preso (não solta a sombra)
+        effects: (power) => [
+          { type: 'DAMAGE', power },
+          {
+            type: 'EXPLOIT',
+            status: StatusType.ROOT,
+            multiplier: 1.5,
+            consume: false,
+          },
+        ],
       },
       {
-        key: 'eclipse',
-        name: 'Eclipse',
+        key: 'assassinato',
+        name: 'Assassinato',
         variant: 'sombra',
         tier: FINAL,
-        range: MELEE,
+        range: FLANK,
         effects: damage(),
       },
     ],
@@ -809,8 +866,8 @@ export const CHARACTERS: CharacterSpec[] = [
     key: 'gaia',
     name: 'Gaia',
     description:
-      'A melhor defensora de Carmesin. Escolhe a esperança de forma consciente; o coração da CORE.',
-    characterClass: CharacterClass.GUARDIAN,
+      'O coração da CORE: suporte do grupo pela terra, na defesa e no ataque, a média distância, moldando o terreno para criar vantagem. Cajado forjado pela família. A mais gentil e empática; odeia guerra e morte.',
+    characterClass: CharacterClass.SUPPORT,
     rarity: Rarity.A,
     danger: DangerLevel.DIFFERENTIABLE,
     variants: ['terra'],
@@ -818,81 +875,93 @@ export const CHARACTERS: CharacterSpec[] = [
     npcPriority: [
       'coracao-da-terra',
       'terremoto',
-      'desafio',
-      'bastiao',
-      'tremor',
+      'solo-firme',
       'muralha-de-terra',
-      'martelo-de-pedra',
+      'cura-da-terra',
+      'moldar-o-terreno',
+      'raizes',
+      'estaca-de-pedra',
       'pedrada',
     ],
     passive: {
-      name: 'Coração da CORE',
+      name: 'Terra Viva',
       description:
-        'Ao receber dano, +10% de Defesa até o fim do próximo turno.',
-      trigger: { type: 'ON_HIT' },
-      effects: [{ type: 'STAT_MODIFIER', stat: Stat.DEFENSE, percent: 10 }],
+        'Quando o campo de batalha muda, adianta a vez de todos os aliados em 15%.',
+      trigger: { type: 'ON_FIELD_CHANGE' },
+      effects: [{ type: 'ADVANCE_ALLIES', percent: 15 }],
     },
     skills: [
-      {
-        key: 'desafio',
-        name: 'Desafio',
-        variant: 'terra',
-        tier: STANDARD,
-        range: RANGED,
-        // Provocar Padrão (D124): 1 inimigo
-        effects: only(status(StatusType.TAUNT)),
-      },
       {
         key: 'pedrada',
         name: 'Pedrada',
         variant: 'terra',
         tier: BASIC,
         slot: K.BASIC,
-        range: MELEE,
+        range: RANGED,
         effects: damage(),
       },
       {
-        key: 'martelo-de-pedra',
-        name: 'Martelo de Pedra',
+        key: 'estaca-de-pedra',
+        name: 'Estaca de Pedra',
         variant: 'terra',
         tier: STANDARD,
         slot: K.STANDARD,
-        range: MELEE,
+        range: RANGED,
         effects: damage(),
       },
       {
-        key: 'muralha-de-terra',
-        name: 'Muralha de Terra',
+        key: 'cura-da-terra',
+        name: 'Cura da Terra',
         variant: 'terra',
         tier: STANDARD,
         slot: K.ROLE,
         target: ALLY,
-        effects: shield,
+        effects: heal,
       },
       {
-        key: 'tremor',
-        name: 'Tremor',
+        key: 'moldar-o-terreno',
+        name: 'Moldar o Terreno',
         variant: 'terra',
         tier: STANDARD,
         slot: K.SIGNATURE,
-        range: MELEE,
-        effects: damageWith(0.8, modifier(Stat.ATTACK, -10)),
+        target: SELF,
+        // troca o campo (12.7): Padrão = 4 rodadas, bônus ×1,0, cooldown 2
+        cooldown: 2,
+        effects: only({ type: 'CHANGE_FIELD', duration: 4, multiplier: 1 }),
       },
       {
-        key: 'bastiao',
-        name: 'Bastião',
+        key: 'raizes',
+        name: 'Raízes',
+        variant: 'terra',
+        tier: STANDARD,
+        range: RANGED,
+        effects: damageWith(0.5, status(StatusType.ROOT)),
+      },
+      {
+        key: 'muralha-de-terra',
+        name: 'Muralha de Terra',
         variant: 'terra',
         tier: REINFORCED,
         target: ALLY,
         effects: shield,
       },
       {
+        key: 'solo-firme',
+        name: 'Solo Firme',
+        variant: 'terra',
+        tier: REINFORCED,
+        target: ALLY,
+        area: GRID,
+        // buff de squad (12.8): magnitude ×0,7
+        effects: only(modifier(Stat.DEFENSE, 10, undefined, BUFF_DURATION)),
+      },
+      {
         key: 'terremoto',
         name: 'Terremoto',
         variant: 'terra',
         tier: STRONG,
-        range: MELEE,
-        area: LINE,
+        range: RANGED,
+        area: GRID,
         effects: damage(),
       },
       {
@@ -902,7 +971,7 @@ export const CHARACTERS: CharacterSpec[] = [
         tier: FINAL,
         target: ALLY,
         area: GRID,
-        effects: shield,
+        effects: heal,
       },
     ],
   },
@@ -910,20 +979,21 @@ export const CHARACTERS: CharacterSpec[] = [
     key: 'rolf-eidvar',
     name: 'Rolf Eidvar',
     description:
-      'O melhor rastreador e batedor. Gentil, calmo, obcecado por limpeza e movido por culpa.',
+      'Atirador cego que se localiza vendo as almas. O ataque de longa distância da CORE, com rifle de precisão e balas imbuídas da própria alma. Calmo e sereno; por pecados antigos, sempre disposto ao sacrifício.',
     characterClass: CharacterClass.MARKSMAN,
     rarity: Rarity.B,
     danger: DangerLevel.CONTINUOUS,
     variants: ['alma'],
     npcTrait: 'mira-firme',
     npcPriority: [
-      'sacrificio',
-      'atravessar',
-      'cacada',
-      'rastro',
-      'ferir-a-alma',
+      'ultimo-disparo',
+      'sentenca-da-alma',
+      'tiro-na-alma',
+      'bala-de-alma',
+      'ler-a-alma',
+      'em-meu-lugar',
       'tiro-da-alma',
-      'flecha-espiritual',
+      'tiro-certeiro',
     ],
     passive: {
       name: 'Primeiro a Cair',
@@ -933,8 +1003,8 @@ export const CHARACTERS: CharacterSpec[] = [
     },
     skills: [
       {
-        key: 'flecha-espiritual',
-        name: 'Flecha Espiritual',
+        key: 'tiro-certeiro',
+        name: 'Tiro Certeiro',
         variant: 'alma',
         tier: BASIC,
         slot: K.BASIC,
@@ -951,8 +1021,8 @@ export const CHARACTERS: CharacterSpec[] = [
         effects: damage(),
       },
       {
-        key: 'rastro',
-        name: 'Rastro',
+        key: 'ler-a-alma',
+        name: 'Ler a Alma',
         variant: 'alma',
         tier: STANDARD,
         slot: K.ROLE,
@@ -960,36 +1030,54 @@ export const CHARACTERS: CharacterSpec[] = [
         effects: damageWith(0.5, status(StatusType.MARK)),
       },
       {
-        key: 'ferir-a-alma',
-        name: 'Ferir a Alma',
+        key: 'bala-de-alma',
+        name: 'Bala de Alma',
         variant: 'alma',
         tier: STANDARD,
         slot: K.SIGNATURE,
-        range: RANGED,
-        effects: damageWith(0.8, modifier(Stat.WILL, -10)),
+        range: PIERCING,
+        effects: damageWith(0.9, modifier(Stat.WILL, -10)),
       },
       {
-        key: 'cacada',
-        name: 'Caçada',
+        key: 'em-meu-lugar',
+        name: 'Em Meu Lugar',
+        variant: 'alma',
+        tier: STANDARD,
+        target: ALLY,
+        // Proteger (D124): o sacrifício, o golpe no aliado adjacente cai no Rolf
+        effects: only({ type: 'PROTECT' }),
+      },
+      {
+        key: 'tiro-na-alma',
+        name: 'Tiro na Alma',
         variant: 'alma',
         tier: REINFORCED,
         range: RANGED,
-        effects: damageWith(0.8, status(StatusType.EXPOSE)),
+        effects: damageWith(0.8, status(StatusType.LOCK)),
       },
       {
-        key: 'atravessar',
-        name: 'Atravessar',
+        key: 'sentenca-da-alma',
+        name: 'Sentença da Alma',
         variant: 'alma',
         tier: STRONG,
-        range: PIERCING,
-        effects: damage(),
+        range: RANGED,
+        // executar (D125): ×1,5 em alvo Marcado, e a marca se apaga
+        effects: (power) => [
+          { type: 'DAMAGE', power },
+          {
+            type: 'EXPLOIT',
+            status: StatusType.MARK,
+            multiplier: 1.5,
+            consume: true,
+          },
+        ],
       },
       {
-        key: 'sacrificio',
-        name: 'Sacrifício',
+        key: 'ultimo-disparo',
+        name: 'Último Disparo',
         variant: 'alma',
         tier: FINAL,
-        range: RANGED,
+        range: PIERCING,
         effects: damage(),
       },
     ],
@@ -998,7 +1086,7 @@ export const CHARACTERS: CharacterSpec[] = [
     key: 'kara',
     name: 'Kara',
     description:
-      'Ilusão, interrogatório e estratégia. A "irmã mais velha"; sonha com civilização, não só com vitória.',
+      'Progressista, com uma visão clara do mundo que deseja; afrontosa, mas muito amorosa com os seus. Discute com o Ecko e é nele que mais confia. Ilusão de suporte: confunde inimigos, ergue a moral e faz sonhar acordado, de lança, no corpo a corpo.',
     characterClass: CharacterClass.SUPPORT,
     rarity: Rarity.B,
     danger: DangerLevel.CONTINUOUS,
@@ -1006,53 +1094,65 @@ export const CHARACTERS: CharacterSpec[] = [
     npcTrait: 'sangue-frio',
     npcPriority: [
       'civilizacao',
+      'perdidos',
       'abrigo-ilusorio',
-      'refugio',
-      'confianca',
       'vertigem',
-      'pesadelo',
-      'miragem',
+      'sonho-acordado',
+      'moral',
+      'lanca-ilusoria',
+      'golpe-de-lanca',
     ],
     passive: {
-      name: 'Irmã Mais Velha',
-      description: 'Ao curar, adianta a própria vez em 15%.',
-      trigger: { type: 'ON_HEAL' },
-      effects: [{ type: 'ADVANCE_TURN', percent: 15 }],
+      name: 'Pelos Meus',
+      description:
+        'Quando um aliado cai, +20% de Ataque até o fim do próximo turno.',
+      trigger: { type: 'ON_ALLY_DEFEATED' },
+      effects: [{ type: 'STAT_MODIFIER', stat: Stat.ATTACK, percent: 20 }],
     },
     skills: [
       {
-        key: 'miragem',
-        name: 'Miragem',
+        key: 'golpe-de-lanca',
+        name: 'Golpe de Lança',
         variant: 'ilusao',
         tier: BASIC,
         slot: K.BASIC,
-        range: RANGED,
+        range: MELEE,
         effects: damage(),
       },
       {
-        key: 'pesadelo',
-        name: 'Pesadelo',
+        key: 'lanca-ilusoria',
+        name: 'Lança Ilusória',
         variant: 'ilusao',
         tier: STANDARD,
         slot: K.STANDARD,
-        range: RANGED,
+        range: MELEE,
         effects: damage(),
       },
       {
-        key: 'refugio',
-        name: 'Refúgio',
+        key: 'moral',
+        name: 'Moral',
         variant: 'ilusao',
         tier: STANDARD,
         slot: K.ROLE,
         target: ALLY,
-        effects: heal,
+        area: GRID,
+        // buff de squad (12.8): magnitude ×0,7
+        effects: only(modifier(Stat.ATTACK, 7, undefined, BUFF_DURATION)),
+      },
+      {
+        key: 'sonho-acordado',
+        name: 'Sonho Acordado',
+        variant: 'ilusao',
+        tier: STANDARD,
+        slot: K.SIGNATURE,
+        range: RANGED,
+        effects: damageWith(0.5, status(StatusType.STUN)),
       },
       {
         key: 'vertigem',
         name: 'Vertigem',
         variant: 'ilusao',
-        tier: STANDARD,
-        slot: K.SIGNATURE,
+        tier: REINFORCED,
         range: RANGED,
         // a ilusão troca o alvo de lugar com um inimigo adjacente (D111)
         effects: damageWith(0.8, { type: 'REPOSITION', kind: 'SWAP' }),
@@ -1064,16 +1164,20 @@ export const CHARACTERS: CharacterSpec[] = [
         tier: REINFORCED,
         target: ALLY,
         // skill de recuperação (9.4b, D120): cura e alivia 50% do Desgaste
-        effects: (power) => [{ type: 'HEAL', power }, { type: 'RECOVER' }],
+        effects: (power) => [
+          { type: 'HEAL', power: r2(power * SUPPORT_BONUS) },
+          { type: 'RECOVER' },
+        ],
       },
       {
-        key: 'confianca',
-        name: 'Confiança',
+        key: 'perdidos',
+        name: 'Perdidos',
         variant: 'ilusao',
         tier: STRONG,
-        target: ALLY,
+        range: RANGED,
         area: GRID,
-        effects: only(modifier(Stat.ATTACK, 14)),
+        // debuff de squad (12.8): magnitude ×0,7
+        effects: only(modifier(Stat.PRECISION, -14)),
       },
       {
         key: 'civilizacao',
@@ -1082,7 +1186,10 @@ export const CHARACTERS: CharacterSpec[] = [
         tier: FINAL,
         target: ALLY,
         area: GRID,
-        effects: heal,
+        effects: only(
+          modifier(Stat.ATTACK, 14, undefined, BUFF_DURATION),
+          modifier(Stat.DEFENSE, 14, undefined, BUFF_DURATION)
+        ),
       },
     ],
   },
@@ -1090,41 +1197,44 @@ export const CHARACTERS: CharacterSpec[] = [
     key: 'tyir-ossvald',
     name: 'Tyir Ossvald',
     description:
-      'O mais experiente, mestre em estratégia de guerra. "Vitória sem humanidade não vale nada."',
+      'O mais experiente da CORE; ex-comandante genial e disruptivo. Os ossos o protegem e a maça é o golpe de perto, mas a arma maior é a inteligência tática. Busca redenção pela nação perdida; quase um pai para o Ecko.',
     characterClass: CharacterClass.TACTICIAN,
     rarity: Rarity.A,
     danger: DangerLevel.DIFFERENTIABLE,
-    variants: ['resistencia'],
+    variants: ['ossos'],
     npcTrait: 'impeto',
     npcPriority: [
       'agora',
+      'lancas-de-osso',
+      'ler-a-batalha',
       'comando',
-      'contra-ataque',
-      'postura-firme',
-      'ler-o-terreno',
+      'formacao-de-guerra',
+      'couraca-de-osso',
       'reposicionar-tropa',
-      'golpe-veterano',
+      'maca-de-osso',
+      'golpe-de-maca',
     ],
     passive: {
-      name: 'Experiência',
-      description: 'Recebe sempre 5% menos dano.',
-      trigger: { type: 'ALWAYS' },
-      effects: [{ type: 'REDUCE_DAMAGE', percent: 5 }],
+      name: 'Veterano',
+      description:
+        'Já viu de tudo: ao ser Atordoado, as recargas de todas as skills baixam 1.',
+      trigger: { type: 'ON_STATUS', status: StatusType.STUN },
+      effects: [{ type: 'REDUCE_COOLDOWN', amount: 1, scope: 'ALL' }],
     },
     skills: [
       {
-        key: 'golpe-veterano',
-        name: 'Golpe Veterano',
-        variant: 'resistencia',
+        key: 'golpe-de-maca',
+        name: 'Golpe de Maça',
+        variant: 'ossos',
         tier: BASIC,
         slot: K.BASIC,
         range: MELEE,
         effects: damage(),
       },
       {
-        key: 'contra-ataque',
-        name: 'Contra-ataque',
-        variant: 'resistencia',
+        key: 'maca-de-osso',
+        name: 'Maça de Osso',
+        variant: 'ossos',
         tier: STANDARD,
         slot: K.STANDARD,
         range: MELEE,
@@ -1133,7 +1243,7 @@ export const CHARACTERS: CharacterSpec[] = [
       {
         key: 'comando',
         name: 'Comando',
-        variant: 'resistencia',
+        variant: 'ossos',
         tier: STANDARD,
         slot: K.ROLE,
         target: ALLY,
@@ -1142,9 +1252,9 @@ export const CHARACTERS: CharacterSpec[] = [
         effects: only({ type: 'GRANT_TURN' }),
       },
       {
-        key: 'postura-firme',
-        name: 'Postura Firme',
-        variant: 'resistencia',
+        key: 'couraca-de-osso',
+        name: 'Couraça de Osso',
+        variant: 'ossos',
         tier: STANDARD,
         slot: K.SIGNATURE,
         range: MELEE,
@@ -1153,26 +1263,45 @@ export const CHARACTERS: CharacterSpec[] = [
       {
         key: 'reposicionar-tropa',
         name: 'Reposicionar Tropa',
-        variant: 'resistencia',
-        tier: REINFORCED,
+        variant: 'ossos',
+        tier: STANDARD,
         target: ALLY,
         // move um aliado para uma célula adjacente (ou troca com quem está lá), sem custar a ação dele (12.8)
         effects: only({ type: 'REPOSITION', kind: 'MOVE_ALLY' }),
       },
       {
-        key: 'ler-o-terreno',
-        name: 'Ler o Terreno',
-        variant: 'resistencia',
+        key: 'ler-a-batalha',
+        name: 'Ler a Batalha',
+        variant: 'ossos',
+        tier: REINFORCED,
+        range: RANGED,
+        // atrasar a vez de um inimigo (12.8): Reforçada −40%, cooldown 3
+        cooldown: 3,
+        effects: only({ type: 'TURN_SHIFT', percent: -40 }),
+      },
+      {
+        key: 'formacao-de-guerra',
+        name: 'Formação de Guerra',
+        variant: 'ossos',
+        tier: REINFORCED,
+        target: ALLY,
+        area: GRID,
+        // buff de squad (12.8): magnitude ×0,7
+        effects: only(modifier(Stat.SPEED, 10, undefined, BUFF_DURATION)),
+      },
+      {
+        key: 'lancas-de-osso',
+        name: 'Lanças de Osso',
+        variant: 'ossos',
         tier: STRONG,
-        target: SELF,
-        // troca o campo (12.7): Forte = 2 rodadas, bônus ×1,5, cooldown 4
-        cooldown: 4,
-        effects: only({ type: 'CHANGE_FIELD', duration: 2, multiplier: 1.5 }),
+        range: MELEE,
+        area: LINE,
+        effects: damage(),
       },
       {
         key: 'agora',
         name: 'Agora!',
-        variant: 'resistencia',
+        variant: 'ossos',
         tier: FINAL,
         target: ALLY,
         // Comando Forte (D126): age logo depois, com +15% de Ataque
@@ -1185,7 +1314,7 @@ export const CHARACTERS: CharacterSpec[] = [
     key: 'isis-maccarthy',
     name: 'Isis Maccarthy',
     description:
-      'Telecinese, combate aéreo e longa distância. Intensa e explosiva; vive pela aprovação do Ecko.',
+      'A artilharia aérea da CORE: telecinese absurda, cobre uma grande área do céu; fraca no corpo a corpo. Esculpe uma liga de metal na forma que quiser. Moleca, sempre rindo e arrumando problema.',
     characterClass: CharacterClass.ARTILLERY,
     rarity: Rarity.B,
     danger: DangerLevel.CONTINUOUS,
@@ -1194,10 +1323,11 @@ export const CHARACTERS: CharacterSpec[] = [
     npcPriority: [
       'queda-livre',
       'tempestade',
-      'esmagamento',
-      'chuva-de-destrocos',
+      'estilhacos',
+      'onda-telecinetica',
+      'chuva-de-metal',
       'puxao',
-      'projetil',
+      'lamina-de-liga',
       'arremesso',
     ],
     passive: {
@@ -1218,8 +1348,8 @@ export const CHARACTERS: CharacterSpec[] = [
         effects: damage(),
       },
       {
-        key: 'projetil',
-        name: 'Projétil',
+        key: 'lamina-de-liga',
+        name: 'Lâmina de Liga',
         variant: 'telecinese',
         tier: STANDARD,
         slot: K.STANDARD,
@@ -1227,8 +1357,8 @@ export const CHARACTERS: CharacterSpec[] = [
         effects: damage(),
       },
       {
-        key: 'chuva-de-destrocos',
-        name: 'Chuva de Destroços',
+        key: 'chuva-de-metal',
+        name: 'Chuva de Metal',
         variant: 'telecinese',
         tier: STANDARD,
         slot: K.ROLE,
@@ -1246,13 +1376,21 @@ export const CHARACTERS: CharacterSpec[] = [
         effects: damageWith(0.8, { type: 'REPOSITION', kind: 'PULL' }),
       },
       {
-        key: 'esmagamento',
-        name: 'Esmagamento',
+        key: 'onda-telecinetica',
+        name: 'Onda Telecinética',
+        variant: 'telecinese',
+        tier: REINFORCED,
+        range: RANGED,
+        effects: damageWith(0.8, { type: 'REPOSITION', kind: 'PUSH' }),
+      },
+      {
+        key: 'estilhacos',
+        name: 'Estilhaços',
         variant: 'telecinese',
         tier: REINFORCED,
         range: RANGED,
         area: COLUMN,
-        effects: damage(),
+        effects: damageWith(1, status(StatusType.DOT)),
       },
       {
         key: 'tempestade',
@@ -1278,7 +1416,7 @@ export const CHARACTERS: CharacterSpec[] = [
     key: 'tank-valen',
     name: 'Tank Valen',
     description:
-      'Sem variante, prodígio no DOM. Humilde, disciplinado e constante: o esforço ainda vale a pena.',
+      'O mais novo da CORE, sem variante: prodígio do DOM. Menosprezado, se esforça mais que todos para ser digno da CORE. Respeitoso com todos; idolatra o Ecko, que o escolheu.',
     characterClass: CharacterClass.GUARDIAN,
     rarity: Rarity.C,
     danger: DangerLevel.DISCRETE,
@@ -1286,12 +1424,12 @@ export const CHARACTERS: CharacterSpec[] = [
     npcTrait: 'muralha-viva',
     npcPriority: [
       'esforco',
-      'guarda-alta',
-      'escudo-vivo',
-      'escudo-humano',
-      'firmeza',
-      'investida',
       'muralha-humana',
+      'aqui',
+      'escudo-humano',
+      'escudo-vivo',
+      'abrir-a-guarda',
+      'investida',
       'soco-firme',
     ],
     passive: {
@@ -1301,15 +1439,6 @@ export const CHARACTERS: CharacterSpec[] = [
       effects: [{ type: 'REDUCE_DAMAGE', percent: 15 }],
     },
     skills: [
-      {
-        key: 'escudo-vivo',
-        name: 'Escudo Vivo',
-        variant: null,
-        tier: STANDARD,
-        target: ALLY,
-        // Proteger (D124): golpes de alvo único no aliado adjacente caem no Tank
-        effects: only({ type: 'PROTECT' }),
-      },
       {
         key: 'soco-firme',
         name: 'Soco Firme',
@@ -1329,26 +1458,37 @@ export const CHARACTERS: CharacterSpec[] = [
         effects: damage(),
       },
       {
-        key: 'escudo-humano',
-        name: 'Escudo Humano',
+        key: 'escudo-vivo',
+        name: 'Escudo Vivo',
         variant: null,
         tier: STANDARD,
         slot: K.ROLE,
         target: ALLY,
-        effects: shield,
+        // Proteger (D124): golpes de alvo único no aliado adjacente caem no Tank
+        effects: only({ type: 'PROTECT' }),
       },
       {
-        key: 'firmeza',
-        name: 'Firmeza',
+        key: 'abrir-a-guarda',
+        name: 'Abrir a Guarda',
         variant: null,
         tier: STANDARD,
         slot: K.SIGNATURE,
         range: MELEE,
-        effects: damageWith(0.8, modifier(Stat.DEFENSE, 10, 'SELF')),
+        effects: damageWith(0.8, status(StatusType.EXPOSE)),
       },
       {
-        key: 'guarda-alta',
-        name: 'Guarda Alta',
+        key: 'aqui',
+        name: 'Aqui!',
+        variant: null,
+        tier: REINFORCED,
+        range: RANGED,
+        area: LINE,
+        // Provocar Reforçada (D124): uma linha
+        effects: only(status(StatusType.TAUNT)),
+      },
+      {
+        key: 'escudo-humano',
+        name: 'Escudo Humano',
         variant: null,
         tier: REINFORCED,
         target: ALLY,
@@ -1360,7 +1500,10 @@ export const CHARACTERS: CharacterSpec[] = [
         variant: null,
         tier: STRONG,
         target: SELF,
-        effects: only(modifier(Stat.DEFENSE, 20)),
+        effects: (power) => [
+          modifier(Stat.DEFENSE, 20, undefined, BUFF_DURATION),
+          { type: 'SHIELD', power: r2(power * 0.75) },
+        ],
       },
       {
         key: 'esforco',

@@ -1041,38 +1041,46 @@ Código: `prisma/seed/content/` (o conteúdo, criado pelas entidades do domínio
 recria as ligações. O simulador usa o mesmo conteúdo sem banco (`loadSeedContent()`).
 
 **Variantes (13):** antimatéria, tempo e alma (Fundamental); relâmpago, gelo superiônico (Elemental); explosão
-(Vetorial); endurecimento, terra (Material); regeneração, resistência (Biológica); sombra, ilusão, telecinese (Psíquica).
+(Vetorial); endurecimento, terra (Material); regeneração, ossos (Biológica); sombra, ilusão, telecinese (Psíquica).
 
-**Personagens (12).** Stats = perfil da classe (`classes_brief.md` 2). Passivas do Ecko e do Lucky vêm do usuário; as
-outras 10 foram propostas e aprovadas (D116), placeholder de valor.
+**Personagens (12).** Reformulados a partir das fichas do usuário (`art_direction.md` 4). Stats = perfil da classe
+(`classes_brief.md` 2). O elenco foi montado para **testar tudo** com poucos personagens: cada passiva usa um gatilho
+diferente (só o `ON_HEAL` fica de fora: 12 personagens, 13 gatilhos) e, juntas, usam todos os efeitos de passiva.
 
 | Personagem | Classe | Variantes | Raridade | Família | Passiva |
 |---|---|---|---|---|---|
-| Ecko Nocthar | Executor | antimatéria | SS | Nocthar | **Aniquilação:** todo dano ignora escudo |
-| Kael Vaz | Vanguarda | explosão + endurecimento | A | | **Disciplina de Guerra:** quando um aliado cai, +20% Ataque por 2 turnos (D124, a implementar; era HP < 50%, +15% Defesa) |
-| Derik Okoro | Vanguarda | regeneração | A | | **Imortal:** início do turno, cura 3% do HP máx. |
-| Lucky | Atirador | relâmpago + tempo | SS | Nocthar | **Fluxo do Tempo:** a cada 3 turnos, recargas −1 |
-| Sunna | Controlador | gelo superiônico | S | | **Controle Absoluto:** ao causar dano, 20% de Prender |
-| Nox | Executor | sombra | A | Hyperion | **Visão Sombria:** ao derrubar, adianta a vez 30% |
-| Gaia | Guardião | terra | A | | **Coração da CORE:** ao ser atingida, +10% Defesa |
-| Rolf Eidvar | Atirador | alma | B | | **Primeiro a Cair:** ao ser derrotado, os aliados adiantam a vez em 30% (D124, a implementar; era HP < 30%, +15% Ataque) |
-| Kara | Suporte | ilusão | B | | **Irmã Mais Velha:** ao curar, adianta a vez 15% |
-| Tyir Ossvald | Tático | resistência | A | | **Experiência:** sempre 5% menos dano |
-| Isis Maccarthy | Artilharia | telecinese | B | | **Explosiva:** ao pagar Desgaste, +10% Velocidade |
-| Tank Valen | Guardião | sem variante | C | | **Constância:** HP < 40%, 15% menos dano |
+| Ecko Nocthar | Executor | antimatéria | SS | Nocthar | **Aniquilação** (sempre): todo dano ignora escudo |
+| Kael Vaz | Vanguarda | explosão + endurecimento | A | | **Híbrido Perfeito** (ao atacar): +10% Defesa |
+| Derik Okoro | Vanguarda | regeneração | A | | **Imortal** (início do turno): cura 2% do HP máx. |
+| Lucky | Atirador | relâmpago + tempo | SS | Nocthar | **Fluxo do Tempo** (a cada 3 turnos): recargas em andamento −1 |
+| Sunna | Controlador | gelo superiônico | S | | **Toque Gélido** (ao ser atingida): 25% de Prender quem bateu |
+| Nox | Executor | sombra | A | Hyperion | **Visão Sombria** (ao derrubar): adianta a vez 30% |
+| Gaia | Suporte | terra | A | | **Terra Viva** (o campo muda): adianta a vez dos aliados 15% |
+| Rolf Eidvar | Atirador | alma | B | | **Primeiro a Cair** (ao ser derrotado): aliados adiantam a vez 30% |
+| Kara | Suporte | ilusão | B | | **Pelos Meus** (aliado cai): +20% Ataque |
+| Tyir Ossvald | Tático | ossos | A | | **Veterano** (ao ser Atordoado): todas as recargas −1 |
+| Isis Maccarthy | Artilharia | telecinese | B | | **Explosiva** (ao pagar Desgaste): +10% Velocidade |
+| Tank Valen | Guardião | sem variante | C | | **Constância** (HP < 40%): 15% menos dano |
 
-**Skills (90):** 7 ou 8 por personagem, todas com os números de `skillReference` (tipo + forma, D92, D108, D109) e acerto
-base 0,8. Kit básico (nível 0): Básica, Padrão, Função da classe, Assinatura (0,8 do Poder + efeito pequeno). Pool:
-Reforçada (nível 20), Forte (40) e Final (60). Juntas cobrem as 8 classes, as 7 linhagens (incluindo none), os 4
-alcances, as 4 áreas, os 6 status, cura, escudo, buff, debuff, adiantar/atrasar, empurrar/puxar e as mecânicas mais
-raras: **avançar** (Salto de Aniquilação, Ecko), **trocar inimigos** (Vertigem, Kara), **recuperação** (Abrigo Ilusório,
-Kara, D120), **mover aliado** (Reposicionar Tropa, Tyir) e **trocar campo** (Ler o Terreno, Tyir, Forte: 2 rodadas,
-×1,5, cooldown 4).
+**Skills (97):** 7 a 9 por personagem, todas com os números de `skillReference` (tipo + forma, D92, D108, D109) e
+acerto base 0,8. Kit básico (nível 0): Básica, Padrão, Função da classe, Assinatura (0,8 do Poder + efeito pequeno).
+Pool: Padrão extra (nível 0), Reforçada (20), Forte (40) e Final (60). Juntas cobrem as 8 classes, as 7 linhagens
+(incluindo none), os 4 alcances, as 4 áreas, os 3 alvos, os 7 status e todos os efeitos de skill
+(`test/seed/seed-content.spec.ts` confere). Onde testar cada mecânica:
 
-**Skills do combate tático (D124 a D126):** Desafio (Gaia, Provocar 1 inimigo), Grito de Guerra (Kael, Provocar uma
-linha), Escudo Vivo (Tank) e Corpo de Escudo (Derik), as duas de Proteger; Estilhaçar (Sunna, ×1,5 em alvo Preso e o Preso
-acaba) e Execução (Nox, ×1,5 em alvo Atordoado); o Comando do Tyir cede a vez (recarga 3) e o Agora! cede com +15% de
-Ataque (recarga 2). São 90 skills; a build dos NPCs sai de `npcPriority` (montada à mão por personagem).
+| Mecânica | Skills |
+|---|---|
+| Linha / coluna / grade (dano) | Onda de Choque, Pilar de Explosão, Detonação Total (Kael); Chuva de Metal, Estilhaços, Tempestade (Isis); Corrente (Lucky); Nevasca (Sunna); Terremoto (Gaia); Lanças de Osso (Tyir); Moedor de Carne (Derik) |
+| Flanco / perfurante | Infiltração, Gancho da Harpe (Ecko); Passo Sombrio, Assassinato (Nox); Trovão Perfurante (Lucky); Superiônico (Sunna); Bala de Alma, Último Disparo (Rolf) |
+| Cura / escudo | Cura da Terra, Coração da Terra (grade), Muralha de Terra (Gaia); Abrigo Ilusório (Kara); Sangue que Volta, Não Morre (Derik); Blindagem (Kael); Escudo Humano, Muralha Humana (Tank) |
+| Buff / debuff de squad | Moral, Civilização (Kara); Solo Firme (Gaia); Formação de Guerra (Tyir) / Presença do Rei (Ecko, −Ataque), Perdidos (Kara, −Precisão) |
+| Status | Atordoado: Congelar, Superiônico (Sunna), Sonho Acordado (Kara); Travado: Nevasca (Sunna), Tiro na Alma (Rolf); Preso: Grilhão (Sunna), Agarrar a Sombra (Nox), Raízes (Gaia); Exposto: Apagar (Ecko), Abrir a Guarda (Tank); Marcado: Marcar o Instante (Lucky), Ler a Alma (Rolf); Dano contínuo: Estilhaços (Isis); Provocado: Vem pra Cima (Derik), Aqui! (Tank, linha) |
+| Executar (D125) | Sentença (Ecko, Exposto), Estilhaçar (Sunna, Preso), Emboscada (Nox, Preso), Sentença da Alma (Rolf, Marcado) |
+| Reposicionar | empurrar: Detonação (Kael), Onda Telecinética (Isis); puxar: Gancho da Harpe (Ecko), Puxão (Isis); trocar inimigos: Vertigem (Kara); mover aliado: Reposicionar Tropa (Tyir); avançar: Trator (Derik), Iaijutsu (Lucky), Passo Sombrio (Nox) |
+| Fila | adiantar a si: Passo Adiante (Lucky); atrasar: Instante Parado (Lucky), Ler a Batalha (Tyir); Comando: Comando, Agora! (Tyir) |
+| Proteger / recuperar / campo | Proteger: Escudo de Aço (Kael), Escudo Vivo (Tank), Em Meu Lugar (Rolf); Recuperar: Não Morre (Derik), Abrigo Ilusório (Kara); trocar campo: Moldar o Terreno (Gaia, Padrão), Inverno Eterno (Sunna, Forte) |
+
+A build dos NPCs sai de `npcPriority` (montada à mão por personagem).
 
 **Traços (9):** Nocthar (família, +3% Ataque e Velocidade, qualquer variante) e Hyperion (família da sombra, +5%
 Esquiva); conquistados: Berserker e Olho de Águia (+10% de dano corpo a corpo / à distância), Mira Firme, Muralha Viva,

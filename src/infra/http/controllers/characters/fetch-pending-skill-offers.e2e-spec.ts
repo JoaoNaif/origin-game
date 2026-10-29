@@ -31,7 +31,7 @@ describe('Fetch Pending Skill Offers (e2e)', () => {
   test('[GET] /me/skill-offers', async () => {
     const { agent, characters } = await createAccount(app, 'ofertas_01')
     const gaia = characters.find((c) => c.templateKey === 'gaia')!
-    const offer = await openSkillOffer(prisma, gaia.id, 5, ['gaia:desafio'])
+    const offer = await openSkillOffer(prisma, gaia.id, 5, ['gaia:raizes'])
 
     const response = await agent.get('/me/skill-offers')
 
@@ -43,8 +43,8 @@ describe('Fetch Pending Skill Offers (e2e)', () => {
         level: 5,
         skills: [
           expect.objectContaining({
-            key: 'gaia:desafio',
-            name: 'Desafio',
+            key: 'gaia:raizes',
+            name: 'Raízes',
             minLevel: 0,
           }),
         ],
@@ -55,7 +55,7 @@ describe('Fetch Pending Skill Offers (e2e)', () => {
   test('[GET] /me/skill-offers never shows blocks of another account', async () => {
     const { characters } = await createAccount(app, 'ofertas_02')
     const gaia = characters.find((c) => c.templateKey === 'gaia')!
-    await openSkillOffer(prisma, gaia.id, 5, ['gaia:desafio'])
+    await openSkillOffer(prisma, gaia.id, 5, ['gaia:raizes'])
     const other = await createAccount(app, 'ofertas_03')
 
     const response = await other.agent.get('/me/skill-offers')

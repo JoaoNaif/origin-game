@@ -4,7 +4,9 @@ import { buildNpcSide } from '@/domain/combat/services/build-snapshot'
 import { CharacterClass } from '@/domain/characters/enums/character-class'
 import { Lineage } from '@/domain/characters/enums/lineage'
 import { StatusType } from '@/domain/skills/enums/status-type'
+import { SkillArea } from '@/domain/skills/enums/skill-area'
 import { SkillRange } from '@/domain/skills/enums/skill-range'
+import { SkillTarget } from '@/domain/skills/enums/skill-target'
 import { describe, expect, it } from 'vitest'
 import { loadSeedContent } from '../../prisma/seed/content'
 
@@ -14,7 +16,7 @@ describe('Seed Content', () => {
 
   it('should be able to load the 12 characters with valid templates and kits', () => {
     expect(sut.characters).toHaveLength(12)
-    expect(sut.fields).toHaveLength(6)
+    expect(sut.fields).toHaveLength(8)
     expect(sut.npcSquads).toHaveLength(20)
   })
 
@@ -34,6 +36,62 @@ describe('Seed Content', () => {
     expect(lineages).toEqual(new Set(Object.values(Lineage)))
     expect(ranges).toEqual(new Set(Object.values(SkillRange)))
     expect(statuses).toEqual(new Set(Object.values(StatusType)))
+  })
+
+  it('should be able to cover every area, target, skill effect and passive shape', () => {
+    const effects = skills.flatMap((s) => s.effects)
+    const passives = sut.characters.map((c) => c.template.passive!)
+
+    expect(new Set(skills.map((s) => s.area))).toEqual(
+      new Set(Object.values(SkillArea))
+    )
+    expect(new Set(skills.map((s) => s.target))).toEqual(
+      new Set(Object.values(SkillTarget))
+    )
+    expect(new Set(effects.map((e) => e.type))).toEqual(
+      new Set([
+        'DAMAGE',
+        'HEAL',
+        'SHIELD',
+        'STAT_MODIFIER',
+        'APPLY_STATUS',
+        'REPOSITION',
+        'TURN_SHIFT',
+        'CHANGE_FIELD',
+        'RECOVER',
+        'PROTECT',
+        'GRANT_TURN',
+        'EXPLOIT',
+      ])
+    )
+    expect(
+      new Set(effects.flatMap((e) => (e.type === 'REPOSITION' ? [e.kind] : [])))
+    ).toEqual(new Set(['PUSH', 'PULL', 'SWAP', 'MOVE_ALLY', 'DASH']))
+    // adiantar e atrasar; buff e debuff
+    const shifts = effects.flatMap((e) =>
+      e.type === 'TURN_SHIFT' ? [Math.sign(e.percent)] : []
+    )
+    const modifiers = effects.flatMap((e) =>
+      e.type === 'STAT_MODIFIER' ? [Math.sign(e.percent)] : []
+    )
+    expect(new Set(shifts)).toEqual(new Set([1, -1]))
+    expect(new Set(modifiers)).toEqual(new Set([1, -1]))
+    // uma passiva por gatilho: só o ON_HEAL fica de fora (12 personagens, 13 gatilhos)
+    expect(new Set(passives.map((p) => p.trigger.type)).size).toBe(12)
+    expect(
+      new Set(passives.flatMap((p) => p.effects.map((e) => e.type)))
+    ).toEqual(
+      new Set([
+        'IGNORE_SHIELD',
+        'REDUCE_COOLDOWN',
+        'APPLY_STATUS',
+        'HEAL',
+        'ADVANCE_TURN',
+        'ADVANCE_ALLIES',
+        'REDUCE_DAMAGE',
+        'STAT_MODIFIER',
+      ])
+    )
   })
 
   it('should be able to build every npc squad into a battle side', () => {
