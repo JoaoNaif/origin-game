@@ -58,6 +58,12 @@ Contas de teste do seed, as duas com os personagens no nível 18: `admin` / `ori
 | `GET /templates` | 200 `{ templates }`: os 12 modelos com classe, raridade, variantes, traço de família, stats (perfil no nível 100), passiva e skills (kit primeiro, na ordem Básica, Padrão, Função, Assinatura) |
 | `GET /traits` | 200 `{ traits }`: os 9 traços com `key`, nome, descrição, categoria, origem (`TEMPLATE` família / `CONQUERED`), variante (família) e efeitos. É o que a tela mostra no lugar das `traitKeys` dos personagens, das unidades e do `requiredTraitKeys` dos campos |
 | `GET /npc-squads?difficulty=` | 200 `{ npcSquads }`: `{ key, name, description, profile, difficulty, level }`, do mais fácil ao mais difícil. `difficulty` opcional (`BEGINNER` a `GRANDMASTER`); outro valor dá 400 |
+| `GET /formation-bonuses` | 200 `{ formationBonuses: { statAuras: [{ characterClass, stat, percent }], supportHealPercent, artilleryBackDamagePercent, executorLoneAttackPercent } }`: os valores do D128, lidos das constantes que o motor aplica |
+
+Como cada bônus de formação vale (D128): `statAuras` e `supportHealPercent` (cura recebida, Suporte) vão para os aliados
+adjacentes nas 4 direções, e auras da mesma classe não somam. `artilleryBackDamagePercent` é da própria Artilharia, de
+dano, no fundo da linha e com alguém à frente dela. `executorLoneAttackPercent` é do próprio Executor, de Ataque, sem
+aliado adjacente. A Vanguarda ancora os adjacentes (não podem ser empurrados, puxados nem trocados à força) e não tem valor.
 
 O squad de NPC **não mostra personagens, formação nem skills**: a formação do rival só aparece quando a batalha
 começa e as skills nem nela (`pvp_brief.md` 3).

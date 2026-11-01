@@ -27,6 +27,7 @@ import { FetchAccountByUsernameController } from './controllers/accounts/fetch-a
 import { FetchAccountCharactersController } from './controllers/characters/fetch-account-characters.controller'
 import { FetchAccountSquadsController } from './controllers/squads/fetch-account-squads.controller'
 import { FetchPendingSkillOffersController } from './controllers/characters/fetch-pending-skill-offers.controller'
+import { FetchFormationBonusesController } from './controllers/catalog/fetch-formation-bonuses.controller'
 import { FetchNpcSquadsController } from './controllers/catalog/fetch-npc-squads.controller'
 import { FetchTraitsController } from './controllers/catalog/fetch-traits.controller'
 import { FetchTemplatesController } from './controllers/catalog/fetch-templates.controller'
@@ -55,6 +56,7 @@ import { squadsUseCases } from './use-cases/squads.providers'
     FetchTemplatesController,
     FetchNpcSquadsController,
     FetchTraitsController,
+    FetchFormationBonusesController,
     // accounts
     CreateAccountController,
     AuthenticateController,
