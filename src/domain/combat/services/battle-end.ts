@@ -7,7 +7,7 @@ import { BattleEndReason, BattleSide, MAX_ROUNDS } from '../enums/battle-enums'
  */
 export const EXHAUSTION_AFTER_ROUND = 3
 
-/** Por rodada de Exaustão: cura −10% e dano +12% (12.5, D138, placeholders aprovados). */
+/** Por rodada de Exaustão: cura −5% (D140) e dano +12% (12.5, D138, placeholders aprovados). */
 export const EXHAUSTION_HEAL_STEP = 0.05
 export const EXHAUSTION_DAMAGE_STEP = 0.12
 
@@ -16,7 +16,7 @@ export function exhaustionStep(round: number): number {
   return Math.max(0, round - EXHAUSTION_AFTER_ROUND)
 }
 
-/** Multiplicador da cura (e do escudo concedido) na rodada: chega a 0 na 13. */
+/** Multiplicador da cura (e do escudo concedido) na rodada: chega a 0 na 23. */
 export function healMultiplier(round: number): number {
   return Math.max(0, 1 - EXHAUSTION_HEAL_STEP * exhaustionStep(round))
 }

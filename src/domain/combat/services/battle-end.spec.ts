@@ -32,15 +32,16 @@ describe('Battle End', () => {
       expect(damageMultiplier(3)).toBe(1)
     })
 
-    it('should be able to cut healing 10% and add 12% damage per round from 4', () => {
-      expect(healMultiplier(4)).toBeCloseTo(0.9)
+    it('should be able to cut healing 5% and add 12% damage per round from 4', () => {
+      expect(healMultiplier(4)).toBeCloseTo(0.95)
       expect(damageMultiplier(4)).toBeCloseTo(1.12)
-      expect(healMultiplier(8)).toBeCloseTo(0.5)
+      expect(healMultiplier(8)).toBeCloseTo(0.75)
       expect(damageMultiplier(8)).toBeCloseTo(1.6)
     })
 
-    it('should be able to reach zero healing on round 13 and keep raising damage until round 30', () => {
-      expect(healMultiplier(13)).toBeCloseTo(0)
+    it('should be able to reach zero healing on round 23 and keep raising damage until round 30', () => {
+      expect(healMultiplier(13)).toBeCloseTo(0.5)
+      expect(healMultiplier(23)).toBeCloseTo(0)
       expect(healMultiplier(30)).toBe(0)
       expect(damageMultiplier(30)).toBeCloseTo(4.24)
     })
