@@ -1,4 +1,5 @@
 import { SeededRng } from '@/core/rng/seeded-rng'
+import { generateCandidates } from '@/domain/ai/services/action-generator'
 import { Stat } from '@/domain/characters/enums/stat'
 import { StatusType } from '@/domain/skills/enums/status-type'
 import { CharacterClass } from '@/domain/characters/enums/character-class'
@@ -203,6 +204,68 @@ describe('Battle Engine (cobertura e meio turno, D123)', () => {
     expect(sut.gauge('PLAYER:3')).toBe(Math.max(0, ally - 500))
     expect(sut.unit('PLAYER:3').position).toEqual({ row: 1, column: 1 })
   })
+
+  /** PLAYER:2 bem mais rápido que PLAYER:3 (adjacentes): sem o D141, a vez do 3 nunca chegaria. */
+  function fastSwapper() {
+    const snapshot = makeBattleSnapshot()
+    for (const u of snapshot.opponent.units)
+      u.characterClass = CharacterClass.MARKSMAN
+    snapshot.player.units[2].profile = {
+      ...snapshot.player.units[2].profile,
+      SPEED: 200,
+    }
+    snapshot.player.units[3].profile = {
+      ...snapshot.player.units[3].profile,
+      SPEED: 40,
+    }
+    return new BattleEngine(snapshot, new FixedRng([0]))
+  }
+
+  it('should not be able to swap again with an ally that has not acted since the last swap (D141)', () => {
+    const sut = fastSwapper()
+    untilTurnOf(sut, 'PLAYER:2')
+    expect(sut.act({ type: 'SWAP', withRef: 'PLAYER:3' }).isRight()).toBe(true)
+    expect(sut.unit('PLAYER:3').swapImmune).toBe(true)
+
+    untilTurnOf(sut, 'PLAYER:2')
+    const gauge = sut.gauge('PLAYER:3')
+    const again = sut.act({ type: 'SWAP', withRef: 'PLAYER:3' })
+
+    expect(again.isLeft()).toBe(true)
+    expect(sut.gauge('PLAYER:3')).toBe(gauge)
+    expect(
+      generateCandidates(sut, 'PLAYER:2').some(
+        (c) => c.payload.type === 'SWAP' && c.payload.withRef === 'PLAYER:3'
+      )
+    ).toBe(false)
+  })
+
+  it('should be able to swap with the same ally again after it acts (D141)', () => {
+    const sut = fastSwapper()
+    untilTurnOf(sut, 'PLAYER:2')
+    sut.act({ type: 'SWAP', withRef: 'PLAYER:3' })
+
+    untilTurnOf(sut, 'PLAYER:3')
+    sut.act({ type: 'DEFEND', timeout: true })
+    expect(sut.unit('PLAYER:3').swapImmune).toBe(false)
+
+    untilTurnOf(sut, 'PLAYER:2')
+    expect(sut.act({ type: 'SWAP', withRef: 'PLAYER:3' }).isRight()).toBe(true)
+  })
+
+  it('should be able to close the round even if a faster unit keeps trying to swap a slower ally (D141)', () => {
+    const sut = fastSwapper()
+    let turn = sut.nextTurn()
+    for (let actions = 0; turn && actions < 200 && sut.round < 3; actions++) {
+      const swapped =
+        turn.ref === 'PLAYER:2' &&
+        sut.act({ type: 'SWAP', withRef: 'PLAYER:3' }).isRight()
+      if (!swapped) sut.act({ type: 'DEFEND', timeout: true })
+      turn = sut.nextTurn()
+    }
+
+    expect(sut.round).toBeGreaterThanOrEqual(3)
+  })
 })
 
 describe('Battle Engine (status que abrem jogada, D125)', () => {
@@ -278,6 +341,41 @@ describe('Battle Engine (status que abrem jogada, D125)', () => {
 
     expect(before.ref).toBe('OPPONENT:2')
     expect(after.ref).toBe('OPPONENT:3')
+  })
+
+  it('should be able to take the cover and 30% of the evasion of a rooted target (D145)', () => {
+    // OPPONENT:3 em (1,2), atrás de OPPONENT:2: com cobertura até ficar Preso
+    const snapshot = makeBattleSnapshot()
+    snapshot.player.units[0].skills[0] = statusSkill(
+      'prender',
+      StatusType.ROOT,
+      SkillRange.FLANK
+    )
+    snapshot.player.units[0].skills[1] = shot('tiro')
+    const sut = new BattleEngine(snapshot, new FixedRng([0]))
+    untilTurnOf(sut, 'PLAYER:0')
+    const cell = { row: 1, column: 2 }
+    const before = firstHit(sut, 'PLAYER:0', 'tiro', cell)
+
+    sut.act({
+      type: 'SKILL',
+      skillKey: 'prender',
+      targetSide: BattleSide.OPPONENT,
+      target: cell,
+    })
+    const after = firstHit(sut, 'PLAYER:0', 'tiro', cell)
+    const { PRECISION, EVASION } = sut.unit('OPPONENT:3').stats
+
+    const damage = (hit: typeof before) =>
+      hit.effects.find((e) => e.type === 'DAMAGE')!.amount
+    // o dano da prévia vem arredondado
+    expect(Math.abs(damage(after) - damage(before) / 0.7)).toBeLessThanOrEqual(
+      1
+    )
+    expect(after.hitChance).toBeCloseTo(
+      Math.min(1, (0.5 * 2 * PRECISION) / (PRECISION + EVASION * 0.7))
+    )
+    expect(after.hitChance).toBeGreaterThan(before.hitChance)
   })
 
   it('should be able to halve the healing on a wounded target (damage over time)', () => {

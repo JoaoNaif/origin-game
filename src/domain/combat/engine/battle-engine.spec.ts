@@ -115,8 +115,12 @@ describe('Battle Engine', () => {
   })
 
   it('should not charge desgaste when the skill misses', () => {
-    // 0,99 erra qualquer chance de 80%
-    const sut = new BattleEngine(makeBattleSnapshot(), new FixedRng([0.99]))
+    // 0,99 erra qualquer chance abaixo de 99%: Esquiva alta para o golpe não chegar a 100%
+    const snapshot = makeBattleSnapshot()
+    for (const u of [...snapshot.player.units, ...snapshot.opponent.units]) {
+      u.profile = { ...u.profile, EVASION: 200 }
+    }
+    const sut = new BattleEngine(snapshot, new FixedRng([0.99]))
     const turn = sut.nextTurn()!
 
     const events = sut.act(simpleChoice(sut, turn.ref))

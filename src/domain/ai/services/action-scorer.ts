@@ -8,6 +8,7 @@ import {
 import { baseDamage } from '@/domain/combat/services/damage'
 import { qualifies } from '@/domain/combat/services/field-draw'
 import { SnapshotField } from '@/domain/combat/value-objects/battle-snapshot'
+import { StatusType } from '@/domain/skills/enums/status-type'
 import {
   AiFactor,
   DEFEND_VALUE,
@@ -142,7 +143,8 @@ function hostileValue(
         amount += effect.amount
         break
       case 'APPLY_STATUS':
-        support += effect.chance * STATUS_VALUE[effect.status]
+        support +=
+          effect.chance * hostileStatusValue(target, hit, effect.status)
         break
       case 'STAT_MODIFIER':
         if (effect.percent < 0) {
@@ -161,6 +163,10 @@ function hostileValue(
   }
 
   const expected = hit.hitChance * Math.min(amount, life)
+  // bater em quem dorme o acorda (D146): só compensa se o golpe valer mais que a ação que ele voltaria a ter
+  const wakes = target.statuses.includes(StatusType.SLEEP)
+    ? STATUS_VALUE.SLEEP
+    : 0
   const threatValue =
     context.maxThreat > 0
       ? (target.stats[Stat.ATTACK] * target.stats[Stat.SPEED]) /
@@ -168,11 +174,37 @@ function hostileValue(
       : 0
 
   return {
-    damage: (expected / target.maxHp) * 100,
+    damage: Math.max(0, (expected / target.maxHp) * 100 - wakes),
     kill: life > 0 ? (expected / life) ** 2 : 0,
     threat: amount > 0 || support > 0 ? hit.hitChance * threatValue : 0,
     support: hit.hitChance * support,
   }
+}
+
+/** Status novos (D146) não valem de novo em quem já está com eles; o Contágio só vale com Dano contínuo. */
+function hostileStatusValue(
+  target: ReturnType<BattleEngine['unit']>,
+  hit: PreviewHit,
+  status: StatusType
+): number {
+  const noRenewal: readonly StatusType[] = [
+    StatusType.SILENCE,
+    StatusType.SLEEP,
+    StatusType.LINK,
+    StatusType.CONTAGION,
+  ]
+  if (noRenewal.includes(status) && target.statuses.includes(status)) return 0
+  if (
+    status === StatusType.CONTAGION &&
+    !target.statuses.includes(StatusType.DOT) &&
+    !hit.effects.some(
+      (e) => e.type === 'APPLY_STATUS' && e.status === StatusType.DOT
+    )
+  ) {
+    return 0
+  }
+
+  return STATUS_VALUE[status]
 }
 
 /** Cura e escudo (×(1 + o que falta de vida)), buff e adiantar a vez num aliado. */
@@ -220,6 +252,16 @@ function allyValue(
       case 'RECOVER':
         // fração aliviada em pontos percentuais de stat, como os buffs (D120)
         value += effect.relieved * 100 * MODIFIER_VALUE_PER_PERCENT
+        break
+      case 'APPLY_STATUS':
+        // status em si mesmo ou aliado (Furtivo, D146); de novo não vale
+        if (!target.statuses.includes(effect.status)) {
+          value += effect.chance * STATUS_VALUE[effect.status]
+        }
+        break
+      case 'CLEANSE':
+        // vale mais que aplicar: devolve o que o inimigo já gastou um turno para pôr (D146)
+        if (effect.status) value += 1.5 * STATUS_VALUE[effect.status]
         break
     }
   }

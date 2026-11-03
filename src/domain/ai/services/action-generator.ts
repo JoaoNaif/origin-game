@@ -101,6 +101,7 @@ export function generateCandidates(
       if (
         ref !== actorRef &&
         ally.canBeMoved &&
+        !ally.swapImmune &&
         ally.position &&
         isAdjacent(actor.position!, ally.position)
       ) {

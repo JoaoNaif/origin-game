@@ -6,13 +6,38 @@ export const STATUS_RULES = {
   STUN: { duration: 1, baseChance: 0.7 },
   /** Instantâneo: +2 de recarga numa skill do alvo (aplicado pela resolução, que conhece as recargas). */
   LOCK: { extraCooldown: 2, baseChance: 0.8 },
-  ROOT: { duration: 2, baseChance: 0.8 },
+  /** Não se move nem é movido; sem cobertura e com menos Esquiva (D145). */
+  ROOT: { duration: 2, baseChance: 0.8, evasionPercent: -30 },
   EXPOSE: { duration: 2, baseChance: 0.85 },
   MARK: { duration: 3, baseChance: 0.8, damageTakenPercent: 20 },
   DOT: { duration: 3, baseChance: 0.8, maxHpPercentPerTurn: 4 },
   /** Vale na próxima ação do afetado e acaba no fim dela (D124). */
   TAUNT: { duration: 1, baseChance: 0.8 },
+  /** Vale na próxima ação do afetado e acaba no fim dela, como o Provocado (D146). */
+  SILENCE: { duration: 1, baseChance: 0.8 },
+  /** Perde até 2 ações; qualquer dano acorda (D146). */
+  SLEEP: { duration: 2, baseChance: 0.6 },
+  /** O parceiro também leva esta parte do dano direto (D146). */
+  LINK: { duration: 2, baseChance: 0.8, sharedDamagePercent: 30 },
+  /** Acaba no início da próxima vez de quem está Furtivo (D146). */
+  STEALTH: { duration: 1, baseChance: 1 },
+  /** Quem pega o Dano contínuo pelo Contágio fica com ele por menos turnos e não passa adiante (D146). */
+  CONTAGION: { duration: 3, baseChance: 0.8, spreadDuration: 2 },
 } as const
+
+/** Purificar (D146): do pior status negativo para o mais leve. */
+export const CLEANSE_ORDER: readonly StatusType[] = [
+  StatusType.STUN,
+  StatusType.SLEEP,
+  StatusType.SILENCE,
+  StatusType.LINK,
+  StatusType.DOT,
+  StatusType.CONTAGION,
+  StatusType.MARK,
+  StatusType.ROOT,
+  StatusType.EXPOSE,
+  StatusType.TAUNT,
+]
 
 /** Ferida (D125): com Dano contínuo, a cura recebida rende metade. */
 export const WOUND_HEAL_MULTIPLIER = 0.5
@@ -50,8 +75,12 @@ export interface StatModifier {
 }
 
 export interface TurnStart {
-  /** Atordoado: perde esta ação. */
+  /** Atordoado ou Adormecido: perde esta ação. */
   skipAction: boolean
+  /** Quem fez perder a ação (a tela mostra). */
+  skipReason: 'STUN' | 'SLEEP' | null
+  /** Contágio ativo neste Dano contínuo (D146): passa para os aliados adjacentes. */
+  spreads: boolean
   /** Dano contínuo do início do turno (ignora a Defesa, D92); a resolução tira do alvo. */
   dotDamage: number
 }
@@ -105,6 +134,18 @@ export class UnitConditions {
     return this.has(StatusType.EXPOSE)
   }
 
+  /** Atordoado ou Adormecido: não age, não intercepta e não recebe ação cedida. */
+  get cannotAct() {
+    return this.has(StatusType.STUN) || this.has(StatusType.SLEEP)
+  }
+
+  /** Multiplicador da Esquiva (Preso, D145). */
+  get evasionMultiplier() {
+    return this.has(StatusType.ROOT)
+      ? 1 + STATUS_RULES.ROOT.evasionPercent / 100
+      : 1
+  }
+
   /** Multiplicador do dano recebido (Marcado). */
   get damageTakenMultiplier() {
     return 1 + (this.statuses.get(StatusType.MARK)?.value ?? 0) / 100
@@ -119,7 +160,12 @@ export class UnitConditions {
     duration: number,
     value = 0
   ): StatusApplication {
-    if (status === StatusType.STUN && this.isStunImmune) return 'IMMUNE'
+    if (
+      (status === StatusType.STUN || status === StatusType.SLEEP) &&
+      this.isStunImmune
+    ) {
+      return 'IMMUNE'
+    }
 
     const current = this.statuses.get(status)
     if (current) {
@@ -154,8 +200,8 @@ export class UnitConditions {
   }
 
   /**
-   * Início do turno do afetado: aplica o dano contínuo, consome o Atordoado (perde a ação e ganha imunidade) e baixa
-   * 1 de todas as durações.
+   * Início do turno do afetado: aplica o dano contínuo, consome o Atordoado ou o Adormecido (perde a ação e ganha
+   * imunidade) e baixa 1 de todas as durações. O dano contínuo acorda antes de perder a ação (D146).
    */
   startTurn(maxHp: number): TurnStart {
     const dot = this.statuses.get(StatusType.DOT)
@@ -163,13 +209,22 @@ export class UnitConditions {
 
     if (this.stunImmunity > 0) this.stunImmunity -= 1
 
-    const skipAction = this.has(StatusType.STUN)
-    if (skipAction) this.stunImmunity = STUN_IMMUNITY_TURNS
+    if (dotDamage > 0) this.wake()
+
+    const skipReason = this.has(StatusType.STUN)
+      ? ('STUN' as const)
+      : this.has(StatusType.SLEEP)
+        ? ('SLEEP' as const)
+        : null
+    if (skipReason) this.stunImmunity = STUN_IMMUNITY_TURNS
+    const spreads = dotDamage > 0 && this.has(StatusType.CONTAGION)
 
     for (const [status, active] of this.statuses) {
-      // o Provocado vale na ação deste turno: acaba no fim dela (afterAction)
-      if (status === StatusType.TAUNT) continue
-      active.turnsLeft -= 1
+      // Provocado e Silenciado valem na ação deste turno: acabam no fim dela (afterAction)
+      if (status === StatusType.TAUNT || status === StatusType.SILENCE) continue
+      // Furtivo vale até agir, qualquer que seja a duração (D146)
+      active.turnsLeft =
+        status === StatusType.STEALTH ? 0 : active.turnsLeft - 1
       if (active.turnsLeft <= 0) this.statuses.delete(status)
     }
 
@@ -178,7 +233,20 @@ export class UnitConditions {
     }
     this.modifiers = this.modifiers.filter((m) => m.turnsLeft > 0)
 
-    return { skipAction, dotDamage }
+    return { skipAction: skipReason !== null, skipReason, dotDamage, spreads }
+  }
+
+  /** Acorda quem está Adormecido, com a mesma imunidade do Atordoado (anti-cadeia). Diz se acordou. */
+  wake(): boolean {
+    if (!this.statuses.delete(StatusType.SLEEP)) return false
+    this.stunImmunity = Math.max(this.stunImmunity, STUN_IMMUNITY_TURNS)
+
+    return true
+  }
+
+  /** O pior status negativo ativo, que o Purificar tiraria. */
+  get worstNegative(): StatusType | null {
+    return CLEANSE_ORDER.find((status) => this.has(status)) ?? null
   }
 
   /** Tira um status (skill de executar que consome, D125). */
@@ -186,9 +254,10 @@ export class UnitConditions {
     this.statuses.delete(status)
   }
 
-  /** Fim da ação do afetado: o Provocado acaba (D124). */
+  /** Fim da ação do afetado: o Provocado (D124) e o Silenciado (D146) acabam. */
   afterAction() {
     this.statuses.delete(StatusType.TAUNT)
+    this.statuses.delete(StatusType.SILENCE)
     this.modifiers = this.modifiers.filter((m) => !m.untilAction)
   }
 

@@ -1,3 +1,4 @@
+import { StatusType } from '@/domain/skills/enums/status-type'
 import { Rng } from '@/core/rng/rng'
 import { SeededRng } from '@/core/rng/seeded-rng'
 import { Stat } from '@/domain/characters/enums/stat'
@@ -246,13 +247,14 @@ function hpShare(engine: BattleEngine, side: BattleSide): number {
 /** Alvo de corpo a corpo: primeiro vivo da linha ou com o status Exposto (11.2, 11.9). */
 function isExposed(engine: BattleEngine, ref: string): boolean {
   const unit = engine.unit(ref)
+  if (unit.isHidden || !unit.position) return false
   if (unit.isExposed) return true
-  if (!unit.position) return false
 
   const row = unit.position.row
   const front = Math.min(
     ...engine
       .aliveRefs(unit.side)
+      .filter((r) => !engine.unit(r).isHidden)
       .map((r) => engine.unit(r).position)
       .filter((p) => p?.row === row)
       .map((p) => p!.column)
@@ -287,6 +289,8 @@ function protects(
       e.type === 'HEAL' ||
       e.type === 'SHIELD' ||
       e.type === 'PROTECT' ||
+      e.type === 'CLEANSE' ||
+      (e.type === 'APPLY_STATUS' && e.status === StatusType.STEALTH) ||
       (e.type === 'STAT_MODIFIER' && e.percent > 0)
   )
 }

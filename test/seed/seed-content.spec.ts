@@ -58,6 +58,7 @@ describe('Seed Content', () => {
         'REPOSITION',
         'TURN_SHIFT',
         'CHANGE_FIELD',
+        'CLEANSE',
         'RECOVER',
         'PROTECT',
         'GRANT_TURN',

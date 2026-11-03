@@ -13,33 +13,32 @@
   como diferencial.
 - A classe é um **perfil de stats** (quanto bate, quanto aguenta, quão rápido). **Não define alcance nem área**:
   isso é propriedade de cada **skill** (D21 a D23, D36).
-- Nenhuma classe é melhor que outra: todas têm o **mesmo orçamento de poder** (~670 no nível 100, contando HP/5; D91 ajustou Velocidade, Precisão, Esquiva e Vontade).
-  Artilharia (~640) é um pouco menor porque a área compensa (D36).
+- Nenhuma classe é melhor que outra: o **orçamento de poder** (nível 100, contando HP/5) é ajustado por classe, pela simulação, para compensar o quanto cada ponto rende (D122, D142).
 - As classes **variam por personagem**: o admin ajusta os stats de cada personagem dentro da classe (ex.: um
   atacante que defende mais e dá menos dano).
 
 ## 2. As 8 classes [ENRAIZADO a lista; valores PLACEHOLDER]
 
-Perfil padrão no **nível 100** (já com pontos livres na distribuição inicial). **Orçamento por classe (D122):** Executor
-640, Controlador e Tático 700, Artilharia 640, os demais 670 (a simulação mostrou que a distribuição do Executor rende
-mais por ponto e a do Controlador e do Tático, menos):
+Perfil padrão no **nível 100** (já com pontos livres na distribuição inicial). **Orçamento por classe (D122, D142, D144):** Executor
+595, Artilharia 615, Atirador 634, Suporte 680, Vanguarda 695, Guardião 696, Tático 706, Controlador 710 (a simulação mostrou que
+os pontos das classes só de ataque rendem mais e os das demais, menos):
 
 | Stat | Vanguarda | Atirador | Executor | Controlador | Suporte | Artilharia | Guardião | Tático |
 |---|---|---|---|---|---|---|---|---|
 | **HP** | 700 | 420 | 400 | **650** | 500 | 500 | 780 | **630** |
-| **Ataque** | 100 | 125 | **130** | **95** | 70 | **140** | 60 | **100** |
+| **Ataque** | 105 | 105 | **115** | 105 | 80 | **115** | 70 | **105** |
 | **Defesa** | **120** | 60 | 55 | 85 | 80 | 70 | **140** | 75 |
-| **Velocidade** | 75 | 95 | **110** | 90 | 105 | 65 | 70 | **110** |
-| **Precisão** | 85 | **125** | **105** | 115 | 85 | 110 | 70 | 105 |
-| **Esquiva** | 55 | 90 | **105** | 75 | 100 | 65 | 50 | 90 |
+| **Velocidade** | 80 | 85 | **100** | 90 | 105 | 65 | 80 | **110** |
+| **Precisão** | 100 | **125** | **105** | 115 | 85 | 110 | 85 | 105 |
+| **Esquiva** | 55 | 90 | **85** | 75 | 100 | 65 | 50 | 90 |
 | **Vontade** | 95 | 85 | 55 | **110** | **130** | 90 | **115** | **95** |
 
 | Classe | Função de guerra | No jogo |
 |---|---|---|
 | **Vanguarda** | Infantaria | Aguenta e bate de verdade; segura a primeira célula |
-| **Atirador** | Fogo de precisão | Precisão e Ataque altos, frágil; atinge de trás |
-| **Executor** | Operações especiais | O mais rápido e o que mais bate, o mais frágil; reposicionamento e infiltração |
-| **Controlador** | Negação de área | Vontade e Precisão para aplicar e manter status; bate pouco |
+| **Atirador** | Fogo de precisão | Precisão alta, frágil; atinge de trás |
+| **Executor** | Operações especiais | Rápido e de golpe forte, o mais frágil; reposicionamento e infiltração |
+| **Controlador** | Negação de área | Vontade e Precisão para aplicar e manter status |
 | **Suporte** | Médico de combate | Cura, escudo e buffs de sustentação; Vontade e Velocidade altas |
 | **Artilharia** | Cerco, fogo pesado | Dano em **área** (linha, coluna, grade), lento, caro; compensa o orçamento menor |
 | **Guardião** | Escolta, muralha | **Intercepta** golpes, cobre aliados, absorve dano por eles; bate pouco |
@@ -65,22 +64,23 @@ Substitui a regra antiga de "3 aptidões" (D48, D51):
 
 ## 4. Referência: dano de um golpe `Poder 1,0` no nível 100 (% do HP do alvo)
 
-Fórmula D68, 8 classes, stats da seção 2 (D91). Média das 64 combinações: **11,0%** (~9,8% com ~89% de acerto).
+Fórmula D68, 8 classes, stats da seção 2 (D144), sem a escala de nível. Média das 64 combinações: **10,4%** (~9,5% com ~91% de acerto).
 
 | Atacando ↓ / Alvo → | Vang. | Atir. | Exec. | Contr. | Supo. | Artil. | Guard. | Tát. |
 |---|---|---|---|---|---|---|---|---|
-| **Vanguarda** | 6,5 | 14,9 | 16,1 | 10,4 | 11,1 | 11,8 | 5,3 | 11,9 |
-| **Atirador** | 9,1 | 20,1 | 21,7 | 14,3 | 15,2 | 16,0 | 7,6 | 16,3 |
-| **Executor** | 10,8 | 23,3 | 25,1 | 16,8 | 17,8 | 18,7 | 9,0 | 19,0 |
-| **Controlador** | 4,6 | 10,9 | 11,9 | 7,5 | 8,0 | 8,5 | 3,7 | 8,6 |
-| **Suporte** | 3,7 | 9,0 | 9,8 | 6,1 | 6,5 | 7,0 | 3,0 | 7,0 |
-| **Artilharia** | 10,8 | 23,3 | 25,1 | 16,8 | 17,8 | 18,7 | 9,0 | 19,0 |
-| **Guardião** | 2,9 | 7,1 | 7,8 | 4,8 | 5,1 | 5,5 | 2,3 | 5,6 |
-| **Tático** | 4,1 | 9,9 | 10,8 | 6,8 | 7,3 | 7,8 | 3,4 | 7,8 |
+| **Vanguarda** | 7,0 | 15,9 | 17,2 | 8,9 | 11,9 | 12,6 | 5,8 | 9,7 |
+| **Atirador** | 7,0 | 15,9 | 17,2 | 8,9 | 11,9 | 12,6 | 5,8 | 9,7 |
+| **Executor** | 8,0 | 18,0 | 19,4 | 10,2 | 13,6 | 14,3 | 6,6 | 11,0 |
+| **Controlador** | 7,0 | 15,9 | 17,2 | 8,9 | 11,9 | 12,6 | 5,8 | 9,7 |
+| **Suporte** | 4,6 | 10,9 | 11,9 | 6,0 | 8,0 | 8,5 | 3,7 | 6,6 |
+| **Artilharia** | 8,0 | 18,0 | 19,4 | 10,2 | 13,6 | 14,3 | 6,6 | 11,0 |
+| **Guardião** | 3,7 | 9,0 | 9,8 | 4,9 | 6,5 | 7,0 | 3,0 | 5,4 |
+| **Tático** | 7,0 | 15,9 | 17,2 | 8,9 | 11,9 | 12,6 | 5,8 | 9,7 |
 
 Leitura: a Vanguarda tira ~15% de um backline e quase não morre; os especialistas em dano são frágeis entre si
-(20 a 25%). Executor e Artilharia têm o mesmo Ataque (140): a Artilharia compensa com Velocidade menor e Poder
-menor por alvo (área). Vigiar na hora das skills.
+(16 a 19%). Executor e Artilharia têm o maior Ataque (115): a Artilharia compensa com Velocidade menor e Poder menor por
+alvo (área).
+Vigiar na hora das skills.
 
 ## 5. Pendências
 

@@ -73,6 +73,7 @@ export class BattlePresenter {
         position: state.position,
         statuses: state.statuses,
         tauntedBy: state.tauntedBy,
+        linkedWith: state.linkedWith,
         protectedBy: state.protectedBy,
         engaged: state.engaged,
         stats: own ? state.stats : null,

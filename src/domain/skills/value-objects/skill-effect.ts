@@ -32,6 +32,8 @@ export type SkillEffect = EffectBase &
     | { type: 'CHANGE_FIELD'; duration: number; multiplier: number }
     /** Skill de recuperação (9.4b, D120): alivia 50% do Desgaste acumulado, incluindo o HP máximo da Fundamental. */
     | { type: 'RECOVER' }
+    /** Purificar (D146): tira o pior status negativo do aliado (`CLEANSE_ORDER`). */
+    | { type: 'CLEANSE' }
     /** Proteger (D124): até o próximo turno do protetor, golpes de alvo único no aliado adjacente caem nele. */
     | { type: 'PROTECT' }
     /**

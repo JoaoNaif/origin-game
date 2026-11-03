@@ -141,7 +141,7 @@ O squad: `{ id, name, members: [{ characterId, row, column }] }`. `row` 0 a 2 (l
 `payload` é exatamente o corpo de `POST /battles/:id/actions`, então o front não precisa repetir as regras do
 motor: só mostra e manda o escolhido. São as mesmas jogadas que a IA considera (`engine.md` 3.13): cada skill
 pronta em cada alvo que dá um conjunto diferente de atingidos (com as escolhas extras de trocar inimigos, avançar,
-mover aliado e trocar campo), mover para uma célula adjacente vazia, trocar com um aliado e, **só sem skill
+mover aliado e trocar campo), mover para uma célula adjacente vazia, trocar com um aliado (menos quem já foi trocado e ainda não agiu, D141; senão 400) e, **só sem skill
 possível**, Defender (D38). Nas skills, `preview` traz `potency` (a força com o Desgaste), `desgaste: { cost, slack }`
 e `hits: [{ ref, falloff, hitChance, effects }]`; cada efeito diz o que faria (`DAMAGE` com o valor já com todos os
 modificadores, `HEAL`, `SHIELD`, `APPLY_STATUS` com a chance etc.). Chances são probabilidades: o resultado de verdade
@@ -154,7 +154,7 @@ sai da seed. Em mover, trocar e defender, `preview` é nulo.
 | `status`, `mode`, `opponent` | `IN_PROGRESS` / `FINISHED`; `PVE`; nome, perfil e dificuldade da máquina |
 | `round`, `turn`, `timeline` | rodada (até 30); de quem é a vez (`{ ref, side }`, nulo no fim); as próximas 8 vezes |
 | `field`, `fields` | o campo valendo (`key`, `untilRound`, `isInitial`) e o catálogo para as trocas |
-| `units` | as 8 unidades (`PLAYER:0..3`, `OPPONENT:0..3`): modelo (`templateKey`, também o nome da imagem em `origin-front/public/characters/`), HP, escudo, posição, status, Provocado/Protegido, Engajado, classe, nível e traços |
+| `units` | as 8 unidades (`PLAYER:0..3`, `OPPONENT:0..3`): modelo (`templateKey`, também o nome da imagem em `origin-front/public/characters/`), HP, escudo, posição, status, Provocado/Protegido, parceiro do Ligado (`linkedWith`), Engajado, classe, nível e traços |
 | `result` | no fim: `winner`, `endReason` (`ELIMINATION`, `ROUND_LIMIT` ou `ABANDON`), `rounds` e `rewards` (o XP entregue, o mesmo da resposta da última jogada; vazio na desistência) |
 
 **O que o jogador vê do inimigo** (`pvp_brief.md` 3): classe, nível, traços e o estado em campo. **Não** vê os
@@ -162,7 +162,7 @@ sai da seed. Em mover, trocar e defender, `preview` é nulo.
 unidades vem tudo, com `ready` em cada skill (fora de recarga).
 
 **`events`:** a lista de `BattleEvent` (`src/domain/combat/engine/battle-events.ts`), em ordem: `TURN`, `SKILL`,
-`DAMAGE`, `HEAL`, `STATUS`, `MOVE`, `DEFEATED`, `BATTLE_END` e os demais. É o que a tela anima.
+`DAMAGE` (com `linked: true` quando veio pelo Ligado), `HEAL`, `STATUS`, `MOVE`, `DEFEATED`, `BATTLE_END` e os demais, como `SKIP` (`reason`: `STUN` ou `SLEEP`), `WOKE` (acordou) e `CLEANSE` (Purificar; `status` é o que saiu). É o que a tela anima.
 
 **`rewards`** (só quando a batalha acaba): `[{ characterId, xp, levelsGained, level, newSkillOffers }]` dos 4 que
 entraram (D134); `newSkillOffers` = blocos de skill que a subida abriu (D135). Ficam guardados na batalha:

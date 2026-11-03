@@ -176,7 +176,7 @@ describe('Turn Queue', () => {
   })
 
   it('should be able to average stats on the budget scale', () => {
-    // Vanguarda: orçamento 670 / 7
-    expect(statAverage(VANGUARD_STATS)).toBeCloseTo(670 / 7)
+    // Vanguarda: orçamento 695 / 7
+    expect(statAverage(VANGUARD_STATS)).toBeCloseTo(695 / 7)
   })
 })

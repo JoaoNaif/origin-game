@@ -128,6 +128,7 @@ export const skillEffectSchema = z.discriminatedUnion('type', [
     appliesTo,
   }),
   z.object({ type: z.literal('RECOVER'), appliesTo }),
+  z.object({ type: z.literal('CLEANSE'), appliesTo }),
   z.object({ type: z.literal('PROTECT'), appliesTo }),
   z.object({
     type: z.literal('GRANT_TURN'),

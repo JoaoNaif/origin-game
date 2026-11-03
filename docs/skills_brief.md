@@ -414,7 +414,7 @@ os **valores** dos stats. Bloqueiam: valores da tabela 9.4, queda de dano (9.3),
 ### 10.4 Reposicionamento [ENRAIZADO]
 
 - Mover só para **célula adjacente**, e custa **meio turno** (500 da barra, D123).
-- **Trocar com um aliado:** só com aliado **adjacente** (D120), e custa **meio turno para os dois** (D123).
+- **Trocar com um aliado:** só com aliado **adjacente** (D120), e custa **meio turno para os dois** (D123). Quem foi trocado não pode ser trocado de novo até agir (D141).
 - **Skills que reposicionam** (empurrar, puxar, trocar) existem e são uma peça estratégica.
 - **Não pode** empurrar para célula ocupada nem para fora da grade: o movimento é barrado, mas **o resto da skill
   (dano etc.) acontece normalmente**.
@@ -506,7 +506,7 @@ queda 100/60/30, Desgaste, Defender menor que dano, perfurante e flanco. Somam-s
 | Rodada | Regra [PLACEHOLDER] |
 |---|---|
 | Até a 3 | Normal (a meta de duração é ~12 rodadas, D138) |
-| A partir da 4 (D138; era a 16) | **Exaustão:** a cada rodada a **cura rende menos** (~-10%) e o **dano rende mais** (~+12%) |
+| A partir da 4 (D138; era a 16) | **Exaustão:** a cada rodada a **cura rende menos** (~-5%, D140) e o **dano rende mais** (~+12%) |
 | 30 | **Fim forçado:** vence quem **causou mais dano** em % do HP total do inimigo (D122; era % de HP) |
 
 Desde o D138 é pressão crescente para toda batalha fechar em ~12 rodadas, não só contra quem tenta travar o jogo.
@@ -519,10 +519,15 @@ Desde o D138 é pressão crescente para toda batalha fechar em ~12 rodadas, não
 |---|---|---|
 | **Atordoado** | Perde a próxima ação | Recarga longa e **imunidade de 1 turno** depois (anti-cadeia) |
 | **Travado** | Uma skill do alvo entra em recarga extra | Atinge o kit, não o turno |
-| **Preso** | Não pode se mover nem ser movido por skill | Contra empurrar/puxar |
+| **Preso** | Não pode se mover nem ser movido por skill; sem cobertura e com menos Esquiva (D145) | Abre quem está atrás da linha |
 | **Exposto** | Vira alvo de corpo a corpo mesmo atrás de alguém | Status de formação (Executor, Controlador) |
 | **Marcado** | Recebe +X% de dano de todas as fontes | Setup para o dano |
 | **Dano contínuo** | Perde HP no início do turno dele (queimadura, sangramento) | Contado em turnos do afetado (D31) |
+| **Silenciado** (D146) | Na próxima ação, só a skill básica | Neutraliza a peça perigosa |
+| **Adormecido** (D146) | Perde as ações até levar dano | Bater acorda: focar ou deixar dormindo? |
+| **Ligado** (D146) | Parte do dano direto em um também atinge o aliado vizinho | Alcança quem está protegido atrás |
+| **Furtivo** (D146) | Não pode ser escolhido por golpe de alvo único até agir | Status positivo; área e perfurante ainda atingem |
+| **Contágio** (D146) | O Dano contínuo passa para os aliados vizinhos | Pune squad agrupada |
 
 **O que a Vontade resiste:**
 
@@ -546,7 +551,7 @@ Substitui a soma direta de 9.5b (D37):
 
 ### 11.11 Reposicionamento [ENRAIZADO]
 
-- **Mover-se** custa **meio turno**; **trocar com aliado** custa meio turno para os dois (D123, altera D19 e D42).
+- **Mover-se** custa **meio turno**; **trocar com aliado** custa meio turno para os dois (D123, altera D19 e D42), e quem foi trocado não pode ser trocado de novo até agir (D141).
 - **Skill que reposiciona** é uma skill normal (Desgaste e recarga). Ser empurrado **não** custa o turno do alvo.
 - Não há custo extra novo.
 
@@ -601,11 +606,18 @@ conta 30% menos (marca de classe, D125).
 |---|---|---|---|
 | Atordoado | Perde a próxima ação (imunidade de 1 turno depois); **indefeso**: golpes contra ele acertam sempre e não são interceptados nem protegidos (D125) | 1 | 70% |
 | Travado | +2 de recarga em uma skill | n/a | 80% |
-| Preso | Não move nem é movido; **isolado**: não pode ser protegido (D125) | 2 | 80% |
+| Preso | Não move nem é movido; **isolado**: não pode ser protegido (D125); **sem cobertura e com −30% de Esquiva** (D145) | 2 | 80% |
 | Exposto | Alvo de corpo a corpo | 2 | 85% |
 | Marcado | +20% de dano recebido | 3 | 80% |
 | Dano contínuo | 4% do HP máx. por turno (ignora Defesa); **Ferida**: cura recebida rende metade (D125) | 3 | 80% |
 | **Provocado** (D124) | Golpes de alvo único só em quem provocou (área, apoio e movimento livres) | 1 | 80% |
+| **Silenciado** (D146) | Na próxima ação, só a skill básica; sem básica equipada, só mover ou Defender | 1 | 80% |
+| **Adormecido** (D146) | Perde as ações até levar dano (Dano contínuo também acorda, e aí ele age); ao acordar, 1 turno imune a Adormecido e Atordoado; não intercepta nem recebe Comando | 2 | 60% |
+| **Ligado** (D146) | Liga ao aliado vizinho com menos vida (empate pela ordem); o outro leva mais 30% do dano direto, sem Defesa, sem repassar de volta e sem contar Dano contínuo; sem vizinho, não pega; acaba para os dois se um morrer ou se a duração de um acabar | 2 | 80% |
+| **Furtivo** (D146) | Acaba no início da próxima vez dele; não pode ser escolhido por alvo único, à distância, corpo a corpo ou flanco; área e perfurante atingem; quem está atrás dele na linha fica exposto; não intercepta | 1 | 100% (em si ou aliado) |
+| **Contágio** (D146) | No Dano contínuo do afetado, os vizinhos sem Dano contínuo pegam por 2 turnos, sem passar adiante | 3 | 80% |
+
+**Purificar** (efeito de skill, D146): tira um status negativo do aliado, o pior nesta ordem: Atordoado, Adormecido, Silenciado, Ligado (dos dois), Dano contínuo, Contágio, Marcado, Preso, Exposto, Provocado. Debuffs de stat não saem.
 
 **Proteger (D124, D127):** efeito de skill (Guardião, Vanguarda). Custa **meio turno**. Até o próximo turno do protetor,
 todo golpe de alvo único contra o aliado adjacente escolhido cai no protetor (inclusive flanco), que tem **+50% de
@@ -621,7 +633,7 @@ da linha diante de um corpo a corpo (Vanguarda, Guardião, Executor), mover ou t
 - **Fontes por stat: 2 buffs e 2 debuffs** (era 3). Magnitudes **10% / 15% / 20%**. Máximo ~+44% e ~−36%.
 - **Defender:** +50% de Defesa efetiva até o próximo turno do personagem, fora do limite de fontes, mais ~10% de alívio
   de Desgaste. Reduz 13% (Executor) a 19% (Vanguarda) do dano recebido.
-- **Exaustão:** a partir da **rodada 4** (D138; era 16), cura −10% e dano +12% por rodada (cura zera na 13, dano +108% na 12), fim forçado na 30.
+- **Exaustão:** a partir da **rodada 4** (D138; era 16), cura −5% (D140) e dano +12% por rodada (cura zera na 23, dano +108% na 12), fim forçado na 30.
 
 ### 12.6 Kit básico e marcos
 

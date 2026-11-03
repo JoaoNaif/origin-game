@@ -13,16 +13,16 @@ export const CharacterClass = {
 export type CharacterClass =
   (typeof CharacterClass)[keyof typeof CharacterClass]
 
-/** Orçamento de poder no nível 100 (HP/5 + demais stats). Artilharia é menor pela área (D69). */
+/** Orçamento de poder no nível 100 (HP/5 + demais stats). Ajustado por simulação, por classe (D122, D142, D144). */
 export const CLASS_BUDGET: Record<CharacterClass, number> = {
-  VANGUARD: 670,
-  MARKSMAN: 670,
-  EXECUTOR: 640,
-  CONTROLLER: 700,
-  SUPPORT: 670,
-  ARTILLERY: 640,
-  GUARDIAN: 670,
-  TACTICIAN: 700,
+  VANGUARD: 695,
+  MARKSMAN: 634,
+  EXECUTOR: 595,
+  CONTROLLER: 710,
+  SUPPORT: 680,
+  ARTILLERY: 615,
+  GUARDIAN: 696,
+  TACTICIAN: 706,
 }
 
 /** Tolerância do orçamento por personagem (o admin ajusta stats dentro da classe). */

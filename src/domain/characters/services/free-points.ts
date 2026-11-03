@@ -50,15 +50,20 @@ export function defaultFreePoints(
   profile: StatBlock,
   level: number
 ): StatBlock {
-  const share = availableFreePoints(level) / MAX_FREE_POINTS
+  const available = availableFreePoints(level)
+  const share = available / MAX_FREE_POINTS
+  const stats = Object.keys(profile) as Stat[]
+  const points = (stat: Stat) => {
+    const freeShare = profile[stat] * (1 - BASE_SHARE) * share
+
+    return stat === Stat.HP ? freeShare / HP_PER_POINT : freeShare
+  }
+  // orçamento acima de ~667: os 15% passariam dos pontos concedidos (D142)
+  const total = stats.reduce((sum, stat) => sum + points(stat), 0)
+  const fit = total > available ? available / total : 1
 
   return Object.fromEntries(
-    (Object.keys(profile) as Stat[]).map((stat) => {
-      const freeShare = profile[stat] * (1 - BASE_SHARE) * share
-      const points = stat === Stat.HP ? freeShare / HP_PER_POINT : freeShare
-
-      return [stat, Math.floor(points)]
-    })
+    stats.map((stat) => [stat, Math.floor(points(stat) * fit)])
   ) as StatBlock
 }
 

@@ -8,6 +8,7 @@ import { StatBlock } from '@/domain/characters/value-objects/stat-block'
 import { SkillArea } from '@/domain/skills/enums/skill-area'
 import { SkillRange } from '@/domain/skills/enums/skill-range'
 import { SkillTarget } from '@/domain/skills/enums/skill-target'
+import { SkillTier } from '@/domain/skills/enums/skill-tier'
 import { StatusType } from '@/domain/skills/enums/status-type'
 import { SkillEffect } from '@/domain/skills/value-objects/skill-effect'
 import { PassiveEffect } from '@/domain/characters/value-objects/passive'
@@ -38,6 +39,7 @@ import {
 import {
   CONTROLLER_WILL_FACTOR,
   STATUS_RULES,
+  StatusApplication,
   UnitConditions,
   WOUND_HEAL_MULTIPLIER,
 } from '../services/conditions'
@@ -86,12 +88,16 @@ interface EngineUnit {
   cooldowns: SkillCooldowns
   /** Já foi atrasado: imune a novo atraso até agir (D102). */
   delayImmune: boolean
+  /** Já foi trocado por um aliado: não pode ser trocado de novo até agir, senão nunca chega a vez dele (D141). */
+  swapImmune: boolean
   /** Turnos começados (para a passiva periódica). */
   turnsStarted: number
   /** Quem provocou (D124), enquanto a unidade está Provocada. */
   tauntedBy: string | null
   /** Quem protege a unidade até o próximo turno dele (D124). */
   protectedBy: string | null
+  /** Parceiro do Ligado (D146). */
+  linkedWith: string | null
 }
 
 /** Contexto de um gatilho de passiva. */
@@ -142,6 +148,7 @@ export type PreviewEffect =
   | { type: 'GRANT_TURN' }
   /** O dano já vem multiplicado na prévia. */
   | { type: 'EXPLOIT' }
+  | { type: 'CLEANSE'; status: StatusType | null }
 
 export interface PreviewHit {
   ref: string
@@ -401,6 +408,9 @@ export class BattleEngine {
         return unit.cooldowns.ready().map((s) => s.key)
       },
       canBeMoved: unit.conditions.canBeMoved,
+      swapImmune: unit.swapImmune,
+      isHidden: unit.conditions.has(StatusType.STEALTH),
+      linkedWith: unit.linkedWith,
       isExposed: unit.conditions.isExposed,
       traitKeys: unit.snapshot.traitKeys,
       tauntedBy: unit.conditions.has(StatusType.TAUNT) ? unit.tauntedBy : null,
@@ -518,11 +528,9 @@ export class BattleEngine {
             return {
               type: 'APPLY_STATUS',
               status: effect.status,
-              chance:
-                effect.status === StatusType.STUN &&
-                target.conditions.isStunImmune
-                  ? 0
-                  : statusChanceOf(effect.baseChance),
+              chance: this.canReceive(target, effect.status)
+                ? statusChanceOf(effect.baseChance)
+                : 0,
             }
           case 'REPOSITION':
             return {
@@ -551,6 +559,8 @@ export class BattleEngine {
               type: 'RECOVER',
               relieved: target.desgaste.totalFraction() * RELIEF.RECOVERY_SKILL,
             }
+          case 'CLEANSE':
+            return { type: 'CLEANSE', status: target.conditions.worstNegative }
         }
       })
 
@@ -624,7 +634,8 @@ export class BattleEngine {
       const grantedRef = this.granted.shift()
       if (grantedRef) {
         const ally = this.get(grantedRef)
-        if (!ally.alive || ally.conditions.has(StatusType.STUN)) continue
+        if (!ally.alive || ally.conditions.cannotAct) continue
+        ally.conditions.remove(StatusType.STEALTH)
         this.current = {
           ref: ally.ref,
           round: this.queue.currentRound,
@@ -664,11 +675,13 @@ export class BattleEngine {
           damage.hpLost + damage.shieldAbsorbed
         this.log.push({ type: 'DOT', ref: unit.ref, amount: start.dotDamage })
       }
+      this.syncLink(unit)
 
       if (!unit.alive) {
         this.afterAction()
         continue
       }
+      if (start.spreads) this.spreadContagion(unit)
 
       unit.turnsStarted += 1
       this.firePassive(unit, 'TURN_START')
@@ -678,7 +691,7 @@ export class BattleEngine {
         this.log.push({
           type: 'SKIP',
           ref: unit.ref,
-          reason: 'STUN',
+          reason: start.skipReason!,
         })
         this.endTurn(unit)
         continue
@@ -781,6 +794,13 @@ export class BattleEngine {
             new InvalidActionError('troca só com aliado adjacente (D120)')
           )
         }
+        if (ally.swapImmune) {
+          return left(
+            new InvalidActionError(
+              'esse aliado já foi trocado e ainda não agiu (D141)'
+            )
+          )
+        }
         const actorEngaged = this.isEngaged(actor)
         const allyEngaged = this.isEngaged(ally)
         const swapped = this.grids[actor.side].swap(actor.ref, ally.ref, {
@@ -799,6 +819,7 @@ export class BattleEngine {
         if (!actorEngaged) this.halfTurnBack(actor)
         const allyCost = allyEngaged ? 100 : MOVE_TURN_COST_PERCENT
         this.queue.shift(ally.ref, -allyCost)
+        ally.swapImmune = true
         this.log.push({
           type: 'TURN_SHIFT',
           targetRef: ally.ref,
@@ -843,12 +864,7 @@ export class BattleEngine {
       },
       units: grid.units(),
       cell: grid.positionOf(taunter.ref),
-      exposedRefs: new Set(
-        grid
-          .units()
-          .map((u) => u.ref)
-          .filter((ref) => this.get(ref).conditions.isExposed)
-      ),
+      ...this.targetingFlags(targetSide),
     })
     const canReach =
       reach.isRight() && reach.value.some((h) => h.ref === taunter.ref)
@@ -888,6 +904,161 @@ export class BattleEngine {
       amount: result.hpLost,
       shieldAbsorbed: result.shieldAbsorbed,
     })
+  }
+
+  /** Quem está Exposto ou Furtivo em cada lado, para escolher os alvos. */
+  private targetingFlags(side: BattleSide) {
+    const refs = this.grids[side].units().map((u) => u.ref)
+    const withFlag = (test: (conditions: UnitConditions) => boolean) =>
+      new Set(refs.filter((ref) => test(this.get(ref).conditions)))
+
+    return {
+      exposedRefs: withFlag((c) => c.isExposed),
+      hiddenRefs: withFlag((c) => c.has(StatusType.STEALTH)),
+    }
+  }
+
+  /** O status tem efeito nessa unidade agora: imunidade do Atordoado e Adormecido, e parceiro para o Ligado. */
+  private canReceive(target: EngineUnit, status: StatusType): boolean {
+    if (status === StatusType.STUN || status === StatusType.SLEEP) {
+      return !target.conditions.isStunImmune
+    }
+    if (status === StatusType.LINK) return this.linkCandidate(target) !== null
+
+    return true
+  }
+
+  /** Parceiro do Ligado: o aliado adjacente com menos vida; empate pela `ref` (sem usar a seed). */
+  private linkCandidate(target: EngineUnit): EngineUnit | null {
+    if (!target.alive) return null
+    const grid = this.grids[target.side]
+    const position = grid.positionOf(target.ref)
+    const [partner] = [...this.units.values()]
+      .filter(
+        (u) =>
+          u.side === target.side &&
+          u.alive &&
+          u.ref !== target.ref &&
+          isAdjacent(position, grid.positionOf(u.ref))
+      )
+      .sort((a, b) => a.hp - b.hp || a.ref.localeCompare(b.ref))
+
+    return partner ?? null
+  }
+
+  /** Liga o alvo ao parceiro (D146); um novo elo desfaz os anteriores dos dois. */
+  private applyLink(target: EngineUnit, duration: number): StatusApplication {
+    const partner = this.linkCandidate(target)
+    if (!partner) return 'IMMUNE'
+
+    const renewed = target.linkedWith === partner.ref
+    this.clearLink(target)
+    this.clearLink(partner)
+    for (const [unit, mate] of [
+      [target, partner],
+      [partner, target],
+    ]) {
+      unit.conditions.applyStatus(StatusType.LINK, duration)
+      unit.linkedWith = mate.ref
+      this.log.push({
+        type: 'STATUS',
+        targetRef: unit.ref,
+        status: StatusType.LINK,
+        result: renewed ? 'RENEWED' : 'APPLIED',
+      })
+    }
+
+    return renewed ? 'RENEWED' : 'APPLIED'
+  }
+
+  /** Parceiro com o elo valendo: os dois vivos e com o status. */
+  private linkedPartner(unit: EngineUnit): EngineUnit | null {
+    if (!unit.linkedWith || !unit.conditions.has(StatusType.LINK)) return null
+    const partner = this.get(unit.linkedWith)
+
+    return partner.alive && partner.conditions.has(StatusType.LINK)
+      ? partner
+      : null
+  }
+
+  /** Desfaz o elo nos dois lados. */
+  private clearLink(unit: EngineUnit) {
+    const partner = unit.linkedWith ? this.get(unit.linkedWith) : null
+    unit.conditions.remove(StatusType.LINK)
+    unit.linkedWith = null
+    if (partner) {
+      partner.conditions.remove(StatusType.LINK)
+      partner.linkedWith = null
+    }
+  }
+
+  /** O elo só vale com os dois: se um perdeu o status (duração, consumo, morte), acaba para o outro. */
+  private syncLink(unit: EngineUnit) {
+    if (unit.linkedWith && !this.linkedPartner(unit)) this.clearLink(unit)
+  }
+
+  /** O parceiro leva parte do dano direto, sem Defesa e sem repassar de volta (D146). */
+  private shareLinkedDamage(
+    actor: EngineUnit,
+    partner: EngineUnit,
+    dealt: number
+  ) {
+    if (!partner.alive || dealt <= 0) return
+
+    const amount = Math.round(
+      (dealt * STATUS_RULES.LINK.sharedDamagePercent) / 100
+    )
+    if (amount <= 0) return
+
+    const result = applyDamage(amount, partner)
+    this.setHp(partner, result.hpLeft, result.shieldLeft)
+    this.log.push({
+      type: 'DAMAGE',
+      ref: actor.ref,
+      targetRef: partner.ref,
+      amount: result.hpLost,
+      shieldAbsorbed: result.shieldAbsorbed,
+      linked: true,
+    })
+    this.wakeUp(partner)
+    if (partner.side !== actor.side) {
+      this.damageDealt[actor.side] += result.hpLost + result.shieldAbsorbed
+      if (!partner.alive) this.action.killed.push(partner)
+    }
+  }
+
+  /** Dano acorda quem está Adormecido (D146). */
+  private wakeUp(unit: EngineUnit) {
+    if (unit.alive && unit.conditions.wake()) {
+      this.log.push({ type: 'WOKE', ref: unit.ref })
+    }
+  }
+
+  /** Contágio (D146): quem está em volta e ainda não tem Dano contínuo pega, sem passar adiante. */
+  private spreadContagion(source: EngineUnit) {
+    const grid = this.grids[source.side]
+    const position = grid.positionOf(source.ref)
+    for (const ally of this.units.values()) {
+      if (
+        ally.side !== source.side ||
+        !ally.alive ||
+        ally.ref === source.ref ||
+        ally.conditions.has(StatusType.DOT) ||
+        !isAdjacent(position, grid.positionOf(ally.ref))
+      ) {
+        continue
+      }
+      this.log.push({
+        type: 'STATUS',
+        targetRef: ally.ref,
+        status: StatusType.DOT,
+        result: ally.conditions.applyStatus(
+          StatusType.DOT,
+          STATUS_RULES.CONTAGION.spreadDuration,
+          STATUS_RULES.DOT.maxHpPercentPerTurn
+        ),
+      })
+    }
   }
 
   /** Marca do Tático (D126): skill dele em aliado dá Coordenação (+10% de Ataque até o aliado agir). */
@@ -965,6 +1136,14 @@ export class BattleEngine {
     const skill = actor.snapshot.skills.find((s) => s.key === payload.skillKey)
     if (!skill) return left(new InvalidActionError('skill fora da build'))
     if (
+      actor.conditions.has(StatusType.SILENCE) &&
+      skill.tier !== SkillTier.BASIC
+    ) {
+      return left(
+        new InvalidActionError('Silenciado: só a skill básica (D146)')
+      )
+    }
+    if (
       skill.effects.some((e) => e.type === 'CHANGE_FIELD') &&
       !this.fieldCatalog.some((f) => f.key === payload.fieldKey)
     ) {
@@ -986,12 +1165,6 @@ export class BattleEngine {
     }
 
     const grid = this.grids[targetSide]
-    const exposedRefs = new Set(
-      grid
-        .units()
-        .map((u) => u.ref)
-        .filter((ref) => this.get(ref).conditions.isExposed)
-    )
     const targets = resolveTargets({
       skill,
       actor: {
@@ -1000,7 +1173,7 @@ export class BattleEngine {
       },
       units: grid.units(),
       cell: payload.target,
-      exposedRefs,
+      ...this.targetingFlags(targetSide),
     })
     if (targets.isLeft())
       return left(new InvalidActionError(targets.value.message))
@@ -1010,11 +1183,7 @@ export class BattleEngine {
 
     if (skill.effects.some((e) => e.type === 'GRANT_TURN')) {
       const ally = targets.value[0] ? this.get(targets.value[0].ref) : null
-      if (
-        !ally ||
-        ally.ref === actor.ref ||
-        ally.conditions.has(StatusType.STUN)
-      ) {
+      if (!ally || ally.ref === actor.ref || ally.conditions.cannotAct) {
         return left(
           new InvalidActionError(
             'Comando só em outro aliado que possa agir (D126)'
@@ -1184,7 +1353,11 @@ export class BattleEngine {
         ref: g.ref,
         characterClass: g.snapshot.characterClass,
         ...grid.positionOf(g.ref),
-        canAct: !g.conditions.has(StatusType.STUN) && g.conditions.canBeMoved,
+        // Furtivo não se revela para interceptar (D146)
+        canAct:
+          !g.conditions.cannotAct &&
+          !g.conditions.has(StatusType.STEALTH) &&
+          g.conditions.canBeMoved,
       }))
 
     const guardianRef = this.intercepts[target.side].intercept(
@@ -1239,6 +1412,8 @@ export class BattleEngine {
           target,
           this.passiveIgnoresShield(actor)
         )
+        // antes do dano: se o alvo morrer, o elo acaba junto, mas este golpe ainda passa
+        const partner = this.linkedPartner(target)
         this.setHp(target, result.hpLeft, result.shieldLeft)
         this.log.push({
           type: 'DAMAGE',
@@ -1247,11 +1422,19 @@ export class BattleEngine {
           amount: result.hpLost,
           shieldAbsorbed: result.shieldAbsorbed,
         })
+        if (result.hpLost + result.shieldAbsorbed > 0) this.wakeUp(target)
         if (target.side !== actor.side) {
           this.damageDealt[actor.side] += result.hpLost + result.shieldAbsorbed
           this.action.damaged.push(target)
           if (!target.alive) this.action.killed.push(target)
           else this.firePassive(target, 'ON_HIT', { attacker: actor })
+        }
+        if (partner) {
+          this.shareLinkedDamage(
+            actor,
+            partner,
+            result.hpLost + result.shieldAbsorbed
+          )
         }
         return
       }
@@ -1337,6 +1520,18 @@ export class BattleEngine {
           return
         }
 
+        if (effect.status === StatusType.LINK) {
+          if (this.applyLink(target, effect.duration) === 'IMMUNE') {
+            this.log.push({
+              type: 'STATUS',
+              targetRef: target.ref,
+              status: effect.status,
+              result: 'IMMUNE',
+            })
+          }
+          return
+        }
+
         const value =
           effect.status === StatusType.MARK
             ? STATUS_RULES.MARK.damageTakenPercent
@@ -1380,6 +1575,19 @@ export class BattleEngine {
           type: 'TURN_SHIFT',
           targetRef: target.ref,
           percent: effect.percent,
+        })
+        return
+      }
+
+      case 'CLEANSE': {
+        const status = target.conditions.worstNegative
+        if (status === StatusType.LINK) this.clearLink(target)
+        else if (status) target.conditions.remove(status)
+        this.log.push({
+          type: 'CLEANSE',
+          ref: actor.ref,
+          targetRef: target.ref,
+          status,
         })
         return
       }
@@ -1501,13 +1709,14 @@ export class BattleEngine {
     return finalDamage(raw)
   }
 
-  /** Cobertura (D123): à distância, alvo único, em quem tem alguém na frente da linha e não está Exposto. */
+  /** Cobertura (D123): à distância, alvo único, em quem tem alguém na frente da linha e não está Exposto nem Preso (D145). */
   private coverMultiplier(skill: SnapshotSkill, target: EngineUnit): number {
     if (
       skill.target !== SkillTarget.ENEMY ||
       skill.range !== SkillRange.RANGED ||
       skill.area !== SkillArea.SINGLE ||
       target.conditions.isExposed ||
+      target.conditions.has(StatusType.ROOT) ||
       !target.alive
     ) {
       return 1
@@ -1566,7 +1775,7 @@ export class BattleEngine {
     return hitChance(
       base,
       this.stat(actor, Stat.PRECISION),
-      this.stat(target, Stat.EVASION)
+      this.stat(target, Stat.EVASION) * target.conditions.evasionMultiplier
     )
   }
 
@@ -1689,6 +1898,7 @@ export class BattleEngine {
     unit.conditions.afterAction()
     if (!unit.conditions.has(StatusType.TAUNT)) unit.tauntedBy = null
     unit.delayImmune = false
+    unit.swapImmune = false
     this.current = null
     this.afterAction()
   }
@@ -2101,6 +2311,11 @@ export class BattleEngine {
           return
         }
 
+        if (effect.status === StatusType.LINK) {
+          this.applyLink(target, STATUS_RULES.LINK.duration)
+          return
+        }
+
         const result = target.conditions.applyDefaultStatus(effect.status)
         if (effect.status === StatusType.TAUNT) target.tauntedBy = owner.ref
         this.log.push({
@@ -2128,6 +2343,7 @@ export class BattleEngine {
       this.queue.remove(unit.ref)
       this.grids[unit.side].remove(unit.ref)
       this.log.push({ type: 'DEFEATED', ref: unit.ref })
+      this.clearLink(unit)
       this.firePassive(unit, 'ON_DEFEATED')
       for (const ally of this.units.values()) {
         if (ally.side === unit.side && ally.alive) {
@@ -2198,9 +2414,11 @@ function createUnit(snapshot: SnapshotUnit, side: BattleSide): EngineUnit {
     conditions: new UnitConditions(),
     cooldowns: new SkillCooldowns(snapshot.skills),
     delayImmune: false,
+    swapImmune: false,
     turnsStarted: 0,
     tauntedBy: null,
     protectedBy: null,
+    linkedWith: null,
   }
 }
 

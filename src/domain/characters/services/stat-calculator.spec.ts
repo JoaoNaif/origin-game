@@ -28,13 +28,13 @@ describe('Stat Calculator', () => {
         freePoints: EMPTY_FREE_POINTS,
       })
 
-      // Vanguarda: 700 / 100 / 120 / 75 / 85 / 55 / 95 × 0,34
+      // Vanguarda: 700 / 105 / 120 / 80 / 100 / 55 / 95 × 0,34
       expect(sut).toEqual({
         HP: 238,
-        ATTACK: 34,
+        ATTACK: 36,
         DEFENSE: 41,
-        SPEED: 26,
-        PRECISION: 29,
+        SPEED: 27,
+        PRECISION: 34,
         EVASION: 19,
         WILL: 32,
       })
@@ -48,7 +48,7 @@ describe('Stat Calculator', () => {
       })
 
       expect(sut.HP).toBe(595)
-      expect(sut.ATTACK).toBe(85)
+      expect(sut.ATTACK).toBe(89)
       expect(sut.DEFENSE).toBe(102)
     })
 
@@ -64,17 +64,36 @@ describe('Stat Calculator', () => {
     })
 
     it('should be able to rebuild the profile with the default distribution at level 100', () => {
+      // Artilharia, orçamento 625: os 15% cabem nos 100 pontos
+      const profile = {
+        HP: 500,
+        ATTACK: 125,
+        DEFENSE: 70,
+        SPEED: 65,
+        PRECISION: 110,
+        EVASION: 65,
+        WILL: 90,
+      }
+      const sut = computeStats({
+        profile,
+        level: 100,
+        freePoints: defaultFreePoints(profile, 100),
+      })
+
+      for (const stat of Object.values(Stat)) {
+        expect(Math.abs(sut[stat] - profile[stat])).toBeLessThanOrEqual(1)
+      }
+    })
+
+    it('should be able to stay near the profile when the budget does not fit the points (D142)', () => {
       const sut = computeStats({
         profile: VANGUARD_STATS,
         level: 100,
         freePoints: defaultFreePoints(VANGUARD_STATS, 100),
       })
 
-      for (const stat of Object.values(Stat)) {
-        expect(Math.abs(sut[stat] - VANGUARD_STATS[stat])).toBeLessThanOrEqual(
-          1
-        )
-      }
+      expect(VANGUARD_STATS.HP - sut.HP).toBeLessThanOrEqual(5)
+      expect(VANGUARD_STATS.SPEED - sut.SPEED).toBeLessThanOrEqual(2)
     })
 
     it('should be able to apply trait percents after base and free points', () => {
@@ -88,7 +107,7 @@ describe('Stat Calculator', () => {
         ],
       })
 
-      expect(sut.ATTACK).toBe(94) // 85 × 1,10 = 93,5
+      expect(sut.ATTACK).toBe(98) // 89,25 × 1,10 = 98,2
       expect(sut.DEFENSE).toBe(94) // 102 × 0,92 = 93,84
     })
 
@@ -103,7 +122,7 @@ describe('Stat Calculator', () => {
         ],
       })
 
-      expect(sut.ATTACK).toBe(98) // 85 × 1,15 = 97,75
+      expect(sut.ATTACK).toBe(103) // 89,25 × 1,15 = 102,6
     })
 
     it('should ignore trait effects that are not stat modifiers', () => {
@@ -128,13 +147,13 @@ describe('Stat Calculator', () => {
       const total = Object.values(sut).reduce((sum, value) => sum + value, 0)
 
       expect(sut).toEqual({
-        HP: 21,
+        HP: 20,
         ATTACK: 15,
-        DEFENSE: 18,
+        DEFENSE: 17,
         SPEED: 11,
-        PRECISION: 12,
-        EVASION: 8,
-        WILL: 14,
+        PRECISION: 14,
+        EVASION: 7,
+        WILL: 13,
       })
       expect(total).toBeLessThanOrEqual(100)
     })
@@ -142,7 +161,7 @@ describe('Stat Calculator', () => {
     it('should be able to scale with the points granted at the level', () => {
       const sut = defaultFreePoints(VANGUARD_STATS, 50)
 
-      expect(sut.DEFENSE).toBe(9) // metade de 18
+      expect(sut.DEFENSE).toBe(8) // metade de 17,3
     })
   })
 })

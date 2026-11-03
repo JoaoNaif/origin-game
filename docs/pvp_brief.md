@@ -106,7 +106,7 @@ da ação é a soma ponderada pelo perfil, dividida pela maior nota do turno.
 
 | Nível | T | Fatores que enxerga | Leitura do jogador |
 |---|---|---|---|
-| Iniciante | 0.6 (D117) | dano esperado, abate, defesa/cura/status (D115) | nenhuma |
+| Iniciante | 1.3 (D144) | dano esperado, abate, defesa/cura/status (D115) | nenhuma |
 | Intermediário | 0.32 (D122) | + ameaça do alvo | última ação |
 | Avançado | 0.2 (D122) | + risco próprio | padrões simples |
 | Mestre | 0.1 (D122) | + situação geral | padrões e uso de skills |
@@ -197,7 +197,9 @@ Cada ação vira quantos **% de HP** ela rende, dividido por **25** (≈ maior g
 |---|---|
 | Cura / escudo | % do HP máx. efetivamente restaurado do aliado, ×(1 + o que falta de vida) |
 | Atordoado | 11 (uma ação) |
-| Travado / Preso / Exposto | 6 / 3 / 4 |
+| Travado / Preso / Exposto | 6 / 6 (D145) / 4 |
+| Silenciado / Adormecido / Ligado / Furtivo / Contágio (D146) | 7 / 14 / 8 / 14 / 6 |
+| Purificar (D146) | 1,5 × o valor do status tirado |
 | Marcado | 5 |
 | Dano contínuo | 12 |
 | Buff / debuff 10 / 15 / 20% | 3 / 4,5 / 6 |

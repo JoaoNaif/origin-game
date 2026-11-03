@@ -45,6 +45,8 @@ export interface TargetingInput {
   cell: GridPosition
   /** Unidades com o status Exposto: viram alvo de corpo a corpo mesmo atrás de alguém (11.9). */
   exposedRefs?: ReadonlySet<string>
+  /** Unidades Furtivas: não podem ser escolhidas por golpe de alvo único; área e perfurante ainda as atingem (D146). */
+  hiddenRefs?: ReadonlySet<string>
 }
 
 const at = (units: readonly GridUnit[], { row, column }: GridPosition) =>
@@ -134,7 +136,8 @@ function allyTargets(
 function enemyTargets(
   input: TargetingInput
 ): Either<InvalidTargetError, TargetHit[]> {
-  const { skill, units, cell, exposedRefs } = input
+  const { skill, units, cell, exposedRefs, hiddenRefs } = input
+  const isHidden = (unit: GridUnit) => hiddenRefs?.has(unit.ref) ?? false
 
   switch (skill.area) {
     case SkillArea.LINE:
@@ -153,13 +156,14 @@ function enemyTargets(
   }
 
   const row = rowFrontToBack(units, cell.row)
+  const visible = row.filter((u) => !isHidden(u))
 
   switch (skill.range) {
     case SkillRange.PIERCING:
       return right(noFalloff(row))
 
     case SkillRange.FLANK: {
-      const last = row.at(-1)
+      const last = visible.at(-1)
       return last
         ? right([{ ref: last.ref, falloff: 1 }])
         : left(new InvalidTargetError('linha vazia'))
@@ -167,6 +171,9 @@ function enemyTargets(
 
     case SkillRange.RANGED: {
       const unit = at(units, cell)
+      if (unit && isHidden(unit)) {
+        return left(new InvalidTargetError('alvo Furtivo (D146)'))
+      }
       return unit
         ? right([{ ref: unit.ref, falloff: 1 }])
         : left(new InvalidTargetError('nenhum inimigo nessa célula'))
@@ -177,9 +184,13 @@ function enemyTargets(
       const unit = at(units, cell)
       if (!unit)
         return left(new InvalidTargetError('nenhum inimigo nessa célula'))
+      if (isHidden(unit)) {
+        return left(new InvalidTargetError('alvo Furtivo (D146)'))
+      }
 
+      // quem está Furtivo na frente não segura o golpe: o próximo da linha fica exposto
       const isExposed =
-        row[0]?.ref === unit.ref || (exposedRefs?.has(unit.ref) ?? false)
+        visible[0]?.ref === unit.ref || (exposedRefs?.has(unit.ref) ?? false)
 
       return isExposed
         ? right([{ ref: unit.ref, falloff: 1 }])

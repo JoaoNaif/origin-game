@@ -78,10 +78,10 @@ export interface DifficultyRules {
 const BASIC: AiFactor[] = [AiFactor.DAMAGE, AiFactor.KILL, AiFactor.SUPPORT]
 const ALL: AiFactor[] = Object.values(AiFactor)
 
-/** Dificuldade (D90, D103, `pvp_brief.md` 8.1 e 10.2; temperaturas do D117 e D121, calibradas por simulação). Nunca dá bônus de stat. */
+/** Dificuldade (D90, D103, `pvp_brief.md` 8.1 e 10.2; temperaturas do D117, D121 e D144, calibradas por simulação). Nunca dá bônus de stat. */
 export const DIFFICULTY_RULES: Record<AiDifficulty, DifficultyRules> = {
   BEGINNER: {
-    temperature: 0.6,
+    temperature: 1.3,
     factors: BASIC,
     logWindow: 0,
     protectionScale: 0,
@@ -140,12 +140,20 @@ export const HP_EQUIVALENT_SCALE = 25
 export const STATUS_VALUE: Record<StatusType, number> = {
   STUN: 11,
   LOCK: 6,
-  ROOT: 3,
+  /** Sem cobertura e com menos Esquiva (D145). */
+  ROOT: 6,
   EXPOSE: 4,
   MARK: 5,
   DOT: 12,
   /** Provocado (D124): tira o golpe livre de uma ação, como o Travado. */
   TAUNT: 6,
+  // D146: o Adormecido vale mais que o Atordoado (até 2 ações), o resto é uma ação parcial ou um risco
+  SILENCE: 7,
+  SLEEP: 14,
+  LINK: 8,
+  /** Alto para a IA chegar a usar (com 6 ficava abaixo do corte de nota e nunca era escolhido). */
+  STEALTH: 14,
+  CONTAGION: 6,
 }
 
 /** Buff/debuff: 10/15/20% valem 3/4,5/6, ou seja, 0,3 por ponto percentual. */

@@ -17,7 +17,16 @@ export type BattleEvent =
       /** Ação cedida pelo Comando (não é um turno novo: sem início de turno nem recarga). */
       extra?: boolean
     }
-  | { type: 'SKIP'; ref: string; reason: 'STUN' }
+  | { type: 'SKIP'; ref: string; reason: 'STUN' | 'SLEEP' }
+  /** Adormecido levou dano e acordou (D146). */
+  | { type: 'WOKE'; ref: string }
+  /** Purificar (D146): `status` é o que saiu; nulo se não havia nada para tirar. */
+  | {
+      type: 'CLEANSE'
+      ref: string
+      targetRef: string
+      status: StatusType | null
+    }
   | { type: 'DOT'; ref: string; amount: number }
   | { type: 'SKILL'; ref: string; skillKey: string; potency: number }
   | { type: 'INTERCEPT'; guardianRef: string; protectedRef: string }
@@ -28,6 +37,8 @@ export type BattleEvent =
       targetRef: string
       amount: number
       shieldAbsorbed: number
+      /** Parte do dano que veio pelo Ligado (D146). */
+      linked?: boolean
     }
   | { type: 'HEAL'; ref: string; targetRef: string; amount: number }
   | { type: 'SHIELD'; ref: string; targetRef: string; amount: number }

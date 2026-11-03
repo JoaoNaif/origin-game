@@ -1,3 +1,4 @@
+import { StatusType } from '../enums/status-type'
 import { Either, left, right } from '@/core/either'
 import { Entity } from '@/core/entities/entity'
 import { UniqueEntityId } from '@/core/entities/unique-entity-id'
@@ -238,6 +239,18 @@ function validate(
 
     if (effect.type === 'RECOVER' && props.target === SkillTarget.ENEMY) {
       return 'recuperação só em aliado ou em si mesmo'
+    }
+
+    if (effect.type === 'CLEANSE' && props.target === SkillTarget.ENEMY) {
+      return 'purificar só em aliado ou em si mesmo'
+    }
+
+    if (
+      effect.type === 'APPLY_STATUS' &&
+      effect.status === StatusType.STEALTH &&
+      props.target === SkillTarget.ENEMY
+    ) {
+      return 'Furtivo só em aliado ou em si mesmo'
     }
 
     if (effect.type === 'APPLY_STATUS' && !isProbability(effect.baseChance)) {

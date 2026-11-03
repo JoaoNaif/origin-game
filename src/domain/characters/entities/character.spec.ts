@@ -282,8 +282,8 @@ describe('Character', () => {
     it('should not be able to pass the class cap of a stat', () => {
       const sut = createCharacter(100)
 
-      // Vanguarda: Ataque não é pico (×1,10): 110 − 85 = 25 pontos no máximo
-      const result = sut.allocateFreePoints(points({ ATTACK: 26 }), template)
+      // Vanguarda: Ataque não é pico (×1,10): 115,5 − 89,25 = 26 pontos no máximo
+      const result = sut.allocateFreePoints(points({ ATTACK: 27 }), template)
 
       expect(result.isLeft()).toBe(true)
     })

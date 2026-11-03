@@ -27,34 +27,34 @@ import { unwrap } from './catalog'
 const CLASS_PROFILE: Record<CharacterClass, StatBlock> = {
   VANGUARD: {
     HP: 700,
-    ATTACK: 100,
+    ATTACK: 105,
     DEFENSE: 120,
-    SPEED: 75,
-    PRECISION: 85,
+    SPEED: 80,
+    PRECISION: 100,
     EVASION: 55,
     WILL: 95,
   },
   MARKSMAN: {
     HP: 420,
-    ATTACK: 125,
+    ATTACK: 105,
     DEFENSE: 60,
-    SPEED: 95,
+    SPEED: 85,
     PRECISION: 125,
     EVASION: 90,
     WILL: 85,
   },
   EXECUTOR: {
     HP: 400,
-    ATTACK: 130,
+    ATTACK: 115,
     DEFENSE: 55,
-    SPEED: 110,
+    SPEED: 100,
     PRECISION: 105,
-    EVASION: 105,
+    EVASION: 85,
     WILL: 55,
   },
   CONTROLLER: {
     HP: 650,
-    ATTACK: 95,
+    ATTACK: 105,
     DEFENSE: 85,
     SPEED: 90,
     PRECISION: 115,
@@ -63,7 +63,7 @@ const CLASS_PROFILE: Record<CharacterClass, StatBlock> = {
   },
   SUPPORT: {
     HP: 500,
-    ATTACK: 70,
+    ATTACK: 80,
     DEFENSE: 80,
     SPEED: 105,
     PRECISION: 85,
@@ -72,7 +72,7 @@ const CLASS_PROFILE: Record<CharacterClass, StatBlock> = {
   },
   ARTILLERY: {
     HP: 500,
-    ATTACK: 140,
+    ATTACK: 115,
     DEFENSE: 70,
     SPEED: 65,
     PRECISION: 110,
@@ -81,16 +81,16 @@ const CLASS_PROFILE: Record<CharacterClass, StatBlock> = {
   },
   GUARDIAN: {
     HP: 780,
-    ATTACK: 60,
+    ATTACK: 70,
     DEFENSE: 140,
-    SPEED: 70,
-    PRECISION: 70,
+    SPEED: 80,
+    PRECISION: 85,
     EVASION: 50,
     WILL: 115,
   },
   TACTICIAN: {
     HP: 630,
-    ATTACK: 100,
+    ATTACK: 105,
     DEFENSE: 75,
     SPEED: 110,
     PRECISION: 105,
@@ -142,6 +142,9 @@ const modifier = (
  */
 const SUPPORT_BONUS = 1.5
 const BUFF_DURATION = 3
+
+/** Skill cujo foco é o status (Atordoar, Marcar, Prender): custa menos que um golpe, Poder ~0,6 à distância (D145). */
+const STATUS_ONLY_DAMAGE = 0.67
 
 /** Dano com efeito lateral (assinatura: ~0,8 do Poder + efeito pequeno, 12.6). */
 const damageWith =
@@ -230,6 +233,7 @@ export const CHARACTERS: CharacterSpec[] = [
       'sentenca',
       'presenca-do-rei',
       'gancho-da-harpe',
+      'apagar-a-voz',
       'apagar',
       'infiltracao',
       'golpe-de-antimateria',
@@ -269,6 +273,15 @@ export const CHARACTERS: CharacterSpec[] = [
         slot: K.ROLE,
         range: FLANK,
         effects: damage(),
+      },
+      {
+        key: 'apagar-a-voz',
+        name: 'Apagar a Voz',
+        variant: 'antimateria',
+        tier: STANDARD,
+        range: RANGED,
+        // a antimatéria apaga o que o alvo ia dizer (D146)
+        effects: damageWith(STATUS_ONLY_DAMAGE, status(StatusType.SILENCE)),
       },
       {
         key: 'apagar',
@@ -591,7 +604,7 @@ export const CHARACTERS: CharacterSpec[] = [
         tier: STANDARD,
         slot: K.ROLE,
         range: RANGED,
-        effects: damageWith(0.5, status(StatusType.MARK)),
+        effects: damageWith(STATUS_ONLY_DAMAGE, status(StatusType.MARK)),
       },
       {
         key: 'passo-adiante',
@@ -702,7 +715,7 @@ export const CHARACTERS: CharacterSpec[] = [
         tier: STANDARD,
         slot: K.ROLE,
         range: RANGED,
-        effects: damageWith(0.5, status(StatusType.STUN)),
+        effects: damageWith(STATUS_ONLY_DAMAGE, status(StatusType.STUN)),
       },
       {
         key: 'grilhao',
@@ -774,6 +787,7 @@ export const CHARACTERS: CharacterSpec[] = [
       'assassinato',
       'emboscada',
       'manto-de-sombra',
+      'entre-sombras',
       'agarrar-a-sombra',
       'passo-sombrio',
       'golpe-da-sombra',
@@ -802,7 +816,8 @@ export const CHARACTERS: CharacterSpec[] = [
         tier: STANDARD,
         slot: K.STANDARD,
         range: MELEE,
-        effects: damage(),
+        // a sombra corta fundo: sangramento (D145)
+        effects: damageWith(0.8, status(StatusType.DOT)),
       },
       {
         key: 'passo-sombrio',
@@ -822,6 +837,16 @@ export const CHARACTERS: CharacterSpec[] = [
         slot: K.SIGNATURE,
         range: RANGED,
         effects: damageWith(0.8, status(StatusType.ROOT)),
+      },
+      {
+        key: 'entre-sombras',
+        name: 'Entre Sombras',
+        variant: 'sombra',
+        tier: STANDARD,
+        target: SELF,
+        // some até a próxima vez dele (D146); a recarga impede ficar sumido o tempo todo
+        cooldown: 3,
+        effects: only(status(StatusType.STEALTH)),
       },
       {
         key: 'manto-de-sombra',
@@ -878,9 +903,10 @@ export const CHARACTERS: CharacterSpec[] = [
       'solo-firme',
       'muralha-de-terra',
       'cura-da-terra',
-      'moldar-o-terreno',
+      'purificar',
       'raizes',
       'estaca-de-pedra',
+      'moldar-o-terreno',
       'pedrada',
     ],
     passive: {
@@ -907,7 +933,8 @@ export const CHARACTERS: CharacterSpec[] = [
         tier: STANDARD,
         slot: K.STANDARD,
         range: RANGED,
-        effects: damage(),
+        // a pedra fica cravada: sangramento (D145)
+        effects: damageWith(0.8, status(StatusType.DOT)),
       },
       {
         key: 'cura-da-terra',
@@ -916,7 +943,17 @@ export const CHARACTERS: CharacterSpec[] = [
         tier: STANDARD,
         slot: K.ROLE,
         target: ALLY,
-        effects: heal,
+        // acima do ×1,5 do suporte puro: Gaia é quem só sustenta (D144)
+        effects: only({ type: 'HEAL', power: 1.9 }),
+      },
+      {
+        key: 'purificar',
+        name: 'Purificar',
+        variant: 'terra',
+        tier: STANDARD,
+        target: ALLY,
+        // a terra limpa o que está errado (D146)
+        effects: only({ type: 'CLEANSE' }),
       },
       {
         key: 'moldar-o-terreno',
@@ -935,7 +972,7 @@ export const CHARACTERS: CharacterSpec[] = [
         variant: 'terra',
         tier: STANDARD,
         range: RANGED,
-        effects: damageWith(0.5, status(StatusType.ROOT)),
+        effects: damageWith(STATUS_ONLY_DAMAGE, status(StatusType.ROOT)),
       },
       {
         key: 'muralha-de-terra',
@@ -943,7 +980,7 @@ export const CHARACTERS: CharacterSpec[] = [
         variant: 'terra',
         tier: REINFORCED,
         target: ALLY,
-        effects: shield,
+        effects: only({ type: 'SHIELD', power: 2.4 }),
       },
       {
         key: 'solo-firme',
@@ -989,6 +1026,7 @@ export const CHARACTERS: CharacterSpec[] = [
       'ultimo-disparo',
       'sentenca-da-alma',
       'tiro-na-alma',
+      'elo-de-almas',
       'bala-de-alma',
       'ler-a-alma',
       'em-meu-lugar',
@@ -1021,13 +1059,22 @@ export const CHARACTERS: CharacterSpec[] = [
         effects: damage(),
       },
       {
+        key: 'elo-de-almas',
+        name: 'Elo de Almas',
+        variant: 'alma',
+        tier: STANDARD,
+        range: RANGED,
+        // amarra duas almas: o que um sente, o vizinho sente também (D146)
+        effects: damageWith(STATUS_ONLY_DAMAGE, status(StatusType.LINK)),
+      },
+      {
         key: 'ler-a-alma',
         name: 'Ler a Alma',
         variant: 'alma',
         tier: STANDARD,
         slot: K.ROLE,
         range: RANGED,
-        effects: damageWith(0.5, status(StatusType.MARK)),
+        effects: damageWith(STATUS_ONLY_DAMAGE, status(StatusType.MARK)),
       },
       {
         key: 'bala-de-alma',
@@ -1096,6 +1143,7 @@ export const CHARACTERS: CharacterSpec[] = [
       'civilizacao',
       'perdidos',
       'abrigo-ilusorio',
+      'sono-profundo',
       'vertigem',
       'sonho-acordado',
       'moral',
@@ -1146,7 +1194,16 @@ export const CHARACTERS: CharacterSpec[] = [
         tier: STANDARD,
         slot: K.SIGNATURE,
         range: RANGED,
-        effects: damageWith(0.5, status(StatusType.STUN)),
+        effects: damageWith(STATUS_ONLY_DAMAGE, status(StatusType.STUN)),
+      },
+      {
+        key: 'sono-profundo',
+        name: 'Sono Profundo',
+        variant: 'ilusao',
+        tier: REINFORCED,
+        range: RANGED,
+        // sem dano: qualquer golpe acorda (D146)
+        effects: only(status(StatusType.SLEEP)),
       },
       {
         key: 'vertigem',
@@ -1207,6 +1264,7 @@ export const CHARACTERS: CharacterSpec[] = [
       'agora',
       'lancas-de-osso',
       'ler-a-batalha',
+      'peste-de-osso',
       'comando',
       'formacao-de-guerra',
       'couraca-de-osso',
@@ -1288,6 +1346,19 @@ export const CHARACTERS: CharacterSpec[] = [
         area: GRID,
         // buff de squad (12.8): magnitude ×0,7
         effects: only(modifier(Stat.SPEED, 10, undefined, BUFF_DURATION)),
+      },
+      {
+        key: 'peste-de-osso',
+        name: 'Peste de Osso',
+        variant: 'ossos',
+        tier: REINFORCED,
+        range: RANGED,
+        // farpas de osso que passam de um para o outro (D146); o golpe é fraco, o perigo é o Contágio
+        effects: only(
+          { type: 'DAMAGE', power: 0.45 },
+          status(StatusType.DOT),
+          status(StatusType.CONTAGION)
+        ),
       },
       {
         key: 'lancas-de-osso',

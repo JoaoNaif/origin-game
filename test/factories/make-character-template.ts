@@ -9,13 +9,13 @@ import { Exclusivity } from '@/domain/characters/enums/exclusivity'
 import { Rarity } from '@/domain/characters/enums/rarity'
 import { StatBlock } from '@/domain/characters/value-objects/stat-block'
 
-/** Perfil padrão da Vanguarda no nível 100 (`classes_brief.md` 2, D91): orçamento 670. */
+/** Perfil padrão da Vanguarda no nível 100 (`classes_brief.md` 2, D144): orçamento 695. */
 export const VANGUARD_STATS: StatBlock = {
   HP: 700,
-  ATTACK: 100,
+  ATTACK: 105,
   DEFENSE: 120,
-  SPEED: 75,
-  PRECISION: 85,
+  SPEED: 80,
+  PRECISION: 100,
   EVASION: 55,
   WILL: 95,
 }

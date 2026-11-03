@@ -8,6 +8,16 @@ export const StatusType = {
   DOT: 'DOT',
   /** Provocado (D124): golpes de alvo único só em quem provocou, na próxima ação. */
   TAUNT: 'TAUNT',
+  /** Silenciado (D146): na próxima ação, só a skill básica. */
+  SILENCE: 'SILENCE',
+  /** Adormecido (D146): perde as ações até levar dano. */
+  SLEEP: 'SLEEP',
+  /** Ligado (D146): parte do dano que um leva também atinge o parceiro. */
+  LINK: 'LINK',
+  /** Furtivo (D146): não pode ser alvo único até agir. */
+  STEALTH: 'STEALTH',
+  /** Contágio (D146): o Dano contínuo passa para os aliados adjacentes. */
+  CONTAGION: 'CONTAGION',
 } as const
 
 export type StatusType = (typeof StatusType)[keyof typeof StatusType]

@@ -23,6 +23,12 @@ export const STATUS_PENALTY: Partial<Record<StatusType, number>> = {
   MARK: 0.1,
   EXPOSE: 0.08,
   DOT: 0.08,
+  SLEEP: 0.3,
+  SILENCE: 0.12,
+  LINK: 0.08,
+  CONTAGION: 0.05,
+  /** Negativo: estar Furtivo protege a peça. */
+  STEALTH: -0.1,
 }
 
 /** Proteções: protegido por um aliado e coberto pela frente da linha (fração do valor da peça). */

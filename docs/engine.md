@@ -275,15 +275,14 @@ não fica negativo. A passiva "ignora escudos" (ex.: Ecko, D83) pula o escudo.
 (cura 2,0 em quem tem 420 de HP = 84); **8%** até o nível 20, em linha reta entre os dois (`healShare`, pelo mesmo nível
 da batalha do dano). A cura não passa do HP máximo (8.3 do `skills_brief.md`), regra aplicada quando a cura entrar na resolução.
 
-**Conferido com a tabela de `classes_brief.md` 4** (Poder 1,0, nível 100, já com a escala de dano ×0,8 do D138; os perfis
-do Executor, Controlador e Tático mudaram no D122, a tabela usa os de antes):
+**Conferido com a tabela de `classes_brief.md` 4** (Poder 1,0, nível 100, já com a escala de dano ×0,8 do D138; stats do D144):
 
 | Ataque → Alvo | Ataque | Defesa do alvo | HP do alvo | Dano | % do HP |
 |---|---|---|---|---|---|
-| Vanguarda → Vanguarda | 100 | 120 | 700 | 36 | 5,2% |
-| Executor → Atirador | 140 | 60 | 420 | 78 | 18,7% |
-| Atirador → Executor | 125 | 55 | 400 | 69 | 17,4% |
-| Guardião → Guardião | 60 | 140 | 780 | 14 | 1,8% |
+| Vanguarda → Vanguarda | 105 | 120 | 700 | 39 | 5,6% |
+| Executor → Atirador | 115 | 60 | 420 | 60 | 14,4% |
+| Atirador → Executor | 105 | 55 | 400 | 55 | 13,8% |
+| Guardião → Guardião | 70 | 140 | 780 | 19 | 2,4% |
 
 ```ts
 const chance = hitChance(skill.baseHitChance, attacker.PRECISION, target.EVASION)
@@ -490,7 +489,12 @@ já foi decidida antes (`statusChance` + `roll`, 3.4).
 |---|---|---|---|
 | Atordoado | perde a próxima ação; depois fica **imune a novo Atordoado por 1 turno** (anti-cadeia) | 1 | 70% |
 | Travado | **+2 de recarga** numa skill do alvo (instantâneo) | | 80% |
-| Preso | não pode se mover nem ser movido | 2 | 80% |
+| Preso | não pode se mover nem ser movido; sem cobertura e com −30% de Esquiva (D145) | 2 | 80% |
+| Silenciado | na próxima ação, só a skill básica (acaba no fim dela, como o Provocado; D146) | 1 | 80% |
+| Adormecido | perde as ações até levar dano (`cannotAct`, `wake`; D146) | 2 | 60% |
+| Ligado | `linkedWith` nos dois; 30% do dano direto passa ao outro (D146) | 2 | 80% |
+| Furtivo | fora de `hiddenRefs` em `resolveTargets`; acaba no início da próxima vez (D146) | 1 | 100% |
+| Contágio | espalha o Dano contínuo em `spreadContagion` (D146) | 3 | 80% |
 | Exposto | vira alvo de corpo a corpo mesmo atrás de alguém (3.6) | 2 | 85% |
 | Marcado | recebe **+20%** de dano | 3 | 80% |
 | Dano contínuo | perde **4% do HP máximo** no início de cada turno dele (ignora a Defesa) | 3 | 80% |
@@ -571,7 +575,7 @@ const attack = conditions.effectiveStat(Stat.ATTACK, desgaste.stat(Stat.ATTACK))
 | Movimento | Regra |
 |---|---|
 | Mover (ação) | só para célula **adjacente e vazia**; custa **meio turno** (devolve 500 da barra, D123) e não conta para as recargas |
-| Trocar com aliado (ação) | só com aliado **adjacente** (D120); **meio turno para os dois** (quem troca recupera 500 da barra, o aliado perde 500, D123); pelo Tático, nenhum perde (D102) |
+| Trocar com aliado (ação) | só com aliado **adjacente** (D120); **meio turno para os dois** (quem troca recupera 500 da barra, o aliado perde 500, D123); pelo Tático, nenhum perde (D102). **Quem foi trocado não pode ser trocado de novo até agir (D141):** sem isso, um aliado mais lento nunca chegaria à vez dele e a rodada nunca fecharia |
 | Empurrar (skill) | o alvo vai para o **fundo** (coluna +1), na mesma linha |
 | Puxar (skill) | o alvo vem para a **frente** (coluna −1), na mesma linha |
 | Avançar/recuar (DASH, skill) | quem usa vai para uma célula adjacente e vazia |
@@ -631,16 +635,17 @@ Funções em `src/domain/combat/services/battle-end.ts` (11.8, 12.5, D31, D72, `
 
 ```
 passo = rodada − 3    (0 até a rodada 3; D138, era 15)
-cura × (1 − 0,10 × passo)      dano × (1 + 0,12 × passo)
+cura × (1 − 0,05 × passo)      dano × (1 + 0,12 × passo)    (D140)
 ```
 
 | Rodada | Cura (e escudo concedido) | Dano |
 |---|---|---|
 | até 3 | 100% | 100% |
-| 4 | 90% | 112% |
-| 8 | 50% | 160% |
-| 12 | 10% | 208% |
-| 13 | **0%** | 220% |
+| 4 | 95% | 112% |
+| 8 | 75% | 160% |
+| 12 | 55% | 208% |
+| 13 | 50% | 220% |
+| 23 | **0%** | 340% |
 | 30 | 0% | 424% |
 
 **Por que a 4 (D138):** com a Exaustão na 16, a batalha levava 15 a 21 rodadas (~55 a 79 decisões do jogador);
@@ -1093,14 +1098,18 @@ melhoria futura: zerar o valor quando a célula de destino está ocupada.
 ### 3.15 Balanceamento (squads aleatórias)
 
 Script `scripts/balance.sim.ts` (`npm run balance`), com a fábrica `test/factories/make-duel-snapshot.ts` (duas squads
-quaisquer do seed, formação automática: tanques na frente). Ajustes experimentais em `scripts/sim-setup.ts` (desligados
+quaisquer do seed; formação automática: os 2 mais resistentes na frente, porque só o primeiro da linha fica exposto e a posição de quem ataca não importa). Ajustes experimentais em `scripts/sim-setup.ts` (desligados
 por padrão; testam valores sem mudar o código).
 
 - **`BAL_MODE=random`:** sorteia duas squads de 4 dos 12 personagens, joga as duas batalhas trocando de lado e mede, por
   personagem: vitória, dano, cura/escudo, abates, mortes, uso de cada skill; e o **estilo da IA** (dano, controle, apoio,
   posição, Defender e golpes no inimigo mais ferido).
+- **`BAL_MODE=cycle`:** as 4 composições do seed e as duas de referência (Ataque total e Tática), todas contra todas, trocando de lado. É a **medida do equilíbrio (D143):** nenhuma composição pode vencer todas as outras.
+- **`BAL_MODE=versus`:** duas squads quaisquer (`BAL_TACTIC` e `BAL_BRUTE`, com `@linhacoluna` opcional para fixar a formação).
 - **`BAL_MODE=turtle`:** a squad Gaia, Tank, Kara e Derik só cura, protege e (sem skill possível) Defende, contra as 4
   composições do seed.
+
+**Teste de fumaça (`test/seed/battle-fuzz.spec.ts`, D146):** batalhas com jogadas legais e builds sorteadas, verificando que nenhuma trava, a vida fica nos limites, toda jogada oferecida é aceita, a cópia direta bate com o replay e o replay repete os eventos. Roda no `npm test` (150 batalhas); `FUZZ_BATTLES` e `FUZZ_FIRST_SEED` rodam mais.
 
 **Correções que a ferramenta achou:** build dos NPCs feita à mão (`npcPriority`, a regra automática deixava o Tyir sem
 golpe e a Kara sem cura); prévia do adiantar/atrasar com a barra real (adiantar quem já está perto da vez era
@@ -1110,4 +1119,6 @@ desperdício); D38 que o motor não aplicava.
 **18,1**, Defender 0%; os 12 personagens entre **43% e 58%** de vitória (antes 34% a 67%). Squad só de defesa: **0
 vitórias** em 400 (antes 35%, quase todas no fim forçado). IA: um nível acima vence 61% a 73%, perfis 42% a 54%.
 Detalhes e pontos fora da meta no relatório da conversa de 2026-10-20.
+
+**Resultado com o D141 a D144 (2026-11-02, IA Equilibrado Mestre; 60 batalhas por par, 300 por nível nos personagens):** ver a linha D144 de `game_design.md`. Escada da IA, um nível acima (200 batalhas, ±7 pontos): 66 / 56 / 79 / 63%, meta ~65%. Com o D145: 65 / 62 / 76 / 66%.
 
