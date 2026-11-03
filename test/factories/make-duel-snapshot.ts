@@ -1,7 +1,6 @@
 import { Rng } from '@/core/rng/rng'
 import { AiDifficulty, NPC_LEVEL_RANGE } from '@/domain/ai/enums/ai-difficulty'
 import { AiProfile } from '@/domain/ai/enums/ai-profile'
-import { CharacterClass } from '@/domain/characters/enums/character-class'
 import { BattleSide } from '@/domain/combat/enums/battle-enums'
 import { buildNpcSide } from '@/domain/combat/services/build-snapshot'
 import {
@@ -21,18 +20,6 @@ export interface DuelMember extends GridPosition {
   skills?: readonly string[]
 }
 
-/** Quem vai na frente numa formação automática: tanques, depois corpo a corpo, depois quem bate de longe. */
-const FRONTNESS: Record<CharacterClass, number> = {
-  GUARDIAN: 0,
-  VANGUARD: 0,
-  EXECUTOR: 1,
-  TACTICIAN: 2,
-  CONTROLLER: 2,
-  SUPPORT: 2,
-  MARKSMAN: 2,
-  ARTILLERY: 2,
-}
-
 /** Células da formação automática: 2 na frente (coluna 0) e 2 atrás (coluna 1). */
 const CELLS: GridPosition[] = [
   { row: 0, column: 0 },
@@ -47,16 +34,23 @@ function difficultyFor(level: number): AiDifficulty {
   )!
 }
 
-/** Formação automática para 4 modelos do seed (tanques na frente). */
+/**
+ * Formação automática para 4 modelos do seed: os 2 mais resistentes (HP × Defesa) na frente, porque só quem é o
+ * primeiro da linha fica exposto ao corpo a corpo, e a posição de quem ataca não importa (`targeting.ts`).
+ */
 export function autoFormation(
   content: SeedContent,
   keys: readonly string[]
 ): DuelMember[] {
-  const classOf = (key: string) =>
-    content.characters.find((c) => c.spec.key === key)!.template.characterClass
+  const toughness = (key: string) => {
+    const { stats } = content.characters.find(
+      (c) => c.spec.key === key
+    )!.template
+    return stats.HP * stats.DEFENSE
+  }
 
   return [...keys]
-    .sort((a, b) => FRONTNESS[classOf(a)] - FRONTNESS[classOf(b)])
+    .sort((a, b) => toughness(b) - toughness(a))
     .map((key, i) => ({ key, ...CELLS[i] }))
 }
 

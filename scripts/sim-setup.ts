@@ -14,6 +14,7 @@ import { vi } from 'vitest'
  * - `BAL_AI_VALUES`: JSON com constantes de `ai-values`;
  * - `BAL_FLANK_POWER`: multiplicador de Poder do flanco;
  * - `BAL_END_BY_DAMAGE=1`: fim forçado por dano causado;
+ * - `BAL_EXHAUSTION`: JSON com os passos da Exaustão por rodada (`heal`, `damage`);
  * - `BAL_D38=1`: a IA só Defende sem skill possível.
  */
 
@@ -57,8 +58,28 @@ vi.mock('@/domain/skills/services/skill-reference', async (original) => {
 
 // BAL_END_BY_DAMAGE=1: no fim forçado, vence quem causou mais dano em % do HP total do inimigo
 vi.mock('@/domain/combat/services/battle-end', async (original) => {
-  const mod =
+  const real =
     await original<typeof import('@/domain/combat/services/battle-end')>()
+  // BAL_EXHAUSTION: JSON com os passos por rodada (ex.: {"heal":0.1,"damage":0.08})
+  const steps = process.env.BAL_EXHAUSTION
+    ? JSON.parse(process.env.BAL_EXHAUSTION)
+    : null
+  const mod = steps
+    ? {
+        ...real,
+        healMultiplier: (round: number) =>
+          Math.max(
+            0,
+            1 -
+              (steps.heal ?? real.EXHAUSTION_HEAL_STEP) *
+                real.exhaustionStep(round)
+          ),
+        damageMultiplier: (round: number) =>
+          1 +
+          (steps.damage ?? real.EXHAUSTION_DAMAGE_STEP) *
+            real.exhaustionStep(round),
+      }
+    : real
   if (process.env.BAL_END_BY_DAMAGE !== '1') return mod
   const share = (
     dealer: { damageDealt?: number },

@@ -25,10 +25,12 @@ import { loadSeedContent } from '../prisma/seed/content'
 
 /**
  * Balanceamento do combate (`engine.md` 3.15). Rodar com `npm run balance`. Variáveis:
- * - `BAL_MODE`: `formations` (12 aberturas de cada squad do seed; `BAL_BATTLES` por abertura), `versus` (squad tática contra squad de força bruta, mesma IA), `random` (padrão; squads sorteadas, estatística por personagem e classe), `skills` (squads e builds sorteadas; vitória de quem equipou cada skill) ou `turtle` (squad que só cura,
+ * - `BAL_MODE`: `formations` (12 aberturas de cada squad do seed; `BAL_BATTLES` por abertura), `cycle` (composições todas contra todas; a medida do equilíbrio, D143), `versus` (squad tática contra squad de força bruta, mesma IA), `random` (padrão; squads sorteadas, estatística por personagem e classe), `skills` (squads e builds sorteadas; vitória de quem equipou cada skill) ou `turtle` (squad que só cura,
  *   protege e Defende contra as composições do seed);
  * - `BAL_BATTLES` (padrão 200), `BAL_FIRST_SEED` (padrão 1), `BAL_LEVEL` (padrão 58);
  * - `BAL_DIFFICULTY` (padrão MASTER) e `BAL_PROFILE` (padrão BALANCED) da IA;
+ * - `BAL_TACTIC` e `BAL_BRUTE`: squads do modo `versus` (`key` dos modelos, separadas por vírgula, cada uma com
+ *   `@linhacoluna` opcional para fixar a formação, ex.: `nox@10`; sem isso, formação automática);
  * - `BAL_OUT`: caminho de um JSON com os números brutos (para somar rodadas paralelas).
  */
 const MODE = process.env.BAL_MODE ?? 'random'
@@ -419,18 +421,30 @@ it(`balance ${MODE}`, { timeout: 0 }, async () => {
     }
   } else if (MODE === 'versus') {
     // a ideia central (D122 a D126): tática bem jogada contra força bruta, mesmo nível, mesma IA
-    const tactic = autoFormation(content, [
-      'gaia',
-      'sunna',
-      'tyir-ossvald',
-      'kara',
-    ])
-    const brute = autoFormation(content, [
-      'ecko-nocthar',
-      'nox',
-      'isis-maccarthy',
-      'lucky',
-    ])
+    // `modelo` (formação automática) ou `modelo@linhacoluna` em cada membro (ex.: `nox@10`)
+    const versusSquad = (keys: string[]): DuelMember[] =>
+      keys[0].includes('@')
+        ? keys.map((entry) => {
+            const [key, cell] = entry.split('@')
+            return { key, row: Number(cell[0]), column: Number(cell[1]) }
+          })
+        : autoFormation(content, keys)
+    const tactic = versusSquad(
+      process.env.BAL_TACTIC?.split(',') ?? [
+        'gaia',
+        'sunna',
+        'tyir-ossvald',
+        'kara',
+      ]
+    )
+    const brute = versusSquad(
+      process.env.BAL_BRUTE?.split(',') ?? [
+        'ecko-nocthar',
+        'nox',
+        'isis-maccarthy',
+        'lucky',
+      ]
+    )
     for (let i = 0; i < BATTLES; i++) {
       const seed = FIRST_SEED + i
       const tacticSide = i % 2 === 0 ? BattleSide.PLAYER : BattleSide.OPPONENT
@@ -447,6 +461,76 @@ it(`balance ${MODE}`, { timeout: 0 }, async () => {
       if (outcome.winner === tacticSide) totals.tacticWins += 1
       await new Promise((resolve) => setImmediate(resolve))
     }
+  } else if (MODE === 'cycle') {
+    // todas contra todas (D143): as 4 composições do seed, na formação delas, e as duas de referência
+    const seedSquads = content.npcSquads
+      .filter((s) => s.difficulty === 'ADVANCED')
+      .map((s) => ({
+        name: s.name,
+        members: s.members.map((m) => ({
+          key: content.characters.find((c) =>
+            c.template.id.equals(m.templateId)
+          )!.spec.key,
+          row: m.row,
+          column: m.column,
+        })),
+      }))
+    const squads = [
+      ...seedSquads,
+      {
+        // os mais frágeis atrás: quem está na frente é quem fica exposto
+        name: 'Ataque total',
+        members: [
+          { key: 'isis-maccarthy', row: 0, column: 0 },
+          { key: 'lucky', row: 1, column: 0 },
+          { key: 'ecko-nocthar', row: 0, column: 1 },
+          { key: 'nox', row: 1, column: 1 },
+        ],
+      },
+      {
+        name: 'Tática',
+        members: [
+          { key: 'tyir-ossvald', row: 0, column: 0 },
+          { key: 'kara', row: 1, column: 0 },
+          { key: 'sunna', row: 0, column: 1 },
+          { key: 'gaia', row: 1, column: 1 },
+        ],
+      },
+    ]
+    const lines = [
+      `A vence B / rodada média (${BATTLES} batalhas por par, trocando de lado)`,
+    ]
+    for (const [a, squadA] of squads.entries()) {
+      for (const [b, squadB] of squads.entries()) {
+        if (b <= a) continue
+        let wins = 0
+
+        const before = totals.rounds
+        for (let i = 0; i < BATTLES; i++) {
+          const seed = FIRST_SEED + a * 10_000 + b * 100_000 + i
+          const aSide = i % 2 === 0 ? BattleSide.PLAYER : BattleSide.OPPONENT
+          const [player, opponent] =
+            aSide === BattleSide.PLAYER
+              ? [squadA.members, squadB.members]
+              : [squadB.members, squadA.members]
+          const outcome = play(
+            makeDuelSnapshot(content, player, opponent, LEVEL, fieldFor(seed)),
+            seed,
+            {
+              PLAYER: aiPolicy(BattleSide.PLAYER, seed),
+              OPPONENT: aiPolicy(BattleSide.OPPONENT, seed),
+            }
+          )
+          if (outcome.winner === aSide) wins += 1
+          await new Promise((resolve) => setImmediate(resolve))
+        }
+        const rounds = (totals.rounds - before) / BATTLES
+        lines.push(
+          `${squadA.name} x ${squadB.name}: ${pct(wins, BATTLES)} / ${rounds.toFixed(1)}`
+        )
+      }
+    }
+    console.log('\n' + lines.join('\n') + '\n')
   } else if (MODE === 'turtle') {
     const turtle = autoFormation(content, [
       'gaia',
