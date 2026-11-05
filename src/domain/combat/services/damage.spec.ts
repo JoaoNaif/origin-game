@@ -11,13 +11,13 @@ import {
 
 describe('Damage', () => {
   describe('Base Damage', () => {
-    // Tabela de referência de `classes_brief.md` 4 (Poder 1,0, % do HP do alvo no nível 100), já com a escala ×0,8 (D131, D138)
+    // Tabela de referência de `classes_brief.md` 4 (Poder 1,0, % do HP do alvo no nível 100), já com a escala ×0,9 (D131, D138, D148)
     it.each([
-      ['Vanguarda → Vanguarda', 100, 120, 700, 5.19],
-      ['Executor → Atirador', 140, 60, 420, 18.67],
-      ['Atirador → Executor', 125, 55, 400, 17.36],
-      ['Guardião → Guardião', 60, 140, 780, 1.85],
-      ['Suporte → Vanguarda', 70, 120, 700, 2.95],
+      ['Vanguarda → Vanguarda', 100, 120, 700, 5.84],
+      ['Executor → Atirador', 140, 60, 420, 21.0],
+      ['Atirador → Executor', 125, 55, 400, 19.53],
+      ['Guardião → Guardião', 60, 140, 780, 2.08],
+      ['Suporte → Vanguarda', 70, 120, 700, 3.32],
     ])(
       'should be able to match the reference table %s',
       (_, attack, defense, targetHp, percent) => {
@@ -45,14 +45,14 @@ describe('Damage', () => {
     })
 
     it('should be able to fall in a straight line to the full scale at level 40', () => {
-      expect(damageScale(30)).toBeCloseTo(1)
-      expect(damageScale(40)).toBe(0.8)
-      expect(damageScale(100)).toBe(0.8)
+      expect(damageScale(30)).toBeCloseTo(1.05)
+      expect(damageScale(40)).toBe(0.9)
+      expect(damageScale(100)).toBe(0.9)
     })
 
     it('should be able to scale the base damage', () => {
       expect(baseDamage(1, 100, 100, 1.2)).toBeCloseTo(60)
-      expect(baseDamage(1, 100, 100)).toBeCloseTo(40)
+      expect(baseDamage(1, 100, 100)).toBeCloseTo(45)
     })
   })
 

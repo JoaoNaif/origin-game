@@ -116,10 +116,10 @@ export const DIFFICULTY_RULES: Record<AiDifficulty, DifficultyRules> = {
     logWindow: 5,
     protectionScale: 0.75,
     remembersSkills: true,
-    lookahead: 1,
-    // dose do Mestre (D132): 3 jogadas, 1 simulação cada
-    lookaheadCandidates: 3,
-    lookaheadRollouts: 1,
+    // sem previsão (D148, era a dose do D132): com ela o Mestre vencia 85% do Avançado; sem, 70%
+    lookahead: 0,
+    lookaheadCandidates: 0,
+    lookaheadRollouts: 0,
   },
   GRANDMASTER: {
     temperature: 0,

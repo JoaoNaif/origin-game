@@ -1095,10 +1095,10 @@ conquistado.
 
 | Perfil | Squad | Frente (coluna 0) | Atrás |
 |---|---|---|---|
-| Agressivo | Trindade | Kael, Ecko, Derik | Isis |
-| Cauteloso | Muralha da CORE | Gaia, Tank | Rolf, Kara |
+| Agressivo | Trindade | Kael, Ecko | Isis (atrás do Kael), Derik (atrás do Ecko) |
+| Cauteloso | Muralha da CORE | Tank, Derik | Gaia, Rolf |
 | Focado em abater | Caçada | Nox, Tyir | Lucky, Sunna |
-| Equilibrado | CORE | Gaia, Kael | Lucky, Kara |
+| Equilibrado | CORE | Kael, Tyir | Lucky, Gaia |
 
 **Conta de teste:** o seed também cria a `tester_01` (D133) pelo mesmo caso de uso do servidor, com os 12 personagens
 no nível 18 e a distribuição padrão dos pontos livres. Se ela já existe, fica como está (o progresso não é apagado).

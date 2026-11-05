@@ -19,15 +19,16 @@
 
 ## 2. As 8 classes [ENRAIZADO a lista; valores PLACEHOLDER]
 
-Perfil padrão no **nível 100** (já com pontos livres na distribuição inicial). **Orçamento por classe (D122, D142, D144):** Executor
-595, Artilharia 615, Atirador 634, Suporte 680, Vanguarda 695, Guardião 696, Tático 706, Controlador 710 (a simulação mostrou que
-os pontos das classes só de ataque rendem mais e os das demais, menos):
+Perfil padrão no **nível 100** (já com pontos livres na distribuição inicial). **Orçamento por classe (D122, D142, D144, D148):** Artilharia
+615, Executor 617, Atirador 634, Suporte 680, Controlador 691, Vanguarda 695, Guardião 696, Tático 706 (a simulação mostrou que
+os pontos das classes só de ataque rendem mais e os das demais, menos; no D148 o Controlador perdeu HP e Ataque, porque a Sunna
+vencia 63 a 71%, e o Executor ganhou HP e Defesa, porque morria quase toda batalha):
 
 | Stat | Vanguarda | Atirador | Executor | Controlador | Suporte | Artilharia | Guardião | Tático |
 |---|---|---|---|---|---|---|---|---|
-| **HP** | 700 | 420 | 400 | **650** | 500 | 500 | 780 | **630** |
-| **Ataque** | 105 | 105 | **115** | 105 | 80 | **115** | 70 | **105** |
-| **Defesa** | **120** | 60 | 55 | 85 | 80 | 70 | **140** | 75 |
+| **HP** | 700 | 420 | 460 | **580** | 500 | 500 | 780 | **630** |
+| **Ataque** | 105 | 105 | **115** | 100 | 80 | **115** | 70 | **105** |
+| **Defesa** | **120** | 60 | 65 | 85 | 80 | 70 | **140** | 75 |
 | **Velocidade** | 80 | 85 | **100** | 90 | 105 | 65 | 80 | **110** |
 | **Precisão** | 100 | **125** | **105** | 115 | 85 | 110 | 85 | 105 |
 | **Esquiva** | 55 | 90 | **85** | 75 | 100 | 65 | 50 | 90 |
@@ -64,21 +65,21 @@ Substitui a regra antiga de "3 aptidões" (D48, D51):
 
 ## 4. Referência: dano de um golpe `Poder 1,0` no nível 100 (% do HP do alvo)
 
-Fórmula D68, 8 classes, stats da seção 2 (D144), sem a escala de nível. Média das 64 combinações: **10,4%** (~9,5% com ~91% de acerto).
+Fórmula D68, 8 classes, stats da seção 2 (D148), sem a escala de nível. Média das 64 combinações: **10,1%** (~9,2% com ~91% de acerto).
 
 | Atacando ↓ / Alvo → | Vang. | Atir. | Exec. | Contr. | Supo. | Artil. | Guard. | Tát. |
 |---|---|---|---|---|---|---|---|---|
-| **Vanguarda** | 7,0 | 15,9 | 17,2 | 8,9 | 11,9 | 12,6 | 5,8 | 9,7 |
-| **Atirador** | 7,0 | 15,9 | 17,2 | 8,9 | 11,9 | 12,6 | 5,8 | 9,7 |
-| **Executor** | 8,0 | 18,0 | 19,4 | 10,2 | 13,6 | 14,3 | 6,6 | 11,0 |
-| **Controlador** | 7,0 | 15,9 | 17,2 | 8,9 | 11,9 | 12,6 | 5,8 | 9,7 |
-| **Suporte** | 4,6 | 10,9 | 11,9 | 6,0 | 8,0 | 8,5 | 3,7 | 6,6 |
-| **Artilharia** | 8,0 | 18,0 | 19,4 | 10,2 | 13,6 | 14,3 | 6,6 | 11,0 |
-| **Guardião** | 3,7 | 9,0 | 9,8 | 4,9 | 6,5 | 7,0 | 3,0 | 5,4 |
-| **Tático** | 7,0 | 15,9 | 17,2 | 8,9 | 11,9 | 12,6 | 5,8 | 9,7 |
+| **Vanguarda** | 7,0 | 15,9 | 14,1 | 10,0 | 11,9 | 12,6 | 5,8 | 9,7 |
+| **Atirador** | 7,0 | 15,9 | 14,1 | 10,0 | 11,9 | 12,6 | 5,8 | 9,7 |
+| **Executor** | 8,0 | 18,0 | 16,0 | 11,4 | 13,6 | 14,3 | 6,6 | 11,0 |
+| **Controlador** | 6,5 | 14,9 | 13,2 | 9,3 | 11,1 | 11,8 | 5,3 | 9,1 |
+| **Suporte** | 4,6 | 10,9 | 9,6 | 6,7 | 8,0 | 8,5 | 3,7 | 6,6 |
+| **Artilharia** | 8,0 | 18,0 | 16,0 | 11,4 | 13,6 | 14,3 | 6,6 | 11,0 |
+| **Guardião** | 3,7 | 9,0 | 7,9 | 5,5 | 6,5 | 7,0 | 3,0 | 5,4 |
+| **Tático** | 7,0 | 15,9 | 14,1 | 10,0 | 11,9 | 12,6 | 5,8 | 9,7 |
 
 Leitura: a Vanguarda tira ~15% de um backline e quase não morre; os especialistas em dano são frágeis entre si
-(16 a 19%). Executor e Artilharia têm o maior Ataque (115): a Artilharia compensa com Velocidade menor e Poder menor por
+(14 a 18%). Executor e Artilharia têm o maior Ataque (115): a Artilharia compensa com Velocidade menor e Poder menor por
 alvo (área).
 Vigiar na hora das skills.
 

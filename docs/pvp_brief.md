@@ -112,7 +112,7 @@ da ação é a soma ponderada pelo perfil, dividida pela maior nota do turno.
 | Mestre | 0.1 (D122) | + situação geral | padrões e uso de skills |
 | Grão-mestre | 0 (sempre a melhor) | todos | tudo, reage ao estilo |
 
-**Previsão (D132):** Mestre prevê 1 jogada (3 ações testadas, 1 simulação); Grão-mestre prevê 2 (6 ações, 3 simulações).
+**Previsão (D132, D148):** só o Grão-mestre prevê, 2 jogadas (6 ações testadas, 3 simulações). O Mestre previa 1 jogada e perdeu a previsão no D148: com ela vencia 85% do Avançado; sem ela, 70% (e o Grão-mestre vence 72% do Mestre).
 
 **Pesos dos perfis** (placeholder; fatores que o nível não enxerga valem 0; Risco pela metade no D115; ajustes do D118):
 

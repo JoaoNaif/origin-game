@@ -24,19 +24,21 @@ const COMPOSITIONS: Record<
   AGGRESSIVE: {
     name: 'Trindade',
     members: [
+      // Kael e Ecko na frente, cada um com alguém atrás (D148): com três expostos, perdia quase tudo
       { key: 'kael-vaz', row: 0, column: 0 },
+      { key: 'isis-maccarthy', row: 0, column: 1 },
       { key: 'ecko-nocthar', row: 1, column: 0 },
-      { key: 'derik-okoro', row: 2, column: 0 },
-      { key: 'isis-maccarthy', row: 1, column: 2 },
+      { key: 'derik-okoro', row: 1, column: 1 },
     ],
   },
   CAUTIOUS: {
     name: 'Muralha da CORE',
     members: [
+      // Derik no lugar da Kara (D148): só com apoio, a squad não tinha dano para vencer
       { key: 'tank-valen', row: 0, column: 0 },
-      { key: 'kara', row: 1, column: 0 },
+      { key: 'derik-okoro', row: 1, column: 0 },
       { key: 'gaia', row: 0, column: 1 },
-      { key: 'rolf-eidvar', row: 1, column: 2 },
+      { key: 'rolf-eidvar', row: 1, column: 1 },
     ],
   },
   FINISHER: {
