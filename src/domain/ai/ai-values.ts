@@ -78,7 +78,7 @@ export interface DifficultyRules {
 const BASIC: AiFactor[] = [AiFactor.DAMAGE, AiFactor.KILL, AiFactor.SUPPORT]
 const ALL: AiFactor[] = Object.values(AiFactor)
 
-/** Dificuldade (D90, D103, `pvp_brief.md` 8.1 e 10.2; temperaturas do D117, D121 e D144, calibradas por simulação). Nunca dá bônus de stat. */
+/** Dificuldade (D90, D103, `pvp_brief.md` 8.1 e 10.2; temperaturas do D117, D121, D144 e D149, calibradas por simulação). Nunca dá bônus de stat. */
 export const DIFFICULTY_RULES: Record<AiDifficulty, DifficultyRules> = {
   BEGINNER: {
     temperature: 1.3,
@@ -101,7 +101,8 @@ export const DIFFICULTY_RULES: Record<AiDifficulty, DifficultyRules> = {
     lookaheadRollouts: 0,
   },
   ADVANCED: {
-    temperature: 0.2,
+    // mais certeiro (D149, era 0,2): com 0,2 vencia só 61% do Intermediário e o salto até o Mestre era de 85%
+    temperature: 0.12,
     factors: [...BASIC, AiFactor.THREAT, AiFactor.RISK],
     logWindow: 5,
     protectionScale: 0.5,
@@ -116,10 +117,10 @@ export const DIFFICULTY_RULES: Record<AiDifficulty, DifficultyRules> = {
     logWindow: 5,
     protectionScale: 0.75,
     remembersSkills: true,
-    // sem previsão (D148, era a dose do D132): com ela o Mestre vencia 85% do Avançado; sem, 70%
-    lookahead: 0,
-    lookaheadCandidates: 0,
-    lookaheadRollouts: 0,
+    lookahead: 1,
+    // dose do Mestre (D132; tirada no D148 e devolvida no D149): 3 jogadas, 1 simulação cada
+    lookaheadCandidates: 3,
+    lookaheadRollouts: 1,
   },
   GRANDMASTER: {
     temperature: 0,

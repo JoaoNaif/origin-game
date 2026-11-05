@@ -908,8 +908,8 @@ nunca é sorteado.
   posições; fila; Interceptar; campo; ações cedidas) com uma sorte nova. A versão antiga, que reconstrói pela foto e pelas
   ações (`forkByReplay`), ficou como referência: um teste confere que as duas dão exatamente a mesma batalha. A IA testa jogadas sem mexer na
   batalha real e **sem ver os sorteios reais**; o replay continua igual (teste com Grão-mestre).
-- **Busca** (`MachineAi.plan`): só o Grão-mestre (`lookahead` 2; 6 ações, 3 simulações). O Mestre também previa (1; 3
-  ações, 1 simulação, D132), mas perdeu a previsão no D148 (vencia 85% do Avançado; sem ela, 70%). Ele testa as melhores ações do turno numa cópia; o inimigo responde com a melhor jogada imediata (modelo Grão-mestre sem previsão) até a próxima vez
+- **Busca** (`MachineAi.plan`): o Mestre (`lookahead` 1, 3 ações, 1 simulação, D132; tirada no D148 e devolvida no D149) e o
+  Grão-mestre (2; 6 ações, 3 simulações) testam as melhores ações do turno numa cópia; o inimigo responde com a melhor jogada imediata (modelo Grão-mestre sem previsão) até a próxima vez
   da IA (no Grão-mestre, a IA joga mais uma vez e o inimigo responde de novo), no máximo 10 ações. Escolhe pela nota do
   estado (`evaluateBattle`: cada peça viva vale `(1 + 0,5 × ameaça) × (0,5 + 0,5 × vida%)`, vitória ±100).
 - **Primeira medição (2026-10-20, 256 batalhas, squads do seed espelhadas):** o Mestre com previsão **perdeu** do Mestre

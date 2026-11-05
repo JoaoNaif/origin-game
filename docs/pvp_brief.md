@@ -108,11 +108,11 @@ da ação é a soma ponderada pelo perfil, dividida pela maior nota do turno.
 |---|---|---|---|
 | Iniciante | 1.3 (D144) | dano esperado, abate, defesa/cura/status (D115) | nenhuma |
 | Intermediário | 0.32 (D122) | + ameaça do alvo | última ação |
-| Avançado | 0.2 (D122) | + risco próprio | padrões simples |
+| Avançado | 0.12 (D149; era 0.2, D122) | + risco próprio | padrões simples |
 | Mestre | 0.1 (D122) | + situação geral | padrões e uso de skills |
 | Grão-mestre | 0 (sempre a melhor) | todos | tudo, reage ao estilo |
 
-**Previsão (D132, D148):** só o Grão-mestre prevê, 2 jogadas (6 ações testadas, 3 simulações). O Mestre previa 1 jogada e perdeu a previsão no D148: com ela vencia 85% do Avançado; sem ela, 70% (e o Grão-mestre vence 72% do Mestre).
+**Previsão (D132, D149):** Mestre prevê 1 jogada (3 ações testadas, 1 simulação); Grão-mestre prevê 2 (6 ações, 3 simulações). O D148 tirou a previsão do Mestre, mas a squad que ele joga muda com ela e o ciclo de squads piorou; o D149 a devolveu e deixou o Avançado mais certeiro.
 
 **Pesos dos perfis** (placeholder; fatores que o nível não enxerga valem 0; Risco pela metade no D115; ajustes do D118):
 
