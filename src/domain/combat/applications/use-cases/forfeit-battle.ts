@@ -19,7 +19,7 @@ type ForfeitBattleUseCaseResponse = Either<
   { battle: Battle; engine: BattleEngine }
 >
 
-/** Desistir (W.O., `ABANDON`): a máquina vence e a batalha sai da lista em andamento. Sem XP (D136, a confirmar). */
+/** Desistir (W.O., `ABANDON`): a máquina vence e a batalha sai da lista em andamento. Sem XP (D136). */
 export class ForfeitBattleUseCase {
   constructor(
     private battlesRepository: BattlesRepository,

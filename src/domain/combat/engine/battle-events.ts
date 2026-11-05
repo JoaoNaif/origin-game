@@ -57,8 +57,13 @@ export type BattleEvent =
   | { type: 'PROTECTED'; protectorRef: string; protectedRef: string }
   /** Skill de recuperação: `relieved` = fração do Desgaste aliviada (soma das frações dos stats). */
   | { type: 'RECOVER'; ref: string; targetRef: string; relieved: number }
+  /**
+   * `ref` em MODIFIER, STATUS, LOCK e TURN_SHIFT: quem causou (skill ou passiva), para o XP de buff/debuff (D147). Sem
+   * `ref` é regra do motor (custo de mover, Contágio, a outra ponta do Ligado).
+   */
   | {
       type: 'MODIFIER'
+      ref?: string
       targetRef: string
       stat: Stat
       percent: number
@@ -66,11 +71,12 @@ export type BattleEvent =
     }
   | {
       type: 'STATUS'
+      ref?: string
       targetRef: string
       status: StatusType
       result: StatusApplication | 'RESISTED'
     }
-  | { type: 'LOCK'; targetRef: string; skillKey: string }
+  | { type: 'LOCK'; ref?: string; targetRef: string; skillKey: string }
   | {
       type: 'MOVE'
       ref: string
@@ -78,7 +84,7 @@ export type BattleEvent =
       forced: boolean
     }
   | { type: 'MOVE_BLOCKED'; ref: string; reason: 'RESISTED' | 'BLOCKED' }
-  | { type: 'TURN_SHIFT'; targetRef: string; percent: number }
+  | { type: 'TURN_SHIFT'; ref?: string; targetRef: string; percent: number }
   | { type: 'DESGASTE'; ref: string; selfDamage: number }
   | { type: 'DEFEND'; ref: string }
   | { type: 'PASSIVE'; ref: string; name: string; trigger: string }

@@ -946,8 +946,15 @@ export class BattleEngine {
     return partner ?? null
   }
 
-  /** Liga o alvo ao parceiro (D146); um novo elo desfaz os anteriores dos dois. */
-  private applyLink(target: EngineUnit, duration: number): StatusApplication {
+  /**
+   * Liga o alvo ao parceiro (D146); um novo elo desfaz os anteriores dos dois. `sourceRef` (quem ligou) vai só no
+   * evento do alvo: o elo conta uma vez no XP (D147).
+   */
+  private applyLink(
+    target: EngineUnit,
+    duration: number,
+    sourceRef: string
+  ): StatusApplication {
     const partner = this.linkCandidate(target)
     if (!partner) return 'IMMUNE'
 
@@ -962,6 +969,7 @@ export class BattleEngine {
       unit.linkedWith = mate.ref
       this.log.push({
         type: 'STATUS',
+        ...(unit === target ? { ref: sourceRef } : {}),
         targetRef: unit.ref,
         status: StatusType.LINK,
         result: renewed ? 'RENEWED' : 'APPLIED',
@@ -1273,6 +1281,7 @@ export class BattleEngine {
         })
         this.log.push({
           type: 'MODIFIER',
+          ref: actor.ref,
           targetRef: ally.ref,
           stat: Stat.ATTACK,
           percent: CLASS_MARKS.coordinationAttackPercent,
@@ -1490,6 +1499,7 @@ export class BattleEngine {
         })
         this.log.push({
           type: 'MODIFIER',
+          ref: actor.ref,
           targetRef: target.ref,
           stat: effect.stat,
           percent,
@@ -1506,6 +1516,7 @@ export class BattleEngine {
           if (!roll(this.rng, chance)) {
             this.log.push({
               type: 'STATUS',
+              ref: actor.ref,
               targetRef: target.ref,
               status: effect.status,
               result: 'RESISTED',
@@ -1516,14 +1527,22 @@ export class BattleEngine {
 
         if (effect.status === StatusType.LOCK) {
           const skillKey = target.cooldowns.lock()
-          this.log.push({ type: 'LOCK', targetRef: target.ref, skillKey })
+          this.log.push({
+            type: 'LOCK',
+            ref: actor.ref,
+            targetRef: target.ref,
+            skillKey,
+          })
           return
         }
 
         if (effect.status === StatusType.LINK) {
-          if (this.applyLink(target, effect.duration) === 'IMMUNE') {
+          if (
+            this.applyLink(target, effect.duration, actor.ref) === 'IMMUNE'
+          ) {
             this.log.push({
               type: 'STATUS',
+              ref: actor.ref,
               targetRef: target.ref,
               status: effect.status,
               result: 'IMMUNE',
@@ -1548,6 +1567,7 @@ export class BattleEngine {
         }
         this.log.push({
           type: 'STATUS',
+          ref: actor.ref,
           targetRef: target.ref,
           status: effect.status,
           result,
@@ -1573,6 +1593,7 @@ export class BattleEngine {
         this.queue.shift(target.ref, effect.percent)
         this.log.push({
           type: 'TURN_SHIFT',
+          ref: actor.ref,
           targetRef: target.ref,
           percent: effect.percent,
         })
@@ -2253,6 +2274,7 @@ export class BattleEngine {
           this.queue.shift(ally.ref, effect.percent)
           this.log.push({
             type: 'TURN_SHIFT',
+            ref: owner.ref,
             targetRef: ally.ref,
             percent: effect.percent,
           })
@@ -2263,6 +2285,7 @@ export class BattleEngine {
         this.queue.shift(owner.ref, effect.percent)
         this.log.push({
           type: 'TURN_SHIFT',
+          ref: owner.ref,
           targetRef: owner.ref,
           percent: effect.percent,
         })
@@ -2295,6 +2318,7 @@ export class BattleEngine {
         if (!roll(this.rng, chance)) {
           this.log.push({
             type: 'STATUS',
+            ref: owner.ref,
             targetRef: target.ref,
             status: effect.status,
             result: 'RESISTED',
@@ -2305,6 +2329,7 @@ export class BattleEngine {
         if (effect.status === StatusType.LOCK) {
           this.log.push({
             type: 'LOCK',
+            ref: owner.ref,
             targetRef: target.ref,
             skillKey: target.cooldowns.lock(),
           })
@@ -2312,7 +2337,7 @@ export class BattleEngine {
         }
 
         if (effect.status === StatusType.LINK) {
-          this.applyLink(target, STATUS_RULES.LINK.duration)
+          this.applyLink(target, STATUS_RULES.LINK.duration, owner.ref)
           return
         }
 
@@ -2320,6 +2345,7 @@ export class BattleEngine {
         if (effect.status === StatusType.TAUNT) target.tauntedBy = owner.ref
         this.log.push({
           type: 'STATUS',
+          ref: owner.ref,
           targetRef: target.ref,
           status: effect.status,
           result,

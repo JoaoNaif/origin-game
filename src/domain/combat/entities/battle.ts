@@ -284,7 +284,7 @@ export class Battle extends Entity<BattleProps> {
 
   /**
    * Desistir (W.O.): a batalha acaba na rodada em que está, com vitória do adversário (`ABANDON`). Sem XP no PvE
-   * (D136, a confirmar): desistir logo depois de começar não pode render nada.
+   * (D136): desistir logo depois de começar não pode render nada.
    */
   forfeit(finishedAt: Date): Either<InvalidBattleError, void> {
     return this.finish({

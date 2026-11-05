@@ -1,4 +1,10 @@
+import {
+  MODIFIER_VALUE_PER_PERCENT,
+  STATUS_VALUE,
+  TURN_SHIFT_VALUE,
+} from '@/domain/ai/ai-values'
 import { AiDifficulty } from '@/domain/ai/enums/ai-difficulty'
+import { StatusType } from '@/domain/skills/enums/status-type'
 import { BattleEvent } from '../engine/battle-events'
 import { BattleSide } from '../enums/battle-enums'
 
@@ -8,12 +14,14 @@ export const XP_POOL = { WIN: 400, LOSS: 160 } as const
 /** Parte do pool dividida igual entre os 4; o resto vai pela participação (métricas). */
 export const XP_EQUAL_SHARE = 0.4
 
-/** Peso de cada métrica (D92). Buff/debuff (0,4 do ganho) ainda não entra: falta definir o "ganho" de um buff. */
+/** Peso de cada métrica (D92): buff e debuff valem 0,4 do ganho (`supportGain`, D147). */
 export const XP_METRIC_WEIGHTS = {
   damage: 1,
   heal: 1,
   shield: 1,
   mitigation: 0.8,
+  buff: 0.4,
+  debuff: 0.4,
   kills: 1,
 } as const
 
@@ -46,15 +54,62 @@ const emptyMetrics = (): BattleMetrics => ({
   heal: 0,
   shield: 0,
   mitigation: 0,
+  buff: 0,
+  debuff: 0,
   kills: 0,
 })
 
 const sideOf = (ref: string) =>
   ref.startsWith(BattleSide.PLAYER) ? BattleSide.PLAYER : BattleSide.OPPONENT
 
+type SupportEvent = Extract<
+  BattleEvent,
+  { type: 'MODIFIER' | 'STATUS' | 'LOCK' | 'TURN_SHIFT' | 'CLEANSE' }
+>
+
+/**
+ * Ganho de um buff ou debuff em % do HP máximo do alvo, na régua da IA (D147, `ai-values.ts`): stat 0,3 por ponto
+ * percentual, status pelo valor dele, adiantar/atrasar a vez 22 por 100%. Ex.: +10% de Ataque = 3% do HP do alvo.
+ */
+function supportGain(event: SupportEvent): number {
+  switch (event.type) {
+    case 'MODIFIER':
+      return event.result === 'IGNORED'
+        ? 0
+        : Math.abs(event.percent) * MODIFIER_VALUE_PER_PERCENT
+    case 'STATUS':
+      return event.result === 'RESISTED' || event.result === 'IMMUNE'
+        ? 0
+        : STATUS_VALUE[event.status]
+    case 'LOCK':
+      return STATUS_VALUE[StatusType.LOCK]
+    case 'TURN_SHIFT':
+      return (Math.abs(event.percent) / 100) * TURN_SHIFT_VALUE
+    case 'CLEANSE':
+      return event.status ? STATUS_VALUE[event.status] : 0
+  }
+}
+
+/** Buff = efeito a favor num aliado (ou em si); debuff = efeito contra num inimigo. O resto não conta. */
+function supportKind(
+  event: SupportEvent,
+  sourceRef: string
+): 'buff' | 'debuff' | null {
+  const ally = sideOf(sourceRef) === sideOf(event.targetRef)
+  const favorable =
+    event.type === 'MODIFIER' || event.type === 'TURN_SHIFT'
+      ? event.percent > 0
+      : event.type === 'CLEANSE' || ally
+
+  if (ally && favorable) return 'buff'
+  if (!ally && !favorable) return 'debuff'
+  return null
+}
+
 /**
  * Métricas de participação de cada unidade de um lado, lidas dos eventos do motor: dano nos inimigos, cura e escudo
- * nos aliados, dano segurado por Interceptar/Proteger (mitigação) e abates (10% do HP máximo do abatido).
+ * nos aliados, dano segurado por Interceptar/Proteger (mitigação), buff e debuff (D147) e abates (10% do HP máximo
+ * do abatido).
  */
 export function battleMetrics(
   events: readonly BattleEvent[],
@@ -104,6 +159,20 @@ export function battleMetrics(
           of(event.ref).shield += event.amount
         }
         break
+      case 'MODIFIER':
+      case 'STATUS':
+      case 'LOCK':
+      case 'TURN_SHIFT':
+      case 'CLEANSE': {
+        // sem `ref` é regra do motor (custo de mover, Contágio), não jogada de ninguém
+        if (!event.ref || sideOf(event.ref) !== side) break
+        const kind = supportKind(event, event.ref)
+        if (kind) {
+          of(event.ref)[kind] +=
+            (supportGain(event) / 100) * maxHpOf(event.targetRef)
+        }
+        break
+      }
       case 'DEFEATED': {
         const killer = lastHitBy.get(event.ref)
         if (killer && sideOf(killer) === side && sideOf(event.ref) !== side) {

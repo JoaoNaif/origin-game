@@ -27,7 +27,7 @@
 |---|---|
 | Pool por batalha | Vitória 400 XP, derrota 160 XP (40%) |
 | Divisão entre os 4 | 40% igual, 60% proporcional às métricas |
-| Peso das métricas | Dano 1,0 · cura 1,0 · escudo 1,0 · mitigação 0,8 · buff/debuff 0,4 do ganho · abate 10% do HP do abatido; retorno decrescente (expoente 0,85) |
+| Peso das métricas | Dano 1,0 · cura 1,0 · escudo 1,0 · mitigação 0,8 · buff/debuff 0,4 do ganho (ganho em % do HP do alvo, na régua da IA: 0,3 por ponto percentual de stat, status pelo valor dele; D147) · abate 10% do HP do abatido; retorno decrescente (expoente 0,85) |
 | Amistosa | 0 (D54) |
 | PvE Iniciante / Intermediário / Avançado / Mestre / Grão-mestre | ×0,6 / ×0,8 / ×1,0 / ×1,2 / ×1,4 |
 | Ranqueado | ×1,5 |

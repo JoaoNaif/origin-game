@@ -14,6 +14,8 @@ const none = (): BattleMetrics => ({
   heal: 0,
   shield: 0,
   mitigation: 0,
+  buff: 0,
+  debuff: 0,
   kills: 0,
 })
 
@@ -121,5 +123,92 @@ describe('Battle XP', () => {
     expect(metrics.get('PLAYER:1')).toMatchObject({ mitigation: 50 })
     expect(metrics.get('PLAYER:3')).toMatchObject({ heal: 40 })
     expect(metrics.has('OPPONENT:1')).toBe(false)
+  })
+
+  it('should be able to measure buffs and debuffs on the AI scale (D147)', () => {
+    const events: BattleEvent[] = [
+      { type: 'TURN', ref: 'PLAYER:0', round: 1, tick: 1 },
+      { type: 'SKILL', ref: 'PLAYER:0', skillKey: 'a', potency: 1 },
+      // +10% de Ataque num aliado: 3% do HP dele
+      {
+        type: 'MODIFIER',
+        ref: 'PLAYER:0',
+        targetRef: 'PLAYER:1',
+        stat: 'ATTACK',
+        percent: 10,
+        result: 'ADDED',
+      },
+      // −20% de Defesa num inimigo: 6%
+      {
+        type: 'MODIFIER',
+        ref: 'PLAYER:0',
+        targetRef: 'OPPONENT:0',
+        stat: 'DEFENSE',
+        percent: -20,
+        result: 'ADDED',
+      },
+      // Atordoado: 11%; resistido não conta
+      {
+        type: 'STATUS',
+        ref: 'PLAYER:0',
+        targetRef: 'OPPONENT:0',
+        status: 'STUN',
+        result: 'APPLIED',
+      },
+      {
+        type: 'STATUS',
+        ref: 'PLAYER:0',
+        targetRef: 'OPPONENT:1',
+        status: 'STUN',
+        result: 'RESISTED',
+      },
+      // atrasar a vez do inimigo em 50%: 11%
+      {
+        type: 'TURN_SHIFT',
+        ref: 'PLAYER:0',
+        targetRef: 'OPPONENT:0',
+        percent: -50,
+      },
+      // custo de mover (sem `ref`) e buff ignorado não contam
+      { type: 'TURN_SHIFT', targetRef: 'PLAYER:0', percent: -50 },
+      {
+        type: 'MODIFIER',
+        ref: 'PLAYER:0',
+        targetRef: 'PLAYER:2',
+        stat: 'ATTACK',
+        percent: 10,
+        result: 'IGNORED',
+      },
+      { type: 'TURN', ref: 'PLAYER:3', round: 1, tick: 2 },
+      // Purificar tirou um Atordoado: 11%
+      {
+        type: 'CLEANSE',
+        ref: 'PLAYER:3',
+        targetRef: 'PLAYER:1',
+        status: 'STUN',
+      },
+      { type: 'TURN', ref: 'OPPONENT:0', round: 1, tick: 3 },
+      // debuff do inimigo em mim não conta para o meu lado
+      {
+        type: 'STATUS',
+        ref: 'OPPONENT:0',
+        targetRef: 'PLAYER:0',
+        status: 'MARK',
+        result: 'APPLIED',
+      },
+    ]
+
+    const metrics = battleMetrics(events, BattleSide.PLAYER, () => 1000)
+
+    expect(metrics.get('PLAYER:0')!.buff).toBeCloseTo(30)
+    expect(metrics.get('PLAYER:0')!.debuff).toBeCloseTo(60 + 110 + 110)
+    expect(metrics.get('PLAYER:3')!.buff).toBeCloseTo(110)
+    expect(metrics.has('OPPONENT:0')).toBe(false)
+  })
+
+  it('should be able to weigh a buff at 0.4 of its gain', () => {
+    expect(participationScore({ ...none(), buff: 100 })).toBeCloseTo(
+      Math.pow(40, 0.85)
+    )
   })
 })

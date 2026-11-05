@@ -7,7 +7,7 @@ import { ZodValidationPipe } from '../../pipes/zod-validation-pipe'
 import { BattlePresenter } from '../../presenters/battle-presenter'
 import { uuidParamSchema } from '../../schemas/common'
 
-/** POST /battles/:id/forfeit — desistir (W.O.): a máquina vence, sem XP (D136, a confirmar). */
+/** POST /battles/:id/forfeit — desistir (W.O.): a máquina vence, sem XP (D136). */
 @Controller('battles')
 export class ForfeitBattleController {
   constructor(private forfeitBattle: ForfeitBattleUseCase) {}

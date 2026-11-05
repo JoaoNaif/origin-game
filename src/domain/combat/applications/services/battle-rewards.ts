@@ -79,6 +79,8 @@ export async function grantBattleXp(
         heal: 0,
         shield: 0,
         mitigation: 0,
+        buff: 0,
+        debuff: 0,
         kills: 0,
       },
     })),
