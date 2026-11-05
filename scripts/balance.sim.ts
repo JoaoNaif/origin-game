@@ -31,6 +31,7 @@ import { loadSeedContent } from '../prisma/seed/content'
  * - `BAL_DIFFICULTY` (padrão MASTER) e `BAL_PROFILE` (padrão BALANCED) da IA;
  * - `BAL_TACTIC` e `BAL_BRUTE`: squads do modo `versus` (`key` dos modelos, separadas por vírgula, cada uma com
  *   `@linhacoluna` opcional para fixar a formação, ex.: `nox@10`; sem isso, formação automática);
+ * - `BAL_LAYOUTS`: modo `cycle`, JSON com outra composição/formação de uma squad do seed (`nome: "key@lc,..."`);
  * - `BAL_OUT`: caminho de um JSON com os números brutos (para somar rodadas paralelas).
  */
 const MODE = process.env.BAL_MODE ?? 'random'
@@ -475,6 +476,18 @@ it(`balance ${MODE}`, { timeout: 0 }, async () => {
           column: m.column,
         })),
       }))
+    // BAL_LAYOUTS: outra composição/formação para uma squad do seed, ex. {"Trindade":"kael-vaz@00,isis-maccarthy@01"}
+    const layouts: Record<string, string> = JSON.parse(
+      process.env.BAL_LAYOUTS ?? '{}'
+    )
+    for (const squad of seedSquads) {
+      const layout = layouts[squad.name]
+      if (!layout) continue
+      squad.members = layout.split(',').map((entry) => {
+        const [key, cell] = entry.split('@')
+        return { key, row: Number(cell[0]), column: Number(cell[1]) }
+      })
+    }
     const squads = [
       ...seedSquads,
       {
