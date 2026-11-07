@@ -21,6 +21,8 @@ export async function seedDatabase(prisma: PrismaClient): Promise<string> {
           name: v.name,
           lineage: v.lineage,
           description: v.description,
+          // as bases vêm antes das despertadas no mapa
+          awakensFromId: v.awakensFromId ? db(v.awakensFromId) : null,
         }
         const row = await tx.variant.upsert({
           where: { key: v.key },
@@ -28,6 +30,21 @@ export async function seedDatabase(prisma: PrismaClient): Promise<string> {
           update: data,
         })
         ids.set(v.id.toValue(), row.id)
+      }
+
+      for (const a of content.awakenings.values()) {
+        const data = {
+          name: a.name,
+          description: a.description,
+          variantId: db(a.variantId),
+          requirements: json(a.requirements),
+          missions: json(a.missions),
+        }
+        await tx.awakening.upsert({
+          where: { key: a.key },
+          create: { id: a.id.toValue(), key: a.key, ...data },
+          update: data,
+        })
       }
 
       for (const t of content.traits.values()) {
@@ -179,6 +196,7 @@ export async function seedDatabase(prisma: PrismaClient): Promise<string> {
   return (
     `seed: ${content.variants.size} variantes, ${content.traits.size} traços, ` +
     `${content.characters.length} personagens, ${content.catalog.skills.size} skills, ` +
-    `${content.fields.length} campos, ${content.npcSquads.length} squads de NPC`
+    `${content.fields.length} campos, ${content.npcSquads.length} squads de NPC, ` +
+    `${content.awakenings.size} despertares`
   )
 }

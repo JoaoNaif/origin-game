@@ -27,6 +27,7 @@ describe('Character Skills', () => {
         danger: character.danger,
         dangerPoints: 0,
         awakenedVariantId: character.awakenedVariantId,
+        awakening: null,
         freePoints: { ...character.freePoints },
         traits: [...character.traits],
         skills: character.skills.map((s) => ({ ...s })),

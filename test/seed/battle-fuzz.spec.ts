@@ -39,16 +39,20 @@ const BATTLES = Number(process.env.FUZZ_BATTLES ?? 150)
 const FIRST_SEED = Number(process.env.FUZZ_FIRST_SEED ?? 1)
 const LEVELS = [10, 18, 30, 58, 100]
 
+/** 4 skills sorteadas do nível; as despertadas, de uma variante despertada só (um despertar, D67). */
 function randomBuild(key: string, level: number, draw: SeededRng) {
   const pool = content.characters
     .find((c) => c.spec.key === key)!
     .skills.filter((s) => s.minLevel <= level)
-    .map((s) => s.key)
   for (let i = pool.length - 1; i > 0; i--) {
     const j = draw.int(0, i)
     ;[pool[i], pool[j]] = [pool[j], pool[i]]
   }
-  return pool.slice(0, 4)
+  const awakened = pool.find((s) => s.isAwakened)?.variantId
+  return pool
+    .filter((s) => !s.isAwakened || s.variantId!.equals(awakened!))
+    .slice(0, 4)
+    .map((s) => s.key)
 }
 
 function randomSnapshot(seed: number): BattleSnapshot {

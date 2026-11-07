@@ -185,6 +185,23 @@ export async function writeCatalogRow(
       }
       return
     }
+
+    case 'AWAKENING': {
+      const data = {
+        key: entity.key,
+        name: entity.name,
+        description: entity.description,
+        variantId: entity.variantId.toString(),
+        requirements: json(entity.requirements),
+        missions: json(entity.missions),
+      }
+      await tx.awakening.upsert({
+        where: { id },
+        create: { id, ...data },
+        update: data,
+      })
+      return
+    }
   }
 }
 
@@ -214,6 +231,9 @@ export async function deleteCatalogRow(
       return
     case 'NPC_SQUAD':
       await tx.npcSquad.delete(where)
+      return
+    case 'AWAKENING':
+      await tx.awakening.delete(where)
       return
   }
 }

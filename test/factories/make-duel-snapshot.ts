@@ -79,14 +79,20 @@ function side(
     members: members.map(({ key, row, column, skills }) => {
       const character = content.characters.find((c) => c.spec.key === key)!
       const family = character.spec.familyTrait
+      const build = skills
+        ? skills.map((k) => character.skills.find((s) => s.key === k)!)
+        : npcBuild(character, level)
+      // skill despertada na build: o NPC despertou nessa variante (D67)
+      const awakenedVariantId = build.find((s) => s.isAwakened)?.variantId
       return {
         template: character.template,
         level,
         row,
         column,
-        skills: skills
-          ? skills.map((k) => character.skills.find((s) => s.key === k)!)
-          : npcBuild(character, level),
+        awakenedVariant: awakenedVariantId
+          ? content.catalog.variants.get(awakenedVariantId.toValue())
+          : null,
+        skills: build,
         traits: [
           ...(family ? [content.traits.get(family)!] : []),
           content.traits.get(character.spec.npcTrait)!,

@@ -138,4 +138,61 @@ describe('Create Catalog Entry', () => {
       })
     }
   })
+  it('should be able to create an awakening for a new awakened variant', async () => {
+    const variant = await sut.execute({
+      kind: 'VARIANT',
+      key: 'gelo-eterno',
+      data: {
+        name: 'Gelo eterno',
+        lineage: Lineage.ELEMENTAL,
+        awakensFromKey: 'gelo-superionico',
+      },
+    })
+    expect(variant.isRight()).toBe(true)
+
+    const result = await sut.execute({
+      kind: 'AWAKENING',
+      key: 'gelo-eterno',
+      data: {
+        name: 'Gelo eterno',
+        variantKey: 'gelo-eterno',
+        requirements: [
+          { stat: 'PRECISION', level: 'HIGH' },
+          { stat: 'WILL', level: 'HIGH' },
+        ],
+        missions: [
+          { kind: 'STATUS_APPLIED', threshold: 100 },
+          { kind: 'DAMAGE_SHARE', threshold: 15 },
+          { kind: 'ENEMY_HP_SHARE', threshold: 1 },
+        ],
+      },
+    })
+
+    expect(result.isRight()).toBe(true)
+    const catalog = await catalogRepository.load()
+    const sunna = byKey(catalog.variants.values(), 'gelo-superionico')
+    expect(
+      byKey(catalog.awakenings.values(), 'gelo-eterno').baseVariantId.equals(
+        sunna.id
+      )
+    ).toBe(true)
+  })
+
+  it('should not be able to give the same awakened variant in two awakenings', async () => {
+    const catalog = await catalogRepository.load()
+    const cristal = byKey(catalog.awakenings.values(), 'cristal')
+
+    const result = await sut.execute({
+      kind: 'AWAKENING',
+      key: 'cristal-2',
+      data: {
+        name: 'Outro cristal',
+        variantKey: 'cristal',
+        requirements: [...cristal.requirements],
+        missions: [...cristal.missions],
+      },
+    })
+
+    expect(result.value).toBeInstanceOf(InvalidCatalogError)
+  })
 })

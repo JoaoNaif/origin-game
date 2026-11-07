@@ -47,6 +47,16 @@ describe('Fetch Admin Catalog (e2e)', () => {
     expect(catalog.skills[0].reference).toMatchObject({
       power: expect.any(Number),
     })
+    // despertares (D151): variante despertada, perfil e pool de missões
+    expect(catalog.awakenings).toHaveLength(4)
+    expect(
+      catalog.awakenings.find((a: { key: string }) => a.key === 'cristal')
+    ).toMatchObject({
+      variantKey: 'cristal',
+      baseVariantKey: 'terra',
+      requirements: expect.any(Array),
+      missions: expect.any(Array),
+    })
   })
 
   test('[GET] /admin/catalog keys link to items of the catalog', async () => {

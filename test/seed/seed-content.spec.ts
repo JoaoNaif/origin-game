@@ -7,6 +7,7 @@ import { StatusType } from '@/domain/skills/enums/status-type'
 import { SkillArea } from '@/domain/skills/enums/skill-area'
 import { SkillRange } from '@/domain/skills/enums/skill-range'
 import { SkillTarget } from '@/domain/skills/enums/skill-target'
+import { skillReference } from '@/domain/skills/services/skill-reference'
 import { describe, expect, it } from 'vitest'
 import { loadSeedContent } from '../../prisma/seed/content'
 
@@ -146,5 +147,43 @@ describe('Seed Content', () => {
     )
 
     expect(engine.nextTurn()).not.toBeNull()
+  })
+  it('should be able to give each awakening 5 skills from level 80 to 100 in the awakened variant', () => {
+    // D151: Sombra (2), Terra e Combustão
+    expect([...sut.awakenings.keys()].sort()).toEqual([
+      'cristal',
+      'eclipse',
+      'plasma',
+      'sombra-abissal',
+    ])
+
+    for (const awakening of sut.awakenings.values()) {
+      const own = skills.filter((s) => s.variantId?.equals(awakening.variantId))
+      expect(own.map((s) => s.minLevel).sort((a, b) => a - b)).toEqual([
+        80, 85, 90, 95, 100,
+      ])
+      for (const skill of own) {
+        expect(skill.isAwakened).toBe(true)
+        const reference = skillReference({
+          tier: skill.tier,
+          target: skill.target,
+          range: skill.range,
+          area: skill.area,
+        })
+        // Desgaste ×1,5 sobre a referência (D96)
+        expect(skill.desgastePercent).toBeCloseTo(
+          reference.desgastePercent * 1.5,
+          1
+        )
+      }
+      // quem tem a variante base pode sortear o despertar
+      expect(
+        sut.characters.some(
+          (c) =>
+            c.template.variants.length === 1 &&
+            c.template.variants[0].variantId.equals(awakening.baseVariantId)
+        )
+      ).toBe(true)
+    }
   })
 })

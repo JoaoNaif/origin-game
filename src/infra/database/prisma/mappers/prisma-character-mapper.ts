@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client'
 import { UniqueEntityId } from '@/core/entities/unique-entity-id'
 import { GameCatalog } from '@/domain/catalog/applications/repositories/catalog-repository'
 import { Character } from '@/domain/characters/entities/character'
+import { AwakeningMissionProgress } from '@/domain/characters/value-objects/awakening-progress'
 
 export const characterInclude = {
   traits: { orderBy: { acquiredAt: 'asc' } },
@@ -25,6 +26,14 @@ export class PrismaCharacterMapper {
         dangerPoints: raw.dangerPoints,
         awakenedVariantId: raw.awakenedVariantId
           ? new UniqueEntityId(raw.awakenedVariantId)
+          : null,
+        awakening: raw.awakeningId
+          ? {
+              awakeningId: new UniqueEntityId(raw.awakeningId),
+              drawnAt: raw.awakeningDrawnAt!,
+              missions:
+                raw.awakeningMissions as unknown as AwakeningMissionProgress[],
+            }
           : null,
         freePoints: {
           HP: raw.freeHp,
@@ -60,6 +69,10 @@ export class PrismaCharacterMapper {
       danger: character.danger,
       dangerPoints: character.dangerPoints,
       awakenedVariantId: character.awakenedVariantId?.toString() ?? null,
+      awakeningId: character.awakening?.awakeningId.toString() ?? null,
+      awakeningMissions: (character.awakening?.missions ??
+        []) as unknown as Prisma.InputJsonValue,
+      awakeningDrawnAt: character.awakening?.drawnAt ?? null,
       freeHp: free.HP,
       freeAttack: free.ATTACK,
       freeDefense: free.DEFENSE,

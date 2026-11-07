@@ -18,6 +18,9 @@ export function seedCatalog(): GameCatalog {
     ...content.catalog,
     fields: content.fields,
     npcSquads: content.npcSquads,
+    awakenings: new Map(
+      [...content.awakenings.values()].map((a) => [a.id.toValue(), a])
+    ),
     version: 'seed-test',
   }
 }
@@ -53,6 +56,7 @@ function withEntry(
     skills: map(catalog.skills, kind === 'SKILL'),
     fields: list(catalog.fields, kind === 'FIELD'),
     npcSquads: list(catalog.npcSquads, kind === 'NPC_SQUAD'),
+    awakenings: map(catalog.awakenings, kind === 'AWAKENING'),
     version: `${catalog.version}+`,
   }
 }

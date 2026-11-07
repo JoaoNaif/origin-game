@@ -1,12 +1,15 @@
 import { Either, left, right } from '@/core/either'
 import { Entity } from '@/core/entities/entity'
 import { UniqueEntityId } from '@/core/entities/unique-entity-id'
+import { SkillOfferSource } from '../enums/skill-offer-source'
 import { InvalidSkillOfferError } from '../errors/invalid-skill-offer-error'
 
 export interface SkillOfferProps {
   characterId: UniqueEntityId
   /** O nível do bloco (5, 10, ..., 100). */
   level: number
+  /** Subida de nível ou recuperação ao despertar (um bloco de cada por nível). */
+  source: SkillOfferSource
   /** As opções sorteadas: 1 a 3 (menos de 3 quando o pool não dá, D135). */
   skillIds: UniqueEntityId[]
   chosenSkillId: UniqueEntityId | null
@@ -25,6 +28,10 @@ export class SkillOffer extends Entity<SkillOfferProps> {
 
   get level() {
     return this.props.level
+  }
+
+  get source() {
+    return this.props.source
   }
 
   get skillIds(): readonly UniqueEntityId[] {
@@ -67,8 +74,8 @@ export class SkillOffer extends Entity<SkillOfferProps> {
   }
 
   static create(
-    props: Omit<SkillOfferProps, 'chosenSkillId' | 'chosenAt'> &
-      Partial<Pick<SkillOfferProps, 'chosenSkillId' | 'chosenAt'>>,
+    props: Omit<SkillOfferProps, 'chosenSkillId' | 'chosenAt' | 'source'> &
+      Partial<Pick<SkillOfferProps, 'chosenSkillId' | 'chosenAt' | 'source'>>,
     id?: UniqueEntityId
   ): Either<InvalidSkillOfferError, SkillOffer> {
     if (props.skillIds.length === 0) {
@@ -79,6 +86,7 @@ export class SkillOffer extends Entity<SkillOfferProps> {
       new SkillOffer(
         {
           ...props,
+          source: props.source ?? SkillOfferSource.LEVEL_UP,
           chosenSkillId: props.chosenSkillId ?? null,
           chosenAt: props.chosenAt ?? null,
         },

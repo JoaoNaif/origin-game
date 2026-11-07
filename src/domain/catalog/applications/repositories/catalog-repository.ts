@@ -1,5 +1,6 @@
 import { Either } from '@/core/either'
 import { ResourceInUseError } from '@/core/errors/err/resource-in-use-error'
+import { Awakening } from '@/domain/characters/entities/awakening'
 import { CharacterTemplate } from '@/domain/characters/entities/character-template'
 import { Trait } from '@/domain/characters/entities/trait'
 import { Variant } from '@/domain/characters/entities/variant'
@@ -16,6 +17,8 @@ import { InvalidCatalogError } from '../../errors/invalid-catalog-error'
 export interface GameCatalog extends SnapshotCatalog {
   fields: readonly BattleField[]
   npcSquads: readonly NpcSquad[]
+  /** Despertares por id (D151). Não entram na `version`: não mudam o replay de uma batalha. */
+  awakenings: ReadonlyMap<string, Awakening>
   /** Identifica o conteúdo (gravado na batalha: o replay só é garantido com o mesmo conteúdo). */
   version: string
 }
@@ -28,6 +31,7 @@ export type CatalogEntry =
   | { kind: 'SKILL'; entity: Skill }
   | { kind: 'FIELD'; entity: BattleField }
   | { kind: 'NPC_SQUAD'; entity: NpcSquad }
+  | { kind: 'AWAKENING'; entity: Awakening }
 
 export type CatalogKind = CatalogEntry['kind']
 

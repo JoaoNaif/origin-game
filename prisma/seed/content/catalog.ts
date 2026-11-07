@@ -142,10 +142,57 @@ const VARIANTS: {
   },
 ]
 
+/** Variantes despertadas (D67, D151): evoluem de uma base, com a mesma linhagem. O despertar fica em `awakenings.ts`. */
+const AWAKENED_VARIANTS: {
+  key: string
+  name: string
+  awakensFrom: string
+  description: string
+}[] = [
+  {
+    key: 'sombra-abissal',
+    name: 'Sombra Abissal',
+    awakensFrom: 'sombra',
+    description: 'A sombra sem fundo: corta e engole quem toca.',
+  },
+  {
+    key: 'eclipse',
+    name: 'Eclipse',
+    awakensFrom: 'sombra',
+    description:
+      'A sombra que apaga a luz dos outros: cala, prende e faz dormir.',
+  },
+  {
+    key: 'cristal',
+    name: 'Cristal',
+    awakensFrom: 'terra',
+    description: 'A terra comprimida até virar cristal: protege e cura.',
+  },
+  {
+    key: 'plasma',
+    name: 'Plasma',
+    awakensFrom: 'combustao',
+    description: 'A combustão quente a ponto de virar plasma.',
+  },
+]
+
 export function buildVariants(): Map<string, Variant> {
-  return new Map(
+  const variants = new Map(
     VARIANTS.map((v) => [v.key, unwrap(Variant.create(v), `variante ${v.key}`)])
   )
+
+  for (const { awakensFrom, ...v } of AWAKENED_VARIANTS) {
+    const base = variants.get(awakensFrom)!
+    variants.set(
+      v.key,
+      unwrap(
+        Variant.create({ ...v, lineage: base.lineage, awakensFrom: base }),
+        `variante ${v.key}`
+      )
+    )
+  }
+
+  return variants
 }
 
 // ---------------------------------------------------------------------------

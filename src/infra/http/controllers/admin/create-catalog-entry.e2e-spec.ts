@@ -53,6 +53,45 @@ describe('Create Catalog Entry (e2e)', () => {
     expect(after.variants.map((v) => v.key)).toContain('vento')
   })
 
+  test('[POST] /admin/awakenings', async () => {
+    const agent = await signUpAdmin(app, prisma, 'admin_desperta')
+    const variant = await agent.post('/admin/variants').send({
+      key: 'gelo-eterno',
+      name: 'Gelo eterno',
+      lineage: 'ELEMENTAL',
+      awakensFromKey: 'gelo-superionico',
+    })
+    expect(variant.statusCode).toBe(201)
+
+    const body = {
+      key: 'gelo-eterno',
+      name: 'Gelo eterno',
+      variantKey: 'gelo-eterno',
+      requirements: [
+        { stat: 'PRECISION', level: 'HIGH' },
+        { stat: 'WILL', level: 'HIGH' },
+      ],
+      missions: [
+        { kind: 'STATUS_APPLIED', threshold: 100 },
+        { kind: 'DAMAGE_SHARE', threshold: 15 },
+        { kind: 'ENEMY_HP_SHARE', threshold: 1 },
+      ],
+    }
+    const response = await agent.post('/admin/awakenings').send(body)
+
+    expect(response.statusCode).toBe(201)
+    expect(response.body.entry).toMatchObject({
+      ...body,
+      baseVariantKey: 'gelo-superionico',
+    })
+
+    // a mesma variante despertada em outro despertar: 400
+    const again = await agent
+      .post('/admin/awakenings')
+      .send({ ...body, key: 'gelo-eterno-2' })
+    expect(again.statusCode).toBe(400)
+  })
+
   test('[POST] /admin/npc-squads shows up for the players', async () => {
     const agent = await signUpAdmin(app, prisma, 'admin_cria_npc')
     const [base] = (await adminCatalog(agent)).npcSquads

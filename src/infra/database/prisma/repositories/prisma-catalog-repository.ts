@@ -12,6 +12,11 @@ import {
 } from '@/domain/catalog/applications/repositories/catalog-repository'
 import { InvalidCatalogError } from '@/domain/catalog/errors/invalid-catalog-error'
 import { catalogIntegrityError } from '@/domain/catalog/services/catalog-integrity'
+import {
+  Awakening,
+  AwakeningMissionTemplate,
+  AwakeningRequirement,
+} from '@/domain/characters/entities/awakening'
 import { CharacterTemplate } from '@/domain/characters/entities/character-template'
 import { Trait } from '@/domain/characters/entities/trait'
 import { Variant } from '@/domain/characters/entities/variant'
@@ -105,6 +110,17 @@ export class PrismaCatalogRepository implements CatalogRepository {
       if (error instanceof CatalogDataError) {
         return left(new InvalidCatalogError(error.message))
       }
+      // coluna única fora a `key` (ex.: dois despertares para a mesma variante, D151)
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        return left(
+          new InvalidCatalogError(
+            `valor repetido em ${String(error.meta?.target ?? 'campo único')}`
+          )
+        )
+      }
       throw error
     } finally {
       this.cached = null
@@ -121,6 +137,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
       skillRows,
       fieldRows,
       npcRows,
+      awakeningRows,
     ] = await Promise.all([
       db.variant.findMany({ orderBy: { key: 'asc' } }),
       db.trait.findMany({ orderBy: { key: 'asc' } }),
@@ -145,6 +162,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
         },
         orderBy: { key: 'asc' },
       }),
+      db.awakening.findMany({ orderBy: { key: 'asc' } }),
     ])
 
     // despertadas dependem da base: as bases entram primeiro
@@ -173,6 +191,28 @@ export class PrismaCatalogRepository implements CatalogRepository {
             id(row.id)
           ),
           `variante ${row.key}`
+        )
+      )
+    }
+
+    const awakenings = new Map<string, Awakening>()
+    for (const row of awakeningRows) {
+      awakenings.set(
+        row.id,
+        unwrap(
+          Awakening.create(
+            {
+              key: row.key,
+              name: row.name,
+              description: row.description,
+              variant: variants.get(row.variantId)!,
+              requirements:
+                row.requirements as unknown as AwakeningRequirement[],
+              missions: row.missions as unknown as AwakeningMissionTemplate[],
+            },
+            id(row.id)
+          ),
+          `despertar ${row.key}`
         )
       )
     }
@@ -337,6 +377,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
       skills,
       fields,
       npcSquads,
+      awakenings,
       version,
     }
   }

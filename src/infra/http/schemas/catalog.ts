@@ -2,6 +2,8 @@ import { z } from 'zod'
 import { AiDifficulty } from '@/domain/ai/enums/ai-difficulty'
 import { AiProfile } from '@/domain/ai/enums/ai-profile'
 import { CatalogKind } from '@/domain/catalog/applications/repositories/catalog-repository'
+import { AwakeningRequirementLevel } from '@/domain/characters/entities/awakening'
+import { AwakeningMissionKind } from '@/domain/characters/enums/awakening-mission-kind'
 import { CharacterClass } from '@/domain/characters/enums/character-class'
 import { DangerLevel } from '@/domain/characters/enums/danger-level'
 import { Exclusivity } from '@/domain/characters/enums/exclusivity'
@@ -219,6 +221,21 @@ const npcSquadSchema = z.object({
   ),
 })
 
+const awakeningSchema = z.object({
+  name,
+  description,
+  variantKey: catalogKeySchema,
+  requirements: z.array(
+    z.object({ stat, level: z.nativeEnum(AwakeningRequirementLevel) })
+  ),
+  missions: z.array(
+    z.object({
+      kind: z.nativeEnum(AwakeningMissionKind),
+      threshold: z.number().int(),
+    })
+  ),
+})
+
 /** Tipo do item pelo pedaço da URL (`/admin/variants`, `/admin/npc-squads`...). */
 export const CATALOG_COLLECTIONS = {
   variants: 'VARIANT',
@@ -227,6 +244,7 @@ export const CATALOG_COLLECTIONS = {
   skills: 'SKILL',
   fields: 'FIELD',
   'npc-squads': 'NPC_SQUAD',
+  awakenings: 'AWAKENING',
 } as const satisfies Record<string, CatalogKind>
 
 export type CatalogCollection = keyof typeof CATALOG_COLLECTIONS
@@ -243,4 +261,5 @@ export const catalogBodySchemas = {
   SKILL: skillSchema,
   FIELD: fieldSchema,
   NPC_SQUAD: npcSquadSchema,
+  AWAKENING: awakeningSchema,
 } satisfies Record<CatalogKind, z.ZodTypeAny>

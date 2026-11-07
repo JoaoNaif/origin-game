@@ -6,6 +6,7 @@ import { DangerLevel } from '@/domain/characters/enums/danger-level'
 import { Exclusivity } from '@/domain/characters/enums/exclusivity'
 import { Rarity } from '@/domain/characters/enums/rarity'
 import { Stat } from '@/domain/characters/enums/stat'
+import { CLASS_PROFILES } from '@/domain/characters/services/class-profiles'
 import { Passive } from '@/domain/characters/value-objects/passive'
 import { StatBlock } from '@/domain/characters/value-objects/stat-block'
 import { STATUS_RULES } from '@/domain/combat/services/conditions'
@@ -14,90 +15,11 @@ import { SkillArea } from '@/domain/skills/enums/skill-area'
 import { SkillKitSlot } from '@/domain/skills/enums/skill-kit-slot'
 import { SkillRange } from '@/domain/skills/enums/skill-range'
 import { SkillTarget } from '@/domain/skills/enums/skill-target'
-import { SkillTier } from '@/domain/skills/enums/skill-tier'
+import { MAX_SKILL_POWER, SkillTier } from '@/domain/skills/enums/skill-tier'
 import { StatusType } from '@/domain/skills/enums/status-type'
 import { skillReference } from '@/domain/skills/services/skill-reference'
 import { SkillEffect } from '@/domain/skills/value-objects/skill-effect'
 import { unwrap } from './catalog'
-
-// ---------------------------------------------------------------------------
-// Perfis das classes no nível 100 (`classes_brief.md` 2)
-// ---------------------------------------------------------------------------
-
-const CLASS_PROFILE: Record<CharacterClass, StatBlock> = {
-  VANGUARD: {
-    HP: 700,
-    ATTACK: 105,
-    DEFENSE: 120,
-    SPEED: 80,
-    PRECISION: 100,
-    EVASION: 55,
-    WILL: 95,
-  },
-  MARKSMAN: {
-    HP: 420,
-    ATTACK: 105,
-    DEFENSE: 60,
-    SPEED: 85,
-    PRECISION: 125,
-    EVASION: 90,
-    WILL: 85,
-  },
-  EXECUTOR: {
-    HP: 460,
-    ATTACK: 115,
-    DEFENSE: 65,
-    SPEED: 100,
-    PRECISION: 105,
-    EVASION: 85,
-    WILL: 55,
-  },
-  CONTROLLER: {
-    HP: 580,
-    ATTACK: 100,
-    DEFENSE: 85,
-    SPEED: 90,
-    PRECISION: 115,
-    EVASION: 75,
-    WILL: 110,
-  },
-  SUPPORT: {
-    HP: 500,
-    ATTACK: 80,
-    DEFENSE: 80,
-    SPEED: 105,
-    PRECISION: 85,
-    EVASION: 100,
-    WILL: 130,
-  },
-  ARTILLERY: {
-    HP: 500,
-    ATTACK: 115,
-    DEFENSE: 70,
-    SPEED: 65,
-    PRECISION: 110,
-    EVASION: 65,
-    WILL: 90,
-  },
-  GUARDIAN: {
-    HP: 780,
-    ATTACK: 70,
-    DEFENSE: 140,
-    SPEED: 80,
-    PRECISION: 85,
-    EVASION: 50,
-    WILL: 115,
-  },
-  TACTICIAN: {
-    HP: 630,
-    ATTACK: 105,
-    DEFENSE: 75,
-    SPEED: 110,
-    PRECISION: 105,
-    EVASION: 90,
-    WILL: 95,
-  },
-}
 
 // ---------------------------------------------------------------------------
 // Efeitos (o Poder vem da referência do tipo + forma, `skillReference`)
@@ -179,6 +101,8 @@ interface SkillSpec {
   area?: SkillArea
   /** Foge da referência do tipo (ex.: trocar campo tem tabela própria, 12.7). */
   cooldown?: number
+  /** Nível mínimo próprio (skills despertadas: 80 a 100, D96). */
+  minLevel?: number
   effects: Effects
 }
 
@@ -885,6 +809,103 @@ export const CHARACTERS: CharacterSpec[] = [
         range: FLANK,
         effects: damage(),
       },
+      {
+        key: 'lamina-do-abismo',
+        name: 'Lâmina do Abismo',
+        variant: 'sombra-abissal',
+        tier: REINFORCED,
+        range: MELEE,
+        minLevel: 80,
+        // despertadas (D151): Poder ×1,25 e Desgaste ×1,5 sobre a referência
+        effects: damageWith(0.8, status(StatusType.DOT)),
+      },
+      {
+        key: 'mergulho-abissal',
+        name: 'Mergulho Abissal',
+        variant: 'sombra-abissal',
+        tier: STRONG,
+        range: FLANK,
+        minLevel: 85,
+        effects: damageWith(1, { type: 'REPOSITION', kind: 'DASH' }),
+      },
+      {
+        key: 'veu-abissal',
+        name: 'Véu Abissal',
+        variant: 'sombra-abissal',
+        tier: REINFORCED,
+        target: SELF,
+        minLevel: 90,
+        effects: only(
+          status(StatusType.STEALTH),
+          modifier(Stat.ATTACK, 20, undefined, BUFF_DURATION)
+        ),
+      },
+      {
+        key: 'ceifa-sombria',
+        name: 'Ceifa Sombria',
+        variant: 'sombra-abissal',
+        tier: STRONG,
+        range: MELEE,
+        area: LINE,
+        minLevel: 95,
+        effects: damage(),
+      },
+      {
+        key: 'noite-sem-fim',
+        name: 'Noite Sem Fim',
+        variant: 'sombra-abissal',
+        tier: FINAL,
+        range: FLANK,
+        minLevel: 100,
+        effects: damage(),
+      },
+      {
+        key: 'prender-a-sombra',
+        name: 'Prender a Sombra',
+        variant: 'eclipse',
+        tier: REINFORCED,
+        range: RANGED,
+        minLevel: 80,
+        effects: damageWith(STATUS_ONLY_DAMAGE, status(StatusType.ROOT)),
+      },
+      {
+        key: 'eclipse',
+        name: 'Eclipse',
+        variant: 'eclipse',
+        tier: STRONG,
+        range: RANGED,
+        area: GRID,
+        minLevel: 85,
+        effects: damageWith(1, status(StatusType.SILENCE)),
+      },
+      {
+        key: 'sono-da-sombra',
+        name: 'Sono da Sombra',
+        variant: 'eclipse',
+        tier: REINFORCED,
+        range: RANGED,
+        minLevel: 90,
+        // sem dano: qualquer golpe acorda (D146)
+        effects: only(status(StatusType.SLEEP)),
+      },
+      {
+        key: 'sombras-ligadas',
+        name: 'Sombras Ligadas',
+        variant: 'eclipse',
+        tier: STRONG,
+        range: RANGED,
+        minLevel: 95,
+        effects: damageWith(0.8, status(StatusType.LINK)),
+      },
+      {
+        key: 'umbra-total',
+        name: 'Umbra Total',
+        variant: 'eclipse',
+        tier: FINAL,
+        range: PIERCING,
+        minLevel: 100,
+        effects: damageWith(0.9, status(StatusType.STUN)),
+      },
     ],
   },
   {
@@ -1009,6 +1030,58 @@ export const CHARACTERS: CharacterSpec[] = [
         target: ALLY,
         area: GRID,
         effects: heal,
+      },
+      {
+        key: 'escudo-de-cristal',
+        name: 'Escudo de Cristal',
+        variant: 'cristal',
+        tier: REINFORCED,
+        target: ALLY,
+        minLevel: 80,
+        // despertadas (D151); cura e escudo param no teto de Poder 2,5 (D96)
+        effects: shield,
+      },
+      {
+        key: 'cura-cristalina',
+        name: 'Cura Cristalina',
+        variant: 'cristal',
+        tier: STRONG,
+        target: ALLY,
+        minLevel: 85,
+        effects: only({ type: 'HEAL', power: MAX_SKILL_POWER }),
+      },
+      {
+        key: 'prisma',
+        name: 'Prisma',
+        variant: 'cristal',
+        tier: REINFORCED,
+        target: ALLY,
+        area: GRID,
+        minLevel: 90,
+        effects: only(modifier(Stat.DEFENSE, 15, undefined, BUFF_DURATION)),
+      },
+      {
+        key: 'estilhacos-de-cristal',
+        name: 'Estilhaços de Cristal',
+        variant: 'cristal',
+        tier: STRONG,
+        range: RANGED,
+        area: GRID,
+        minLevel: 95,
+        effects: damageWith(1, status(StatusType.ROOT)),
+      },
+      {
+        key: 'coracao-de-cristal',
+        name: 'Coração de Cristal',
+        variant: 'cristal',
+        tier: FINAL,
+        target: ALLY,
+        area: GRID,
+        minLevel: 100,
+        effects: only(
+          { type: 'HEAL', power: MAX_SKILL_POWER },
+          { type: 'CLEANSE' }
+        ),
       },
     ],
   },
@@ -1874,6 +1947,55 @@ export const CHEST_CHARACTERS: CharacterSpec[] = [
         area: LINE,
         effects: damage(),
       },
+      {
+        key: 'feixe-de-plasma',
+        name: 'Feixe de Plasma',
+        variant: 'plasma',
+        tier: REINFORCED,
+        range: PIERCING,
+        minLevel: 80,
+        // despertadas (D151): Poder ×1,25 e Desgaste ×1,5 sobre a referência
+        effects: damage(),
+      },
+      {
+        key: 'arco-de-plasma',
+        name: 'Arco de Plasma',
+        variant: 'plasma',
+        tier: STRONG,
+        range: RANGED,
+        area: LINE,
+        minLevel: 85,
+        effects: damageWith(1, status(StatusType.DOT)),
+      },
+      {
+        key: 'sobrecarga',
+        name: 'Sobrecarga',
+        variant: 'plasma',
+        tier: REINFORCED,
+        target: SELF,
+        minLevel: 90,
+        effects: only(modifier(Stat.ATTACK, 25, undefined, BUFF_DURATION)),
+      },
+      {
+        key: 'chuva-de-plasma',
+        name: 'Chuva de Plasma',
+        variant: 'plasma',
+        tier: STRONG,
+        range: RANGED,
+        area: GRID,
+        minLevel: 95,
+        effects: damage(),
+      },
+      {
+        key: 'sol-artificial',
+        name: 'Sol Artificial',
+        variant: 'plasma',
+        tier: FINAL,
+        range: RANGED,
+        area: LINE,
+        minLevel: 100,
+        effects: damage(),
+      },
     ],
   },
   {
@@ -2184,6 +2306,7 @@ function buildSkill(
     range: enemy ? range : null,
     area,
     isNone: spec.variant === null,
+    isAwakened: spec.variant ? variants.get(spec.variant)!.isAwakened : false,
   })
 
   return unwrap(
@@ -2198,7 +2321,7 @@ function buildSkill(
       cooldown: spec.cooldown ?? ref.cooldown,
       desgastePercent: ref.desgastePercent,
       baseHitChance: enemy ? 0.8 : null,
-      minLevel: ref.minLevel,
+      minLevel: spec.minLevel ?? ref.minLevel,
       kitClass: spec.slot ? owner.characterClass : null,
       kitSlot: spec.slot ?? null,
       effects:
@@ -2248,7 +2371,7 @@ export function buildCharacters(
         })),
         familyTrait: spec.familyTrait ? traits.get(spec.familyTrait)! : null,
         stats: {
-          ...CLASS_PROFILE[spec.characterClass],
+          ...CLASS_PROFILES[spec.characterClass],
           ...overrides.classProfiles?.[spec.characterClass],
           ...overrides.characterStats?.[spec.key],
         },

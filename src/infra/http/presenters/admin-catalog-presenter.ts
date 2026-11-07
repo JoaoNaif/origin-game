@@ -3,6 +3,7 @@ import {
   GameCatalog,
 } from '@/domain/catalog/applications/repositories/catalog-repository'
 import { templateSkills } from '@/domain/catalog/services/template-skills'
+import { Awakening } from '@/domain/characters/entities/awakening'
 import { CharacterTemplate } from '@/domain/characters/entities/character-template'
 import { Trait } from '@/domain/characters/entities/trait'
 import { Variant } from '@/domain/characters/entities/variant'
@@ -46,6 +47,9 @@ export class AdminCatalogPresenter {
       npcSquads: byKey(catalog.npcSquads).map((n) =>
         AdminCatalogPresenter.npcSquad(n, catalog)
       ),
+      awakenings: byKey(catalog.awakenings.values()).map((a) =>
+        AdminCatalogPresenter.awakening(a, catalog)
+      ),
     }
   }
 
@@ -63,6 +67,8 @@ export class AdminCatalogPresenter {
         return AdminCatalogPresenter.field(entity, catalog)
       case 'NPC_SQUAD':
         return AdminCatalogPresenter.npcSquad(entity, catalog)
+      case 'AWAKENING':
+        return AdminCatalogPresenter.awakening(entity, catalog)
     }
   }
 
@@ -143,6 +149,7 @@ export class AdminCatalogPresenter {
         range: skill.range,
         area: skill.area,
         isNone: skill.isNone,
+        isAwakened: skill.isAwakened,
       }),
     }
   }
@@ -159,6 +166,19 @@ export class AdminCatalogPresenter {
       secondaryStat: field.secondaryStat,
       primaryPercent: field.primaryPercent,
       secondaryPercent: field.secondaryPercent,
+    }
+  }
+
+  static awakening(awakening: Awakening, catalog: GameCatalog) {
+    return {
+      key: awakening.key,
+      name: awakening.name,
+      description: awakening.description,
+      variantKey: keyOf(catalog.variants, awakening.variantId)!,
+      requirements: awakening.requirements,
+      missions: awakening.missions,
+      // só leitura: a variante base (quem pode sortear este despertar)
+      baseVariantKey: keyOf(catalog.variants, awakening.baseVariantId)!,
     }
   }
 

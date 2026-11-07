@@ -8,6 +8,7 @@ export class PrismaSkillOfferMapper {
       {
         characterId: new UniqueEntityId(raw.characterId),
         level: raw.level,
+        source: raw.source,
         skillIds: raw.skillIds.map((id) => new UniqueEntityId(id)),
         chosenSkillId: raw.chosenSkillId
           ? new UniqueEntityId(raw.chosenSkillId)
@@ -29,6 +30,7 @@ export class PrismaSkillOfferMapper {
       id: offer.id.toString(),
       characterId: offer.characterId.toString(),
       level: offer.level,
+      source: offer.source,
       skillIds: offer.skillIds.map((id) => id.toString()),
       chosenSkillId: offer.chosenSkillId?.toString() ?? null,
       createdAt: offer.createdAt,

@@ -27,6 +27,7 @@ export interface AdminCatalogBody {
   npcSquads: (AdminItem & {
     members: { level: number; skillKeys: string[] }[]
   })[]
+  awakenings: AdminItem[]
 }
 
 export async function adminCatalog(agent: Agent): Promise<AdminCatalogBody> {

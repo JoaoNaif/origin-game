@@ -54,6 +54,8 @@ export interface SkillOfferDrawInput {
   /** Skills que já estão em outro bloco pendente (não aparecem em dois ao mesmo tempo). */
   excludedSkillIds: ReadonlySet<string>
   rng: Rng
+  /** Bloco de recuperação do despertar (D151): sem skill despertada elegível, não há bloco. */
+  requireAwakened?: boolean
 }
 
 /** Sorteia um item pelo peso e o tira da lista. */
@@ -72,7 +74,8 @@ function takeWeighted(pool: Skill[], blockLevel: number, rng: Rng): Skill {
 /**
  * Sorteia o bloco do nível (D77, D135): skills do pool (fora do kit) que o personagem pode ter no nível do bloco
  * (próprias variantes, nível mínimo, despertada só se despertou), que ele ainda não tem e que não estão em outro bloco
- * pendente; até 3, sem repetir, pelo peso. Nos marcos 50 e 100, uma Forte ou Final vem garantida se existir.
+ * pendente; até 3, sem repetir, pelo peso. Despertado, uma despertada vem garantida enquanto restarem (D96); nos
+ * marcos 50 e 100, uma Forte ou Final vem garantida se existir.
  * Lista vazia = nenhuma elegível (o bloco não é criado).
  */
 export function drawSkillOffer(input: SkillOfferDrawInput): Skill[] {
@@ -96,7 +99,20 @@ export function drawSkillOffer(input: SkillOfferDrawInput): Skill[] {
 
   const drawn: Skill[] = []
 
-  if (SKILL_OFFER_MILESTONES.includes(blockLevel)) {
+  // despertado: ao menos 1 despertada por bloco enquanto restarem (D96, D151)
+  const awakened = pool.filter((s) => s.isAwakened)
+  if (awakened.length > 0) {
+    const pick = takeWeighted(awakened, blockLevel, rng)
+    pool.splice(pool.indexOf(pick), 1)
+    drawn.push(pick)
+  } else if (input.requireAwakened) {
+    return []
+  }
+
+  if (
+    SKILL_OFFER_MILESTONES.includes(blockLevel) &&
+    !drawn.some((s) => MILESTONE_TIERS.includes(s.tier))
+  ) {
     const strong = pool.filter((s) => MILESTONE_TIERS.includes(s.tier))
     if (strong.length > 0) {
       const pick = takeWeighted(strong, blockLevel, rng)

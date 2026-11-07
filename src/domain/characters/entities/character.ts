@@ -3,11 +3,18 @@ import { Entity } from '@/core/entities/entity'
 import { UniqueEntityId } from '@/core/entities/unique-entity-id'
 import { Account } from '@/domain/accounts/entities/account'
 import { Skill } from '@/domain/skills/entities/skill'
+import { AWAKENED_MIN_LEVEL } from '@/domain/skills/enums/skill-tier'
+import { AwakeningHint } from '../enums/awakening-hint'
 import { CharacterSkillSource } from '../enums/character-skill-source'
 import { DangerLevel } from '../enums/danger-level'
 import { Stat } from '../enums/stat'
 import { TraitSource } from '../enums/trait-source'
 import { InvalidCharacterError } from '../errors/invalid-character-error'
+import {
+  advanceMissions,
+  awakeningHint,
+  isMissionComplete,
+} from '../services/awakening-missions'
 import { awakeningError } from '../services/awakening-rules'
 import {
   availableFreePoints,
@@ -21,6 +28,10 @@ import {
   statsOverTraitCap,
   TRAIT_STAT_CAP_PERCENT,
 } from '../services/trait-rules'
+import {
+  AwakeningBattleStats,
+  AwakeningProgress,
+} from '../value-objects/awakening-progress'
 import { LearnedSkill } from '../value-objects/learned-skill'
 import { StatBlock } from '../value-objects/stat-block'
 import { CharacterTemplate } from './character-template'
@@ -47,6 +58,8 @@ export interface CharacterProps {
   dangerPoints: number
   /** Variante despertada (D67, D96); nulo = não despertou. */
   awakenedVariantId: UniqueEntityId | null
+  /** Despertar sorteado e as missões ocultas (D151); nulo = ainda não sorteou. */
+  awakening: AwakeningProgress | null
   /** Pontos livres por stat (HP em pontos: 1 ponto = 5 de HP). */
   freePoints: StatBlock
   /** Até 5, incluindo o de família copiado do modelo. */
@@ -96,6 +109,15 @@ export class Character extends Entity<CharacterProps> {
 
   get isAwakened() {
     return this.props.awakenedVariantId !== null
+  }
+
+  get awakening(): Readonly<AwakeningProgress> | null {
+    return this.props.awakening
+  }
+
+  /** O que o jogador vê do despertar: silêncio, sinais, iminente ou despertou (D67). */
+  get awakeningHint(): AwakeningHint {
+    return awakeningHint(this.isAwakened, this.props.awakening)
   }
 
   get freePoints(): Readonly<StatBlock> {
@@ -148,6 +170,7 @@ export class Character extends Entity<CharacterProps> {
           danger: template.initialDanger,
           dangerPoints: 0,
           awakenedVariantId: null,
+          awakening: null,
           freePoints: { ...EMPTY_FREE_POINTS },
           traits: familyTrait ? [familyTrait] : [],
           skills: kitSkills.map((skill, index) => ({
@@ -338,6 +361,43 @@ export class Character extends Entity<CharacterProps> {
     this.props.freePoints = { ...allocation }
 
     return right(undefined)
+  }
+
+  /** Guarda o despertar sorteado e as 3 missões (D151): uma vez só, a partir do nível 80, sem ter despertado. */
+  startAwakening(
+    progress: AwakeningProgress
+  ): Either<InvalidCharacterError, void> {
+    if (this.isAwakened || this.props.awakening) {
+      return left(new InvalidCharacterError('o despertar já foi sorteado'))
+    }
+
+    if (this.props.level < AWAKENED_MIN_LEVEL) {
+      return left(
+        new InvalidCharacterError(
+          `o despertar é sorteado a partir do nível ${AWAKENED_MIN_LEVEL}`
+        )
+      )
+    }
+
+    this.props.awakening = {
+      ...progress,
+      missions: progress.missions.map((m) => ({ ...m })),
+    }
+
+    return right(undefined)
+  }
+
+  /**
+   * Soma uma batalha que conta (D96) nas missões ocultas. Devolve `true` se as 3 estão cumpridas (quem chama desperta
+   * o personagem). Sem sorteio ou já despertado, não faz nada.
+   */
+  recordAwakeningBattle(stats: AwakeningBattleStats): boolean {
+    const progress = this.props.awakening
+    if (!progress || this.isAwakened) return false
+
+    progress.missions = advanceMissions(progress.missions, stats)
+
+    return progress.missions.every(isMissionComplete)
   }
 
   /** Desperta (D67, D96): só com exatamente 1 variante, a partir do nível 80, numa despertada dela. */

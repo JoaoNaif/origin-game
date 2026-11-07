@@ -1,6 +1,7 @@
 import { Either, left, right } from '@/core/either'
 import { UniqueEntityId } from '@/core/entities/unique-entity-id'
 import { ResourceNotFoundError } from '@/core/errors/err/resource-not-found-error'
+import { InvalidAwakeningError } from '@/domain/characters/errors/invalid-awakening-error'
 import { InvalidAwakenedVariantError } from '@/domain/characters/errors/invalid-awakened-variant-error'
 import { InvalidCharacterTemplateError } from '@/domain/characters/errors/invalid-character-template-error'
 import { InvalidTraitError } from '@/domain/characters/errors/invalid-trait-error'
@@ -10,6 +11,11 @@ import { InvalidSkillError } from '@/domain/skills/errors/invalid-skill-error'
 import { InvalidNpcSquadError } from '@/domain/squads/errors/invalid-npc-squad-error'
 import { AiDifficulty } from '@/domain/ai/enums/ai-difficulty'
 import { AiProfile } from '@/domain/ai/enums/ai-profile'
+import {
+  Awakening,
+  AwakeningMissionTemplate,
+  AwakeningRequirement,
+} from '@/domain/characters/entities/awakening'
 import { CharacterTemplate } from '@/domain/characters/entities/character-template'
 import { Trait } from '@/domain/characters/entities/trait'
 import { Variant } from '@/domain/characters/entities/variant'
@@ -121,6 +127,15 @@ export interface NpcSquadInput {
   members: NpcSquadMemberInput[]
 }
 
+export interface AwakeningInput {
+  name: string
+  description?: string | null
+  /** A variante despertada que ele dá. */
+  variantKey: string
+  requirements: AwakeningRequirement[]
+  missions: AwakeningMissionTemplate[]
+}
+
 /** O pedido do admin, pelo tipo do item. */
 export type CatalogInput =
   | { kind: 'VARIANT'; data: VariantInput }
@@ -129,6 +144,7 @@ export type CatalogInput =
   | { kind: 'SKILL'; data: SkillInput }
   | { kind: 'FIELD'; data: FieldInput }
   | { kind: 'NPC_SQUAD'; data: NpcSquadInput }
+  | { kind: 'AWAKENING'; data: AwakeningInput }
 
 /** Ligação (`key`) que não existe, ou regra do `create` do item. */
 export type CatalogEntryError =
@@ -140,6 +156,7 @@ export type CatalogEntryError =
   | InvalidSkillError
   | InvalidBattleFieldError
   | InvalidNpcSquadError
+  | InvalidAwakeningError
 
 type Built = Either<CatalogEntryError, CatalogEntry>
 
@@ -311,6 +328,17 @@ function build(
             }
           }),
         },
+        id
+      )
+      return result.isLeft()
+        ? left(result.value)
+        : right({ kind: input.kind, entity: result.value })
+    }
+
+    case 'AWAKENING': {
+      const { variantKey, ...data } = input.data
+      const result = Awakening.create(
+        { key, ...data, variant: lookup(variants(), variantKey, 'variante') },
         id
       )
       return result.isLeft()

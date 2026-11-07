@@ -50,9 +50,30 @@ model Variant {
 
   awakenedCharacters Character[]      @relation("CharacterAwakening")
   awakenedNpcs       NpcSquadMember[] @relation("NpcAwakening")
+  awakening          Awakening?
 
   @@index([awakensFromId])
   @@map("variants")
+}
+
+// Despertar (catálogo do admin, D151): a variante despertada que ele dá, o perfil do sorteio e o pool de
+// missões ocultas. JSON validado no domínio: requirements = [{ stat, level: HIGH | LOW }] (2 a 3),
+// missions = [{ kind, threshold }] (ao menos uma de cada categoria).
+model Awakening {
+  id           String   @id @default(uuid())
+  key          String   @unique
+  name         String
+  description  String?
+  variantId    String   @unique @map("variant_id")
+  requirements Json
+  missions     Json
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  variant    Variant     @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  characters Character[]
+
+  @@map("awakenings")
 }
 
 // Categoria do traço (D47).
@@ -392,6 +413,11 @@ model Character {
   danger            DangerLevel
   dangerPoints      Int         @default(0) @map("danger_points")
   awakenedVariantId String?     @map("awakened_variant_id")
+  // Despertar sorteado (D151) e as 3 missões ocultas: [{ kind, threshold, progress }] (cópia do pool, já com o
+  // limiar de sangue puro). Nulo = ainda não sorteou.
+  awakeningId       String?     @map("awakening_id")
+  awakeningMissions Json        @default("[]") @map("awakening_missions")
+  awakeningDrawnAt  DateTime?   @map("awakening_drawn_at")
   freeHp            Int         @default(0) @map("free_hp")
   freeAttack        Int         @default(0) @map("free_attack")
   freeDefense       Int         @default(0) @map("free_defense")
@@ -405,6 +431,7 @@ model Character {
   account         Account           @relation(fields: [accountId], references: [id], onDelete: Cascade)
   template        CharacterTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
   awakenedVariant Variant?          @relation("CharacterAwakening", fields: [awakenedVariantId], references: [id], onDelete: Restrict)
+  awakening       Awakening?        @relation(fields: [awakeningId], references: [id], onDelete: Restrict)
   traits          CharacterTrait[]
   skills          CharacterSkill[]
   squadMembers    SquadMember[]
@@ -412,6 +439,7 @@ model Character {
 
   @@index([accountId])
   @@index([templateId])
+  @@index([awakeningId])
   @@map("characters")
 }
 
@@ -455,21 +483,28 @@ model CharacterSkill {
 }
 
 // Formação salva da conta: 4 personagens dela na grade 3x3 (D11). Regras no domínio.
+// De onde veio o bloco: subida de nível (D77) ou recuperação ao despertar (D151).
+enum SkillOfferSource {
+  LEVEL_UP
+  AWAKENING
+}
+
 // Bloco de skills a cada 5 níveis (D77, D135): até 3 sorteadas, o jogador escolhe 1. Pendente = sem escolha;
 // fica na fila sem prazo. As opções guardam os ids das skills (lidos junto do catálogo, como o JSON da batalha).
 model SkillOffer {
-  id            String    @id @default(uuid())
-  characterId   String    @map("character_id")
+  id            String           @id @default(uuid())
+  characterId   String           @map("character_id")
   level         Int
-  skillIds      String[]  @map("skill_ids")
-  chosenSkillId String?   @map("chosen_skill_id")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  chosenAt      DateTime? @map("chosen_at")
+  source        SkillOfferSource @default(LEVEL_UP)
+  skillIds      String[]         @map("skill_ids")
+  chosenSkillId String?          @map("chosen_skill_id")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  chosenAt      DateTime?        @map("chosen_at")
 
   character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
 
-  // um bloco por nível: duas batalhas não abrem o mesmo bloco duas vezes
-  @@unique([characterId, level])
+  // um bloco por nível e origem: duas batalhas não abrem o mesmo bloco duas vezes
+  @@unique([characterId, level, source])
   @@map("skill_offers")
 }
 

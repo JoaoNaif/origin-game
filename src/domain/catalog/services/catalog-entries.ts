@@ -38,6 +38,10 @@ export function findCatalogEntry(
       const entity = byKey(catalog.npcSquads)
       return entity ? { kind, entity } : null
     }
+    case 'AWAKENING': {
+      const entity = byKey(catalog.awakenings.values())
+      return entity ? { kind, entity } : null
+    }
   }
 }
 
@@ -69,6 +73,8 @@ export function catalogUsages(
       for (const { squad, member } of members)
         if (member.awakenedVariantId?.equals(id))
           usages.push(`squad de NPC ${squad.key}`)
+      for (const a of catalog.awakenings.values())
+        if (a.variantId.equals(id)) usages.push(`despertar ${a.key}`)
       break
     case 'TRAIT':
       for (const t of catalog.templates.values())
@@ -95,6 +101,9 @@ export function catalogUsages(
     // a batalha guarda o campo e o rival como valor (foto): ninguém do catálogo aponta para eles
     case 'FIELD':
     case 'NPC_SQUAD':
+      break
+    // só o personagem que sorteou aponta para o despertar (dado de jogador: quem confere é o repositório)
+    case 'AWAKENING':
       break
   }
 

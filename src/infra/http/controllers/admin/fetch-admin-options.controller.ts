@@ -38,6 +38,16 @@ import {
 import { StatusType } from '@/domain/skills/enums/status-type'
 import { Admin } from '@/infra/auth/admin'
 import {
+  AWAKENING_REQUIREMENTS,
+  AwakeningRequirementLevel,
+  MAX_REQUIREMENTS_PER_LEVEL,
+} from '@/domain/characters/entities/awakening'
+import {
+  AWAKENING_MISSION_KINDS,
+  AwakeningMissionCategory,
+} from '@/domain/characters/enums/awakening-mission-kind'
+import { AWAKENING_MISSION_RULES } from '@/domain/characters/services/awakening-missions'
+import {
   passiveEffectSchema,
   passiveTriggerSchema,
   skillEffectSchema,
@@ -77,6 +87,10 @@ export class FetchAdminOptionsController {
         statusTypes: values(StatusType),
         aiProfiles: values(AiProfile),
         aiDifficulties: values(AiDifficulty),
+        awakeningRequirementLevels: values(AwakeningRequirementLevel),
+        awakeningMissionCategories: values(AwakeningMissionCategory),
+        /** Os 11 tipos de missão (D151): categoria e limiar padrão. */
+        awakeningMissionKinds: AWAKENING_MISSION_KINDS,
         effectTypes: {
           trait: types(traitEffectSchema),
           skill: types(skillEffectSchema),
@@ -99,6 +113,11 @@ export class FetchAdminOptionsController {
             primary: FIELD_PRIMARY_PERCENT,
             secondary: FIELD_SECONDARY_PERCENT,
           },
+          awakeningRequirements: {
+            ...AWAKENING_REQUIREMENTS,
+            maxPerLevel: MAX_REQUIREMENTS_PER_LEVEL,
+          },
+          awakeningMissionRules: AWAKENING_MISSION_RULES,
         },
       },
     }
