@@ -17,13 +17,17 @@ const getSkillReferenceQuerySchema = z.object({
     .enum(['true', 'false'])
     .optional()
     .transform((value) => value === 'true'),
+  isAwakened: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((value) => value === 'true'),
 })
 
 type GetSkillReferenceQuerySchema = z.infer<typeof getSkillReferenceQuerySchema>
 
 /**
- * GET /admin/skills/reference?tier=&target=&range=&area=&isNone= — os valores de referência (Poder, Desgaste, cooldown e
- * nível mínimo) do tipo + forma (D16, D92), para a tela comparar enquanto o admin monta a skill.
+ * GET /admin/skills/reference?tier=&target=&range=&area=&isNone=&isAwakened= — os valores de referência (Poder, Desgaste, cooldown e
+ * nível mínimo) do tipo + forma (D16, D92; despertada ×1,25 de Poder e ×1,5 de Desgaste, D96), para a tela comparar enquanto o admin monta a skill.
  */
 @Controller('admin/skills/reference')
 @Admin()

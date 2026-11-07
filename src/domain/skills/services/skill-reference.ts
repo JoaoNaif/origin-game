@@ -2,6 +2,8 @@ import { SkillArea } from '../enums/skill-area'
 import { SkillRange } from '../enums/skill-range'
 import { SkillTarget } from '../enums/skill-target'
 import {
+  AWAKENED_MIN_LEVEL,
+  MAX_SKILL_POWER,
   SKILL_TIER_REFERENCE,
   SkillTier,
   SkillTierReference,
@@ -38,6 +40,9 @@ const ALLY_AREA_MODIFIER: Modifier = { power: 0.7, cost: 1.3 }
 /** Skill none (sem variante, D92): Poder ×0,85, custo ×0,5, cooldown −1 (mín. 0). */
 const NONE_MODIFIER = { power: 0.85, cost: 0.5, cooldown: -1 }
 
+/** Skill despertada (D52, D96): Poder ×1,25 (teto 2,5) e Desgaste ×1,5, a partir do nível 80. */
+const AWAKENED_MODIFIER: Modifier = { power: 1.25, cost: 1.5 }
+
 export interface SkillReferenceInput {
   tier: SkillTier
   target: SkillTarget
@@ -45,6 +50,8 @@ export interface SkillReferenceInput {
   area: SkillArea
   /** Skill de quem não tem variante. */
   isNone?: boolean
+  /** Skill de variante despertada. */
+  isAwakened?: boolean
 }
 
 const round2 = (value: number) => Math.round(value * 100) / 100
@@ -69,13 +76,21 @@ export function skillReference(input: SkillReferenceInput): SkillTierReference {
         : ALLY_AREA_MODIFIER
 
   const none = input.isNone ? NONE_MODIFIER : { power: 1, cost: 1, cooldown: 0 }
+  const awakened = input.isAwakened ? AWAKENED_MODIFIER : NEUTRAL
 
   return {
-    power: round2(base.power * range.power * area.power * none.power),
+    power: Math.min(
+      MAX_SKILL_POWER,
+      round2(
+        base.power * range.power * area.power * none.power * awakened.power
+      )
+    ),
     desgastePercent: round2(
-      base.desgastePercent * range.cost * area.cost * none.cost
+      base.desgastePercent * range.cost * area.cost * none.cost * awakened.cost
     ),
     cooldown: Math.max(0, base.cooldown + none.cooldown),
-    minLevel: base.minLevel,
+    minLevel: input.isAwakened
+      ? Math.max(base.minLevel, AWAKENED_MIN_LEVEL)
+      : base.minLevel,
   }
 }
