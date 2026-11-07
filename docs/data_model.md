@@ -53,9 +53,10 @@
 | 11 | `BattleAction` (+ enum `BattleActionType`) | Batalha | Battle | **feito** |
 | 12 | `BattleField` (+ `BattleFieldTrait` e enum `Stat`) | Catálogo | Trait | **feito** |
 | 13 | `Wallet` + `WalletEntry` (enum `WalletReason`) e `Chest` (enum `ChestSource`) | Economia | Account, Battle | **feito** (D150, 3.13) |
+| 14 | `Awakening` (+ colunas do despertar em `Character` e enum `SkillOfferSource`) | Catálogo | Variant | **feito** (D151, 3.14) |
 
 **Fora do MVP** (cada um vira migração própria quando a camada chegar): inventário, equipamento vivo, bestas, DOM,
-despertar, mercado e organizações.
+mercado e organizações.
 
 ---
 
@@ -87,8 +88,8 @@ desconto ×0,75 das demais quando houver uma despertada equipada (D96).
 - Uma despertada **não pode ser base** de outra (um despertar só, sem estágios, D67).
 - Uma base pode ter **várias** despertadas (o sorteio do D96).
 - Um **modelo de personagem nunca vem com variante despertada** (3.3): o despertar é conquista da instância.
-- O catálogo do despertar (perfil do sorteio e modelos de missão) vira o modelo `Awakening` quando a camada entrar
-  (fora do MVP).
+- O catálogo do despertar (perfil do sorteio e modelos de missão) é o modelo `Awakening` (3.14, D151): uma
+  despertada vem de **um** despertar.
 
 **Sem variante (opção A, aprovada):** não existe uma linha "Nenhuma". O personagem sem variante simplesmente **não
 tem variante ligada** (zero linhas na ligação com `CharacterTemplate`, 3.3). `NONE` só aparece na **skill none** e no
@@ -480,7 +481,7 @@ Skill.create({ ...flameWave, target: SkillTarget.ALLY })
 **Domínio:** `src/domain/skills/entities/skill.ts`; referência em `src/domain/skills/services/skill-reference.ts`.
 Fábrica de teste em `test/factories/make-skill.ts`.
 
-**Fora do MVP:** a skill única do DOM e o catálogo do despertar (`Awakening`) entram com essas camadas.
+**Fora do MVP:** a skill única do DOM entra com a camada dele. O catálogo do despertar está em 3.14.
 
 ### 3.5 Account (jogador)
 
@@ -574,6 +575,9 @@ fica no modelo (`CharacterTemplate`, 3.3).
 | `danger` | `DangerLevel` | periculosidade atual; começa na inicial do modelo e só sobe (D86) |
 | `dangerPoints` | inteiro | pontos de periculosidade (limiares 500 / 1.500 / 4.000 / 10.000, D100); a subida entra com a progressão |
 | `awakenedVariantId` | FK opcional → `Variant` | a variante despertada; nulo = não despertou |
+| `awakeningId` | FK opcional → `Awakening` | o despertar sorteado (D151); nulo = ainda não sorteou. Restrict: o admin não apaga um despertar sorteado |
+| `awakeningMissions` | JSON `[{ kind, threshold, progress }]` | as 3 missões ocultas (uma de cada categoria), cópia do pool com o limiar de sangue puro |
+| `awakeningDrawnAt` | data, opcional | quando sorteou |
 | `freeHp` … `freeWill` | 7 inteiros | pontos livres por stat; **HP em pontos** (1 ponto = 5 de HP, D69) |
 | `createdAt`, `updatedAt` | data | |
 
@@ -600,6 +604,8 @@ traços, DOM e equipamento quando essas camadas entrarem). Guardar o valor criar
 | `addTrait` | só `CONQUERED`; sem repetir; no máximo 5; soma dos `STAT_MODIFIER` positivos num stat ≤ +15% (D88) |
 | `allocateFreePoints` | inteiros ≥ 0; total ≤ disponível no nível; cada stat ≤ teto da classe |
 | `awaken` | só com **exatamente 1 variante**; nível ≥ 80; a variante é uma despertada **da variante do personagem**; um despertar só (D67, D96) |
+| `startAwakening` | guarda o despertar sorteado e as 3 missões; uma vez só, nível ≥ 80, sem ter despertado (D151) |
+| `recordAwakeningBattle` | soma uma batalha que conta nas missões (sem passar do limiar); devolve se as 3 estão cumpridas. `awakeningHint` dá a dica (`SILENT`, `SIGNS`, `IMMINENT`, `AWAKENED`) |
 | `Character.restore` | recompõe a partir do banco, sem as regras de criação |
 
 **Exemplo** (fictício): a Kael (Vanguarda, perfil 700 / 100 / 120 / 75 / 85 / 55 / 95) de `tester_01`.
@@ -630,8 +636,8 @@ kael.allocateFreePoints({ ...EMPTY_FREE_POINTS, ATTACK: 26 }, kaelTemplate)
 **Domínio:** `src/domain/characters/entities/character.ts`; curva em `services/level-curve.ts`; pontos livres em
 `services/free-points.ts`.
 
-**Fica para depois:** subida da periculosidade, DOM (pilares e níveis), equipamento vivo, contratos, títulos e as
-missões ocultas do despertar (o `awaken` já valida a regra; o sorteio e as missões entram com a camada).
+**Fica para depois:** subida da periculosidade, DOM (pilares e níveis), equipamento vivo, contratos e títulos. O
+despertar (sorteio, missões e dica) está em 3.14.
 
 ### 3.7 CharacterSkill (jogador)
 
@@ -1076,15 +1082,47 @@ grava a carteira **antes** de entregar (baú comprado, tentativa de aprimorar), 
 personagens **não exclusivos** dela; novo entra no Elenco como no cadastro (nível 0, kit básico, traço de família);
 repetido ou raridade sem personagem vira moeda pelo valor de venda (3.3). Mais os fragmentos do nível (E 1, D 2, C 4).
 
+### 3.14 Awakening (catálogo) e o despertar do personagem
+
+O despertar do admin (D67, D96, D151; regra em `awakening_brief.md` 7). Domínio em
+`src/domain/characters/entities/awakening.ts`; sorteio em `services/awakening-draw.ts`; missões e dica em
+`services/awakening-missions.ts`; medição na batalha em `src/domain/combat/services/awakening-stats.ts`.
+
+| Campo | Tipo | Regra |
+|---|---|---|
+| `id` | uuid | |
+| `key` | texto, **único** | |
+| `name`, `description` | texto | |
+| `variantId` | FK → `Variant`, **único** | uma variante **despertada**; uma por despertar. A base (quem pode sortear) é o `awakensFromId` dela |
+| `requirements` | JSON `[{ stat, level: HIGH \| LOW }]` | 2 a 3, sem repetir stat, no máximo 2 de cada nível |
+| `missions` | JSON `[{ kind, threshold }]` | sem repetir `kind`, limiar inteiro ≥ 1, ao menos uma de cada categoria (`AwakeningMissionKind`, 11 tipos) |
+
+**Não entra na `version` do catálogo:** o despertar não muda o replay de uma batalha (a foto já guarda as skills).
+
+**No personagem** (3.6): o sorteio grava `awakeningId`, `awakeningMissions` e `awakeningDrawnAt`. No fim de cada
+batalha (`battle-rewards.ts`): primeiro as missões de quem já sorteou (se a batalha conta: Intermediário ou acima e
+NPC fora das últimas 5), depois o despertar de quem cumpriu as 3 (com os blocos de recuperação, `SkillOffer.source =
+AWAKENING`), por último o sorteio de quem está no nível 80 ou mais e ainda não sorteou. Cada sorte usa a seed da
+batalha com um sal próprio.
+
+**`SkillOffer.source`** (`SkillOfferSource`): `LEVEL_UP` (subida, D77) ou `AWAKENING` (recuperação, D151). A chave
+única é `characterId` + `level` + `source`: o bloco de recuperação do 85 convive com o bloco normal do 85.
+
 ## 4. Seed do MVP (conteúdo)
 
 Código: `prisma/seed/content/` (o conteúdo, criado pelas entidades do domínio e validado por elas) e `prisma/seed.ts`
 (grava no banco). Rodar: `npm run db:seed` (precisa do Postgres e da migração). Idempotente: atualiza pela `key` e
 recria as ligações. O simulador usa o mesmo conteúdo sem banco (`loadSeedContent()`).
 
-**Variantes (18):** antimatéria, tempo e alma (Fundamental); relâmpago, gelo superiônico, combustão, névoa
+**Variantes (22):** antimatéria, tempo e alma (Fundamental); relâmpago, gelo superiônico, combustão, névoa
 (Elemental); explosão, som (Vetorial); endurecimento, terra, rocha, metal (Material); regeneração, ossos (Biológica);
-sombra, ilusão, telecinese (Psíquica).
+sombra, ilusão, telecinese (Psíquica). Mais 4 **despertadas** (D151): Sombra Abissal e Eclipse (de sombra), Cristal
+(de terra) e Plasma (de combustão).
+
+**Despertares (4, D151, `prisma/seed/content/awakenings.ts`):** um por despertada, com perfil e pool de 7 a 8
+missões (`awakening_brief.md` 7.4). As 5 skills de cada um ficam com o personagem da variante base (Nox, Gaia e Oren
+Ignara), nos níveis 80, 85, 90, 95 e 100, com Poder ×1,25 e Desgaste ×1,5 (`skillReference` com `isAwakened`). Os
+NPCs não usam (não estão no `npcPriority`).
 
 **Personagens (12).** Reformulados a partir das fichas do usuário (`art_direction.md` 4). Stats = perfil da classe
 (`classes_brief.md` 2). O elenco foi montado para **testar tudo** com poucos personagens: cada passiva usa um gatilho
@@ -1121,7 +1159,7 @@ Mesmo molde dos 12 (kit de 4 + Reforçada, Forte e Final).
 **Carteiras de teste:** `tester_01` e `admin` começam com 20.000 M e 50 de cada fragmento (só na criação da carteira;
 rodar o seed de novo não repõe).
 
-**Skills (97):** 7 a 9 por personagem, todas com os números de `skillReference` (tipo + forma, D92, D108, D109) e
+**Skills (165, 20 delas despertadas):** 7 a 9 por personagem (mais as despertadas), todas com os números de `skillReference` (tipo + forma, D92, D108, D109) e
 acerto base 0,8. Kit básico (nível 0): Básica, Padrão, Função da classe, Assinatura (0,8 do Poder + efeito pequeno).
 Pool: Padrão extra (nível 0), Reforçada (20), Forte (40) e Final (60). Juntas cobrem as 8 classes, as 7 linhagens
 (incluindo none), os 4 alcances, as 4 áreas, os 3 alvos, os 7 status e todos os efeitos de skill

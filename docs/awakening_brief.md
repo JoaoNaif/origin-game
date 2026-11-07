@@ -98,8 +98,9 @@ A dica **não revela** qual despertar nem quais missões faltam.
 
 ## 5. Pendências
 
-Fechadas em D96 (seção 6). Resta o **catálogo** (admin: despertares por variante e perfil de cada um), os **modelos de
-missão** (pool de ~8 por despertar, admin) e o ajuste fino por simulação.
+Fechadas em D96 (seção 6) e implementadas em D151 (seção 7): catálogo `Awakening` no admin, 11 tipos de missão e 4
+despertares no seed. Resta o ajuste fino por simulação, o despertar no ranqueado (faixas, quando o PvP entrar) e
+despertares para as outras variantes (conteúdo do admin).
 
 ## 6. Valores (D96)
 
@@ -141,3 +142,63 @@ missão** (pool de ~8 por despertar, admin) e o ajuste fino por simulação.
 - **Dica:** mantida (Sinais com 1 missão, Iminente com 2).
 - **Despertar novo:** se o admin criar um despertar para uma variante, personagens elegíveis acima do nível 80
   entram no sorteio.
+
+## 7. Na prática (D151)
+
+Como a regra virou código. **[PLACEHOLDER aprovado]** nos números.
+
+### 7.1 Catálogo (admin)
+
+Cada **despertar** (`Awakening`) é uma linha do catálogo ligada a uma **variante despertada** (a que tem
+`awakensFromId`). Guarda:
+
+- **Perfil:** 2 a 3 requisitos `{ stat, HIGH | LOW }`, sem repetir stat, no máximo 2 altos e 2 baixos.
+- **Pool de missões:** lista de `{ tipo, limiar }`, sem repetir tipo, com **ao menos uma de cada categoria**.
+
+**Alto e baixo:** cada stat final do personagem (nível, pontos livres e traços) é dividido pela **média daquele stat
+nos perfis das 8 classes** (`classes_brief.md` 2). Alto = entre os 2 maiores; baixo = entre os 2 menores. Empate
+segue a ordem dos stats (HP, Ataque, Defesa, Velocidade, Precisão, Esquiva, Vontade).
+
+### 7.2 Tipos de missão
+
+Fixos no código (cada um precisa ser medido nos eventos da batalha); o admin escolhe quais entram no pool e o limiar.
+
+| Categoria | Tipo | O que conta | Limiar padrão |
+|---|---|---|---|
+| Acumulativa | `KILLS` | inimigos abatidos (o último golpe é dele) | 100 |
+| | `STATUS_APPLIED` | status aplicados num inimigo que pegaram | 100 |
+| | `HEAVY_HITS` | usos de skill Forte ou Final que causaram dano num inimigo | 100 |
+| | `SUPPORT_ACTIONS` | curas e escudos em aliados (cada alvo conta) | 100 |
+| Condição repetida | `DAMAGE_SHARE` | batalhas com ≥40% do dano da squad | 15 |
+| | `SUPPORT_SHARE` | batalhas com ≥35% da cura e escudo da squad | 15 |
+| | `LAST_ALIVE_WIN` | vitórias em que ele é o último vivo | 15 |
+| | `MULTI_KILL` | batalhas com ≥2 abates | 15 |
+| Marco único | `SOLE_SURVIVOR_WIN` | vencer sendo o único vivo | 1 |
+| | `ENEMY_HP_SHARE` | causar ≥60% do HP total inimigo numa batalha | 1 |
+| | `TRIPLE_KILL` | abater 3 numa batalha | 1 |
+
+### 7.3 Fluxo
+
+1. **Sorteio:** no fim da primeira batalha em que o personagem (1 variante, sem despertar) já está no nível 80 ou mais
+   e a variante dele tem despertar. Peso `1 + 0,75 × afinidade`. Sorteia também **3 missões, uma de cada categoria**
+   do pool, e guarda uma cópia (mudar o pool depois não afeta quem já sorteou). Sangue puro: limiar ×0,7, para baixo,
+   mínimo 1.
+2. **Missões:** contam a partir da batalha seguinte. No PvE, só a partir do **Intermediário** e contra squad de NPC
+   **fora das últimas 5 batalhas** da conta. Desistência não conta.
+3. **Dica:** 0 cumpridas = Silêncio, 1 = Sinais, 2 = Iminente. O jogador nunca vê o despertar nem as missões.
+4. **Despertar:** com as 3 cumpridas, o personagem desperta no fim da batalha (o resultado avisa) e abre **blocos de
+   recuperação**, um para cada nível de despertada já atingido (80, 85, ..., até o nível atual), cada um com **ao
+   menos 1 skill despertada**. Sem despertada sobrando para aquele nível, o bloco não abre. Os blocos normais de 80 a
+   100 também garantem 1 despertada enquanto restarem.
+
+### 7.4 Conteúdo do seed
+
+| Variante base | Despertar | Perfil | Personagem |
+|---|---|---|---|
+| Sombra | Sombra Abissal | Ataque alto, Velocidade alta, Defesa baixa | Nox |
+| Sombra | Eclipse | Precisão alta, Vontade alta | Nox |
+| Terra | Cristal | Vontade alta, HP alto, Ataque baixo | Gaia |
+| Combustão | Plasma | Ataque alto, Precisão alta, Esquiva baixa | Oren Ignara |
+
+5 skills por despertar, nos níveis 80, 85, 90, 95 e 100, com Poder ×1,25 e Desgaste ×1,5 sobre a referência do tipo e
+da forma (`skillReference` com `isAwakened`). Lista em `prisma/seed/content/awakenings.ts`.

@@ -88,8 +88,15 @@ A conta: `{ id, username, displayName }` (a senha nunca sai, nem como hash).
 ## Personagens (`characters`)
 
 O personagem: `{ id, templateKey, name, characterClass, level, xp, xpToNextLevel, danger, awakenedVariantKey,
-stats, freePoints: { allocated, available, maxPerStat }, traitKeys, skills: [{ key, name, source, isEnhanced,
-buildSlot }] }`. `stats` são os de fora da batalha (nível + pontos livres + traços). `buildSlot` 1 a 4 = na build.
+awakeningHint, stats, freePoints: { allocated, available, maxPerStat }, traitKeys, skills: [{ key, name, source,
+isEnhanced, buildSlot }] }`. `stats` são os de fora da batalha (nível + pontos livres + traços). `buildSlot` 1 a 4 =
+na build.
+
+**Despertar (D67, D151):** tudo oculto. A partir do nível 80, o servidor sorteia o despertar no fim de uma batalha e
+abre 3 missões que o jogador não vê. `awakeningHint` é a única pista: `SILENT` (nada, ou nenhuma missão cumprida),
+`SIGNS` (1 cumprida: "algo desperta"), `IMMINENT` (2: está perto) ou `AWAKENED`. Ao despertar, `awakenedVariantKey`
+passa a ter a variante despertada, a recompensa da batalha vem com `awakened: true` e abrem os blocos de recuperação
+(abaixo).
 
 | Rota | Respostas |
 |---|---|
@@ -100,11 +107,13 @@ buildSlot }] }`. `stats` são os de fora da batalha (nível + pontos livres + tr
 
 **Blocos de skill (D77, D135):** a cada 5 níveis o personagem ganha um bloco de até 3 skills e escolhe 1. O bloco
 nasce no fim da batalha (`rewards[].newSkillOffers` diz quantos abriram), fica numa fila sem prazo e não dá para
-recusar. A skill escolhida fica guardada; para usar, entra na build.
+recusar. A skill escolhida fica guardada; para usar, entra na build. Despertado, cada bloco de 80 a 100 traz ao
+menos 1 skill despertada enquanto restarem. Ao despertar, abrem **blocos de recuperação** (`source: AWAKENING`), um
+para cada nível de despertada já atingido (80, 85...), cada um com ao menos 1 despertada (D151).
 
 | Rota | Respostas |
 |---|---|
-| `GET /me/skill-offers` | 200 `{ offers: [{ id, characterId, level, skills }] }`: os blocos pendentes, do mais antigo para o mais novo; `skills` no mesmo formato de `GET /templates` |
+| `GET /me/skill-offers` | 200 `{ offers: [{ id, characterId, level, source, skills }] }`: os blocos pendentes, do mais antigo para o mais novo; `source` = `LEVEL_UP` ou `AWAKENING`; `skills` no mesmo formato de `GET /templates` |
 | `POST /skill-offers/:id/choose` `{ skillKey }` | 200 `{ character }` com a skill aprendida (`source: OFFER`, `buildSlot: null`); 400 skill fora do bloco ou bloco já escolhido; 403 de outra conta; 404 |
 
 **Aprimorar skill (D80, D100, D150):** tentativa paga, com 25% de chance (fixa, sem pity). O custo sai na hora, dê certo
@@ -176,8 +185,9 @@ unidades vem tudo, com `ready` em cada skill (fora de recarga).
 **`events`:** a lista de `BattleEvent` (`src/domain/combat/engine/battle-events.ts`), em ordem: `TURN`, `SKILL`,
 `DAMAGE` (com `linked: true` quando veio pelo Ligado), `HEAL`, `STATUS`, `MOVE`, `DEFEATED`, `BATTLE_END` e os demais, como `SKIP` (`reason`: `STUN` ou `SLEEP`), `WOKE` (acordou) e `CLEANSE` (Purificar; `status` é o que saiu). É o que a tela anima.
 
-**`rewards`** (só quando a batalha acaba): `[{ characterId, xp, levelsGained, level, newSkillOffers }]` dos 4 que
-entraram (D134); `newSkillOffers` = blocos de skill que a subida abriu (D135). Ficam guardados na batalha:
+**`rewards`** (só quando a batalha acaba): `[{ characterId, xp, levelsGained, level, newSkillOffers, awakened? }]`
+dos 4 que entraram (D134); `newSkillOffers` = blocos de skill que a subida abriu (D135), mais os de recuperação;
+`awakened: true` só em quem despertou nesta batalha (D151). Ficam guardados na batalha:
 `GET /battles/:id` traz os mesmos em `result.rewards`, para a tela de resultado depois de uma reconexão.
 
 **`loot`** (só quando a batalha acaba; nulo antes): `{ coins, fragments: { [linhagem]: quantidade }, chest: { id, tier } | null }`.
@@ -220,16 +230,18 @@ Toda rota daqui dá 403 para quem não é admin (401 sem login). O front mostra 
 
 | Rota | Resposta |
 |---|---|
-| `GET /admin/catalog` | 200 `{ catalog: { version, variants, traits, templates, skills, fields, npcSquads } }`: tudo, pela `key`, inclusive a formação e as skills dos NPCs (que o jogador não vê). Cada item vem **no formato do corpo da edição** (abaixo) mais campos só de leitura, então a tela pode editar e devolver o mesmo objeto |
-| `GET /admin/options` | 200 `{ options }`: as listas dos selects (linhagens, classes, raridades, periculosidade, exclusividade, stats, categorias e origens de traço, tiers, alvos, alcances, áreas, papéis do kit, status, perfis e dificuldades da IA), os tipos de efeito (`effectTypes.trait`, `.skill`, `.passiveTrigger`, `.passiveEffect`) e as regras (`rules`: orçamento por classe e tolerância, referência por tier, Poder máximo, nível do despertar, faixa de nível dos NPCs por dificuldade, limites de traços, variantes e campos) |
-| `GET /admin/skills/reference?tier=&target=&range=&area=&isNone=` | 200 `{ reference: { power, desgastePercent, cooldown, minLevel } }`: os valores de referência do tipo + forma (D16, D92) enquanto o admin monta a skill. `range` só em skill de inimigo; `isNone=true` para skill sem variante |
+| `GET /admin/catalog` | 200 `{ catalog: { version, variants, traits, templates, skills, fields, npcSquads, awakenings } }`: tudo, pela `key`, inclusive a formação e as skills dos NPCs (que o jogador não vê). Cada item vem **no formato do corpo da edição** (abaixo) mais campos só de leitura, então a tela pode editar e devolver o mesmo objeto |
+| `GET /admin/options` | 200 `{ options }`: as listas dos selects (linhagens, classes, raridades, periculosidade, exclusividade, stats, categorias e origens de traço, tiers, alvos, alcances, áreas, papéis do kit, status, perfis e dificuldades da IA, `awakeningRequirementLevels`, `awakeningMissionCategories` e `awakeningMissionKinds` com a categoria e o limiar padrão de cada tipo), os tipos de efeito (`effectTypes.trait`, `.skill`, `.passiveTrigger`, `.passiveEffect`) e as regras (`rules`: orçamento por classe e tolerância, referência por tier, Poder máximo, nível do despertar, faixa de nível dos NPCs por dificuldade, limites de traços, variantes e campos, `awakeningRequirements` e `awakeningMissionRules`) |
+| `GET /admin/skills/reference?tier=&target=&range=&area=&isNone=&isAwakened=` | 200 `{ reference: { power, desgastePercent, cooldown, minLevel } }`: os valores de referência do tipo + forma (D16, D92) enquanto o admin monta a skill. `range` só em skill de inimigo; `isNone=true` para skill sem variante; `isAwakened=true` para skill de variante despertada (Poder ×1,25 até 2,5, Desgaste ×1,5, nível mínimo 80, D96) |
 
 Campos só de leitura no `GET /admin/catalog`: modelo `skillKeys` (as skills dele, kit primeiro); skill `lineage`,
-`isAwakened`, `templateKey` e `reference`; squad de NPC `level`. No `PUT` eles são ignorados.
+`isAwakened`, `templateKey` e `reference`; squad de NPC `level`; despertar `baseVariantKey`. No `PUT` eles são
+ignorados.
 
 ### Criar, editar e apagar
 
-`:collection` = `variants`, `traits`, `templates`, `skills`, `fields` ou `npc-squads` (outro valor dá 400).
+`:collection` = `variants`, `traits`, `templates`, `skills`, `fields`, `npc-squads` ou `awakenings` (outro valor dá
+400).
 
 | Rota | Respostas |
 |---|---|
@@ -275,7 +287,17 @@ andamento segue com a foto do início. `version` muda a cada gravação. **Rodar
 { "name": "...", "description": null, "profile": "BALANCED", "difficulty": "BEGINNER",
   "members": [{ "templateKey": "kael-vaz", "level": 18, "row": 0, "column": 0, "awakenedVariantKey": null,
                 "skillKeys": ["...", "...", "...", "..."], "traitKeys": [] }] }
+// awakenings (D151; variantKey = uma variante despertada, uma por despertar; requirements: 2 a 3, sem repetir stat,
+//             no máximo 2 HIGH e 2 LOW; missions: sem repetir kind, ao menos uma de cada categoria)
+{ "name": "Cristal", "description": null, "variantKey": "cristal",
+  "requirements": [{ "stat": "WILL", "level": "HIGH" }, { "stat": "HP", "level": "HIGH" }, { "stat": "ATTACK", "level": "LOW" }],
+  "missions": [{ "kind": "SUPPORT_ACTIONS", "threshold": 100 }, { "kind": "SUPPORT_SHARE", "threshold": 15 },
+               { "kind": "SOLE_SURVIVOR_WIN", "threshold": 1 }] }
 ```
+
+**Despertar no catálogo:** as skills do despertar são skills comuns na variante despertada (`minLevel` ≥ 80), com a
+`key` do modelo que as recebe. Apagar um despertar que algum personagem já sorteou dá 409 ("jogadores"). Mudar o
+pool não afeta quem já sorteou (o personagem guarda a cópia das 3 missões).
 
 ### Contas
 
