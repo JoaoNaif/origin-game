@@ -3,8 +3,14 @@ import { SeededRng } from '@/core/rng/seeded-rng'
 import { GameCatalog } from '@/domain/catalog/applications/repositories/catalog-repository'
 import { CharactersRepository } from '@/domain/characters/applications/repositories/characters-repository'
 import { SkillOffersRepository } from '@/domain/characters/applications/repositories/skill-offers-repository'
-import { skillOffersOnLevelUp } from '@/domain/characters/applications/services/skill-offers-on-level-up'
+import { AiDifficulty } from '@/domain/ai/enums/ai-difficulty'
+import {
+  skillOffersOnAwakening,
+  skillOffersOnLevelUp,
+} from '@/domain/characters/applications/services/skill-offers-on-level-up'
 import { Character } from '@/domain/characters/entities/character'
+import { drawAwakening } from '@/domain/characters/services/awakening-draw'
+import { AwakeningBattleStats } from '@/domain/characters/value-objects/awakening-progress'
 import { ChestsRepository } from '@/domain/economy/applications/repositories/chests-repository'
 import { WalletsRepository } from '@/domain/economy/applications/repositories/wallets-repository'
 import { creditWallet } from '@/domain/economy/applications/services/credit-wallet'
@@ -17,6 +23,7 @@ import { BattleEngine } from '../../engine/battle-engine'
 import { Battle } from '../../entities/battle'
 import { BattleSide, BattleStatus } from '../../enums/battle-enums'
 import { BattleReward } from '../../value-objects/battle-reward'
+import { awakeningBattleStats } from '../../services/awakening-stats'
 import {
   battleMetrics,
   battleXp,
@@ -51,6 +58,17 @@ const SKILL_OFFER_SEED_SALT = 0x2545f491
 /** Sal da sorte da moeda, fragmentos e baú do fim (D150). */
 const LOOT_SEED_SALT = 0x6c8e9cf5
 
+/** Sal da sorte do sorteio do despertar e das missões (D151). */
+const AWAKENING_SEED_SALT = 0x1b873593
+
+/** Anti-farm do despertar no PvE (D96): a partir do Intermediário e contra NPC fora das últimas 5 batalhas. */
+export const AWAKENING_PVE_RULES = {
+  minDifficulty: AiDifficulty.INTERMEDIATE,
+  distinctNpcWindow: 5,
+} as const
+
+const DIFFICULTY_ORDER: readonly AiDifficulty[] = Object.values(AiDifficulty)
+
 /**
  * Entrega o fim da batalha PvE e grava na batalha: o XP aos 4 personagens que entraram, com os blocos de skill dos
  * níveis atravessados (D77, D134, D135), e a moeda, os fragmentos e o baú na conta (D100, D104, D150). Só uma vez:
@@ -69,14 +87,24 @@ export async function deliverBattleRewards(
     battle.accountId.toString(),
     { status: BattleStatus.FINISHED, limit: SAME_NPC_XP.window + 1 }
   )
-  const sameNpcRepeats = recent
-    .filter((b) => b.id !== battle.id.toString())
+  const previous = recent.filter((b) => b.id !== battle.id.toString())
+  const sameNpc = (b: { npcSquadId: string | null }) =>
+    !!battle.npcSquadId && b.npcSquadId === battle.npcSquadId.toString()
+  const sameNpcRepeats = previous
     .slice(0, SAME_NPC_XP.window)
-    .filter(
-      (b) => battle.npcSquadId && b.npcSquadId === battle.npcSquadId.toString()
-    ).length
+    .filter(sameNpc).length
 
-  const rewards = await grantBattleXp(battle, engine, sameNpcRepeats, deps)
+  const countsForAwakening =
+    DIFFICULTY_ORDER.indexOf(battle.aiDifficulty) >=
+      DIFFICULTY_ORDER.indexOf(AWAKENING_PVE_RULES.minDifficulty) &&
+    !previous.slice(0, AWAKENING_PVE_RULES.distinctNpcWindow).some(sameNpc)
+
+  const rewards = await grantBattleXp(
+    battle,
+    engine,
+    { sameNpcRepeats, countsForAwakening },
+    deps
+  )
   const loot = await grantBattleLoot(battle, sameNpcRepeats, deps)
 
   const recorded = [
@@ -88,11 +116,18 @@ export async function deliverBattleRewards(
   return { rewards, loot }
 }
 
-/** XP do fim (D76, D92). Personagem que já não está na conta fica sem XP. */
+/**
+ * XP do fim (D76, D92) e o despertar (D151): as missões ocultas de quem já sorteou (se a batalha conta), o despertar
+ * de quem cumpriu as 3 (com os blocos de recuperação) e o sorteio de quem já está no nível 80. Personagem que já não
+ * está na conta fica sem nada.
+ */
 async function grantBattleXp(
   battle: Battle,
   engine: BattleEngine,
-  sameNpcRepeats: number,
+  {
+    sameNpcRepeats,
+    countsForAwakening,
+  }: { sameNpcRepeats: number; countsForAwakening: boolean },
   deps: BattleRewardsDeps
 ): Promise<CharacterReward[]> {
   const { charactersRepository, skillOffersRepository } = deps
@@ -136,7 +171,9 @@ async function grantBattleXp(
     })),
   })
 
+  const awakeningStats = playerAwakeningStats(battle, engine)
   const rng = new SeededRng((battle.seed ^ SKILL_OFFER_SEED_SALT) >>> 0)
+  const awakeningRng = new SeededRng((battle.seed ^ AWAKENING_SEED_SALT) >>> 0)
   const rewards: CharacterReward[] = []
   for (const unit of units) {
     const character: Character | undefined = characters.find(
@@ -147,16 +184,48 @@ async function grantBattleXp(
     const amount = xp.get(unit.ref) ?? 0
     const fromLevel = character.level
     const levelsGained = character.gainXp(amount)
-    await charactersRepository.save(character)
+    const characterPending = pending.filter((o) =>
+      o.characterId.equals(character.id)
+    )
 
     const offers = skillOffersOnLevelUp({
       character,
       fromLevel,
       catalog: deps.catalog,
-      pending: pending.filter((o) => o.characterId.equals(character.id)),
+      pending: characterPending,
       rng,
       now: deps.now,
     })
+
+    const awakened =
+      countsForAwakening &&
+      advanceAwakening(character, awakeningStats.get(unit.ref), deps.catalog)
+    if (awakened) {
+      offers.push(
+        ...skillOffersOnAwakening({
+          character,
+          catalog: deps.catalog,
+          pending: [...characterPending, ...offers],
+          rng,
+          now: deps.now,
+        })
+      )
+    }
+
+    // sorteio depois das missões: elas só contam a partir da batalha seguinte
+    const template = deps.catalog.templates.get(character.templateId.toValue())
+    const drawn = template
+      ? drawAwakening({
+          character,
+          template,
+          awakenings: deps.catalog.awakenings.values(),
+          rng: awakeningRng,
+          now: deps.now,
+        })
+      : null
+    if (drawn) character.startAwakening(drawn)
+
+    await charactersRepository.save(character)
     if (offers.length > 0) await skillOffersRepository.createMany(offers)
 
     rewards.push({
@@ -165,10 +234,56 @@ async function grantBattleXp(
       levelsGained,
       level: character.level,
       newSkillOffers: offers.length,
+      ...(awakened ? { awakened: true } : {}),
     })
   }
 
   return rewards
+}
+
+/** O que a batalha mediu de cada personagem do jogador para as missões do despertar (D151). */
+function playerAwakeningStats(
+  battle: Battle,
+  engine: BattleEngine
+): Map<string, AwakeningBattleStats> {
+  const { player, opponent } = battle.snapshot
+  const refs = player.units.map((u) => u.ref)
+
+  return awakeningBattleStats({
+    events: engine.events,
+    side: BattleSide.PLAYER,
+    refs,
+    aliveRefs: refs.filter((ref) => engine.unit(ref).alive),
+    won: battle.winner === BattleSide.PLAYER,
+    enemyTotalHp: opponent.units.reduce(
+      (sum, u) => sum + engine.unit(u.ref).maxHp,
+      0
+    ),
+    tierOf: (ref, skillKey) =>
+      player.units
+        .find((u) => u.ref === ref)
+        ?.skills.find((s) => s.key === skillKey)?.tier ?? null,
+  })
+}
+
+/** Soma a batalha nas missões e desperta quem cumpriu as 3 (D151). Devolve se despertou. */
+function advanceAwakening(
+  character: Character,
+  stats: AwakeningBattleStats | undefined,
+  catalog: GameCatalog
+): boolean {
+  if (!stats || !character.recordAwakeningBattle(stats)) return false
+
+  const awakening = catalog.awakenings.get(
+    character.awakening!.awakeningId.toValue()
+  )
+  const variant = awakening
+    ? catalog.variants.get(awakening.variantId.toValue())
+    : undefined
+  const template = catalog.templates.get(character.templateId.toValue())
+  if (!variant || !template) return false
+
+  return character.awaken(variant, template).isRight()
 }
 
 /** Moeda, fragmentos e baú do fim (D150), com os modificadores do XP (dificuldade e mesmo NPC). */

@@ -41,6 +41,7 @@ describe('Fetch Pending Skill Offers (e2e)', () => {
         id: offer.id,
         characterId: gaia.id,
         level: 5,
+        source: 'LEVEL_UP',
         skills: [
           expect.objectContaining({
             key: 'gaia:raizes',

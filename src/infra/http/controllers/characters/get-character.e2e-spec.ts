@@ -34,6 +34,8 @@ describe('Get Character (e2e)', () => {
       templateKey: characters[0].templateKey,
       skills: expect.any(Array),
       traitKeys: expect.any(Array),
+      // conta nova: nada sorteado (D151)
+      awakeningHint: 'SILENT',
     })
   })
 

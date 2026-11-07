@@ -28,6 +28,8 @@ export class CharacterPresenter {
       awakenedVariantKey: character.awakenedVariantId
         ? catalog.variants.get(character.awakenedVariantId.toValue())!.key
         : null,
+      /** Dica do despertar (D67): SILENT, SIGNS, IMMINENT ou AWAKENED; nunca qual é nem as missões. */
+      awakeningHint: character.awakeningHint,
       stats: computeStats({
         profile: template.stats,
         level: character.level,

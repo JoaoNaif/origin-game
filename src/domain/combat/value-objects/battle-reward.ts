@@ -5,6 +5,8 @@ export interface BattleReward {
   levelsGained: number
   /** O nível depois do XP. */
   level: number
-  /** Blocos de skill que a subida abriu (D77). */
+  /** Blocos de skill que a subida abriu (D77), mais os de recuperação se despertou (D151). */
   newSkillOffers: number
+  /** Despertou nesta batalha (D151): o jogador só fica sabendo agora. */
+  awakened?: boolean
 }

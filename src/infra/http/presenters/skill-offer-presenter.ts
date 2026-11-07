@@ -9,6 +9,8 @@ export class SkillOfferPresenter {
       id: offer.id.toString(),
       characterId: offer.characterId.toString(),
       level: offer.level,
+      /** `LEVEL_UP` (subida de nível) ou `AWAKENING` (recuperação ao despertar, D151). */
+      source: offer.source,
       skills: offer.skillIds.flatMap((id) => {
         const skill = catalog.skills.get(id.toValue())
         return skill ? [SkillPresenter.toHTTP(skill)] : []
