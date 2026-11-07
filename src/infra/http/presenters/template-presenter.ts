@@ -39,6 +39,7 @@ export class TemplatePresenter {
       characterClass: template.characterClass,
       rarity: template.rarity,
       initialDanger: template.initialDanger,
+      isStarter: template.isStarter,
       variants: template.variants.map(({ variantId, isPrimary }) => {
         const variant = catalog.variants.get(variantId.toValue())!
 

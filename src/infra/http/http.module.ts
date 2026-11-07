@@ -41,10 +41,19 @@ import { StartPveBattleController } from './controllers/battles/start-pve-battle
 import { SubmitBattleActionController } from './controllers/battles/submit-battle-action.controller'
 import { UpdateAccountController } from './controllers/accounts/update-account.controller'
 import { UpdateSquadFormationController } from './controllers/squads/update-squad-formation.controller'
+import { BuyChestController } from './controllers/economy/buy-chest.controller'
+import { BuyFragmentsController } from './controllers/economy/buy-fragments.controller'
+import { EnhanceSkillController } from './controllers/characters/enhance-skill.controller'
+import { FetchAccountChestsController } from './controllers/economy/fetch-account-chests.controller'
+import { FetchEconomyController } from './controllers/economy/fetch-economy.controller'
+import { GetWalletController } from './controllers/economy/get-wallet.controller'
+import { OpenChestController } from './controllers/economy/open-chest.controller'
+import { SellFragmentsController } from './controllers/economy/sell-fragments.controller'
 import { adminUseCases } from './use-cases/admin.providers'
 import { battlesUseCases } from './use-cases/battles.providers'
 import { accountsUseCases } from './use-cases/accounts.providers'
 import { charactersUseCases } from './use-cases/characters.providers'
+import { economyUseCases } from './use-cases/economy.providers'
 import { squadsUseCases } from './use-cases/squads.providers'
 
 // Controllers e use-cases (providers) de cada contexto entram aqui.
@@ -72,6 +81,15 @@ import { squadsUseCases } from './use-cases/squads.providers'
     AllocateFreePointsController,
     FetchPendingSkillOffersController,
     ChooseSkillOfferController,
+    EnhanceSkillController,
+    // economia (D150)
+    FetchEconomyController,
+    GetWalletController,
+    BuyFragmentsController,
+    SellFragmentsController,
+    FetchAccountChestsController,
+    BuyChestController,
+    OpenChestController,
     // squads
     CreateSquadController,
     FetchAccountSquadsController,
@@ -103,6 +121,7 @@ import { squadsUseCases } from './use-cases/squads.providers'
     ...squadsUseCases,
     ...battlesUseCases,
     ...adminUseCases,
+    ...economyUseCases,
   ],
 })
 export class HttpModule {}

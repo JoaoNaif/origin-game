@@ -109,6 +109,37 @@ const VARIANTS: {
     lineage: Lineage.PSYCHIC,
     description: 'Move e arremessa à distância.',
   },
+  // personagens de baú (D150), das famílias ancestrais (`world_build.md` 4.2)
+  {
+    key: 'rocha',
+    name: 'Rocha',
+    lineage: Lineage.MATERIAL,
+    description: 'Endurece o corpo e ergue a pedra do chão (Granek).',
+  },
+  {
+    key: 'metal',
+    name: 'Metal',
+    lineage: Lineage.MATERIAL,
+    description: 'Molda e forja metal no meio da luta (Kovarik).',
+  },
+  {
+    key: 'combustao',
+    name: 'Combustão',
+    lineage: Lineage.ELEMENTAL,
+    description: 'Inflama o ar e faz explodir o que toca (Ignara).',
+  },
+  {
+    key: 'nevoa',
+    name: 'Névoa',
+    lineage: Lineage.ELEMENTAL,
+    description: 'Vira névoa para sumir e passar por frestas (Kisar).',
+  },
+  {
+    key: 'som',
+    name: 'Som',
+    lineage: Lineage.VECTORIAL,
+    description: 'Dobra a vibração do ar: fere, cala e faz dormir (Virelli).',
+  },
 ]
 
 export function buildVariants(): Map<string, Variant> {

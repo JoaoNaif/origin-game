@@ -9,8 +9,9 @@ o servidor é a autoridade do combate (D9): o cliente só envia a jogada e exibe
 - Corpo e resposta em JSON. Cada resposta embrulha o recurso numa chave (`{ account }`, `{ characters }`).
 - Erros no formato do Nest: `{ statusCode, message }`. Validação de formato (Zod) devolve 400 com `errors`.
 - **Login por username + senha** (`data_model.md` 3.5): toda rota exige estar logado, menos as marcadas como
-  **públicas** (cadastro, login, refresh, logout, catálogo e health). O que é da conta logada fica em `/me/...`; o
-  que vem pelo id (`/characters/:id`, `/squads/:id`, `/battles/:id`) só serve ao dono (outra conta = 403).
+  **públicas** (cadastro, login, refresh, logout, catálogo, `GET /economy` e health). O que é da conta logada fica em
+  `/me/...`; o que vem pelo id (`/characters/:id`, `/squads/:id`, `/battles/:id`, `/chests/:id`) só serve ao dono
+  (outra conta = 403).
 - **Sessão em cookies httpOnly** (`SameSite=Strict`): o front chama a API com `credentials: 'include'` e nunca vê os
   tokens. `access_token` (JWT RS256, 15 min) vai em toda requisição; `refresh_token` (30 dias, com rotação) só nas
   rotas `/sessions`. Quando uma rota der 401, o front chama `POST /sessions/refresh` e repete; se o refresh também
@@ -25,25 +26,27 @@ o servidor é a autoridade do combate (D9): o cliente só envia a jogada e exibe
 
 | Status | Quando |
 |---|---|
-| 400 | corpo ou parâmetro fora do formato, ou regra do domínio (username inválido, senha curta, build com 3 skills, jogada ilegal) |
+| 400 | corpo ou parâmetro fora do formato, ou regra do domínio (username inválido, senha curta, build com 3 skills, jogada ilegal, saldo insuficiente, baú já aberto) |
 | 401 | não está logado, token vencido ou inválido, ou username/senha errados |
 | 403 | recurso de outra conta, ou origem não permitida (CSRF) |
 | 404 | recurso não existe |
-| 409 | já existe (username, `key` do catálogo), item do catálogo em uso, ou a batalha não aceita a jogada agora (já acabou, não é a vez do jogador, ou outra jogada entrou antes: clique duplo ou duas abas) |
+| 409 | já existe (username, `key` do catálogo), item do catálogo em uso, ou a batalha não aceita a jogada agora (já acabou, não é a vez do jogador, ou outra jogada entrou antes: clique duplo ou duas abas), ou a carteira mudou no meio de um gasto (nada foi gasto: repetir) |
 | 429 | limite de requisições |
 
 ## Fluxo de uma partida contra a máquina
 
-1. `POST /accounts`: cria a conta, já com os 12 personagens (D133). `POST /sessions`: entra.
+1. `POST /accounts`: cria a conta, já com os 12 personagens iniciais (D133, D150). `POST /sessions`: entra.
 2. `POST /me/squads`: salva a formação (4 personagens na grade 3x3).
 3. `GET /npc-squads`: escolhe o adversário.
 4. `POST /me/battle-drafts`: o servidor sorteia o **campo** e mostra antes da escolha do squad (D28).
 5. `POST /battles` com o squad: a batalha começa; a máquina joga até a vez do jogador.
 6. Na vez do jogador: `GET /battles/:id/options` (o que dá para fazer, com a prévia) e `POST /battles/:id/actions`
-   com uma das opções. Repete até `status: FINISHED`; no fim vem o XP (`rewards`, D134).
+   com uma das opções. Repete até `status: FINISHED`; no fim vem o XP (`rewards`, D134) e a moeda, os fragmentos e
+   às vezes um baú (`loot`, D150).
 
 Contas de teste do seed, as duas com os personagens no nível 18: `admin` / `origin123` (papel de admin) e `tester_01` /
-`origin123` (com os blocos de skill do nível 5 do Derik, da Gaia e do Tank).
+`origin123` (com os blocos de skill do nível 5 do Derik, da Gaia e do Tank). As duas começam com 20.000 M e 50 de
+cada fragmento, para testar baús e aprimoramento.
 
 ## Saúde
 
@@ -55,7 +58,7 @@ Contas de teste do seed, as duas com os personagens no nível 18: `admin` / `ori
 
 | Rota | Resposta |
 |---|---|
-| `GET /templates` | 200 `{ templates }`: os 12 modelos com classe, raridade, variantes, traço de família, stats (perfil no nível 100), passiva e skills (kit primeiro, na ordem Básica, Padrão, Função, Assinatura) |
+| `GET /templates` | 200 `{ templates }`: os 18 modelos com classe, raridade, `isStarter` (inicial: a conta nova recebe; os outros só saem de baú), variantes, traço de família, stats (perfil no nível 100), passiva e skills (kit primeiro, na ordem Básica, Padrão, Função, Assinatura) |
 | `GET /traits` | 200 `{ traits }`: os 9 traços com `key`, nome, descrição, categoria, origem (`TEMPLATE` família / `CONQUERED`), variante (família) e efeitos. É o que a tela mostra no lugar das `traitKeys` dos personagens, das unidades e do `requiredTraitKeys` dos campos |
 | `GET /npc-squads?difficulty=` | 200 `{ npcSquads }`: `{ key, name, description, profile, difficulty, level }`, do mais fácil ao mais difícil. `difficulty` opcional (`BEGINNER` a `GRANDMASTER`); outro valor dá 400 |
 | `GET /formation-bonuses` | 200 `{ formationBonuses: { statAuras: [{ characterClass, stat, percent }], supportHealPercent, artilleryBackDamagePercent, executorLoneAttackPercent } }`: os valores do D128, lidos das constantes que o motor aplica |
@@ -104,6 +107,15 @@ recusar. A skill escolhida fica guardada; para usar, entra na build.
 | `GET /me/skill-offers` | 200 `{ offers: [{ id, characterId, level, skills }] }`: os blocos pendentes, do mais antigo para o mais novo; `skills` no mesmo formato de `GET /templates` |
 | `POST /skill-offers/:id/choose` `{ skillKey }` | 200 `{ character }` com a skill aprendida (`source: OFFER`, `buildSlot: null`); 400 skill fora do bloco ou bloco já escolhido; 403 de outra conta; 404 |
 
+**Aprimorar skill (D80, D100, D150):** tentativa paga, com 25% de chance (fixa, sem pity). O custo sai na hora, dê certo
+ou não: moeda + fragmentos **da linhagem da skill** (Neutro na skill none), pelo tipo da skill (`GET /economy`,
+`enhancement.cost`). Deu certo: `isEnhanced: true` e a skill rende +15% (dano, cura, escudo, buff e debuff). Um
+aprimoramento só por skill.
+
+| Rota | Respostas |
+|---|---|
+| `POST /characters/:id/enhance` `{ skillKey }` | 200 `{ success, chance, character, wallet }` (`success: false` = perdeu o custo); 400 skill não aprendida, já aprimorada ou saldo insuficiente (nada é gasto); 403 de outra conta; 404; 409 a carteira mudou no meio (nada foi gasto) |
+
 ## Squads (`squads`)
 
 O squad: `{ id, name, members: [{ characterId, row, column }] }`. `row` 0 a 2 (linha), `column` 0 a 2 (0 = frente).
@@ -120,12 +132,12 @@ O squad: `{ id, name, members: [{ characterId, row, column }] }`. `row` 0 a 2 (l
 | Rota | Respostas |
 |---|---|
 | `POST /me/battle-drafts` `{ npcSquadKey }` | 201 `{ draft: { id, opponent: { key, name, profile, difficulty }, field } }`; 404 NPC. `field` traz `requiredTraitKeys` (quem tem qualquer um ganha o bônus, D98) e os dois bônus. Vale por 30 minutos |
-| `POST /battles` `{ draftId, squadId }` | 201 `{ battle, events, rewards }`; 403 pré-batalha ou squad de outra conta; 404 pré-batalha (já usada, inclusive por um clique duplo, ou expirada) ou squad; 400 squad incompleto ou personagem sem build |
+| `POST /battles` `{ draftId, squadId }` | 201 `{ battle, events, rewards, loot }`; 403 pré-batalha ou squad de outra conta; 404 pré-batalha (já usada, inclusive por um clique duplo, ou expirada) ou squad; 400 squad incompleto ou personagem sem build |
 | `GET /me/battles?status=` | 200 `{ battles }`: as batalhas da conta, da mais recente para a mais antiga (até 50), sem a foto e sem o log: `{ id, mode, status, squadId, npcSquadId, opponent: { name, profile, difficulty }, winner, endReason, rounds, startedAt, finishedAt }`. `status=IN_PROGRESS` acha a batalha para retomar (aba fechada, outro aparelho); `FINISHED` é o histórico |
 | `GET /battles/:id` | 200 `{ battle, events }` com **todos** os eventos (retomar a tela ou rever); 403 de outra conta |
 | `POST /battles/:id/forfeit` | 200 `{ battle }`: desistir (W.O.). A máquina vence (`endReason: ABANDON`) e não há XP (D136, D147); 403 de outra conta; 409 se a batalha já acabou (inclusive por uma jogada que terminou ao mesmo tempo) |
 | `GET /battles/:id/options` | 200 `{ turn, options }`: as jogadas legais da vez do jogador (abaixo); 403 de outra conta; 409 se não é a vez do jogador ou a batalha acabou |
-| `POST /battles/:id/actions` (jogada) | 200 `{ battle, events, rewards }` com os eventos **desta** jogada e das vezes da máquina que vieram depois; 400 jogada ilegal (nada muda); 403 de outra conta; 409 batalha encerrada ou outra jogada entrou antes (nada desta fica gravado) |
+| `POST /battles/:id/actions` (jogada) | 200 `{ battle, events, rewards, loot }` com os eventos **desta** jogada e das vezes da máquina que vieram depois; 400 jogada ilegal (nada muda); 403 de outra conta; 409 batalha encerrada ou outra jogada entrou antes (nada desta fica gravado) |
 
 **Jogada** (`data_model.md` 3.11):
 
@@ -155,7 +167,7 @@ sai da seed. Em mover, trocar e defender, `preview` é nulo.
 | `round`, `turn`, `timeline` | rodada (até 30); de quem é a vez (`{ ref, side }`, nulo no fim); as próximas 8 vezes |
 | `field`, `fields` | o campo valendo (`key`, `untilRound`, `isInitial`) e o catálogo para as trocas |
 | `units` | as 8 unidades (`PLAYER:0..3`, `OPPONENT:0..3`): modelo (`templateKey`, também o nome da imagem em `origin-front/public/characters/`), HP, escudo, posição, status, Provocado/Protegido, parceiro do Ligado (`linkedWith`), Engajado, classe, nível e traços |
-| `result` | no fim: `winner`, `endReason` (`ELIMINATION`, `ROUND_LIMIT` ou `ABANDON`), `rounds` e `rewards` (o XP entregue, o mesmo da resposta da última jogada; vazio na desistência) |
+| `result` | no fim: `winner`, `endReason` (`ELIMINATION`, `ROUND_LIMIT` ou `ABANDON`), `rounds`, `rewards` (o XP entregue, o mesmo da resposta da última jogada; vazio na desistência) e `loot` (moeda, fragmentos e baú; nulo na desistência) |
 
 **O que o jogador vê do inimigo** (`pvp_brief.md` 3): classe, nível, traços e o estado em campo. **Não** vê os
 `stats` (vêm nulos) nem as skills que ele ainda não usou: `skills` do inimigo só traz as já vistas. Das próprias
@@ -168,8 +180,37 @@ unidades vem tudo, com `ready` em cada skill (fora de recarga).
 entraram (D134); `newSkillOffers` = blocos de skill que a subida abriu (D135). Ficam guardados na batalha:
 `GET /battles/:id` traz os mesmos em `result.rewards`, para a tela de resultado depois de uma reconexão.
 
+**`loot`** (só quando a batalha acaba; nulo antes): `{ coins, fragments: { [linhagem]: quantidade }, chest: { id, tier } | null }`.
+Moeda (vitória 130, derrota 70) e fragmentos (2 / 1, do tipo das variantes da squad; sem variante = Neutro), os dois
+com os modificadores do XP (dificuldade e mesmo NPC). O baú, quando cai, fica fechado na conta (`GET /me/chests`).
+Já está na carteira quando a resposta chega; também fica em `result.loot`.
+
 **Jogada enviada duas vezes** (clique duplo, duas abas): só a primeira entra. A outra recebe 409 e nada dela fica
 gravado, nem o XP. O front deve recarregar com `GET /battles/:id`.
+
+## Economia (carteira, fragmentos e baús)
+
+Valores em `progression_brief.md` Parte 3 (D100, D104, D150). A carteira: `{ coins, fragments, fragmentCap }`, com
+`fragments` = os 7 tipos (`FUNDAMENTAL`, `ELEMENTAL`, `MATERIAL`, `VECTORIAL`, `PSYCHIC`, `BIOLOGICAL` e `NONE` =
+Neutro), zero nos que faltam, e `fragmentCap` = 500 por tipo. O que passaria do limite vira moeda (40 M cada).
+
+O baú: `{ id, tier, source, battleId, createdAt, openedAt, contents }`. `tier` usa a escala de raridade (`E` a `SS`);
+`source` é `PURCHASE` ou `BATTLE`. `contents` é nulo até abrir; depois, `{ rarity, character, convertedTemplateKey,
+coins, fragments }`: `character` (`{ templateKey, characterId }`) é o personagem novo que entrou no Elenco;
+`convertedTemplateKey` é o repetido que virou moeda; `coins` é o valor do repetido ou da raridade sem personagem.
+
+| Rota | Respostas |
+|---|---|
+| `GET /economy` (pública) | 200 `{ chests: [{ tier, price, fragments, rarityChances }], raritySaleValue, fragments: { cap, buyPrice, sellPrice }, enhancement: { chance, cost }, battle: { coins, fragments, chestDrop, lossChestDropFactor } }`: os valores para a tela mostrar preços e chances (`price` nulo = não se compra) |
+| `GET /me/wallet` | 200 `{ wallet }` |
+| `POST /me/fragments/buy` `{ type, amount }` | 200 `{ wallet }`: 200 M cada; 400 saldo insuficiente, quantidade menor que 1 ou passaria de 500 no tipo |
+| `POST /me/fragments/sell` `{ type, amount }` | 200 `{ wallet }`: 40 M cada; 400 fragmentos insuficientes |
+| `GET /me/chests` | 200 `{ chests }`: os baús **fechados**, do mais antigo para o mais novo |
+| `POST /me/chests` `{ tier }` | 201 `{ chest, wallet }`: compra um baú (E 300, D 1.000, C 3.500 M), que chega fechado; 400 nível que não se compra (B a SS) ou saldo insuficiente; 409 a carteira mudou no meio |
+| `POST /chests/:id/open` | 200 `{ chest, character, wallet }`: abre (1 item + fragmentos, D150). `character` é o personagem novo (formato de `GET /characters/:id`) ou nulo; 400 já aberto (inclusive por um clique duplo: só a primeira abertura entrega); 403 de outra conta; 404 |
+
+**Gasto ao mesmo tempo** (duas abas): de dois gastos em cima do mesmo saldo, só um entra; o outro recebe 409 sem gastar
+nada. Ganhos (fim de batalha, baú aberto) nunca se perdem.
 
 ## Admin (`/admin/...`, papel `ADMIN`)
 
@@ -220,7 +261,7 @@ andamento segue com a foto do início. `version` muda a cada gravação. **Rodar
   "effects": [{ "type": "STAT_MODIFIER", "stat": "WILL", "percent": 3 }] }
 // templates (stats = perfil no nível 100; passiva: src/domain/characters/value-objects/passive.ts)
 { "name": "...", "description": null, "characterClass": "VANGUARD", "rarity": "C", "initialDanger": "DISCRETE",
-  "exclusivity": "NONE", "variants": [{ "variantKey": "explosao", "isPrimary": true }], "familyTraitKey": null,
+  "exclusivity": "NONE", "isStarter": false, "variants": [{ "variantKey": "explosao", "isPrimary": true }], "familyTraitKey": null,
   "stats": { "HP": 0, "ATTACK": 0, "DEFENSE": 0, "SPEED": 0, "PRECISION": 0, "EVASION": 0, "WILL": 0 },
   "passive": { "name": "...", "description": "...", "trigger": { "type": "ON_HIT" }, "effects": [...] } }
 // skills (efeitos: src/domain/skills/value-objects/skill-effect.ts; todos aceitam "appliesTo": "TARGET" | "SELF")

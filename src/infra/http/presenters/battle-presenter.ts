@@ -127,6 +127,8 @@ export class BattlePresenter {
             finishedAt: battle.finishedAt,
             // o XP entregue no fim (D134, D135); vazio na desistência
             rewards: battle.rewards,
+            // moeda, fragmentos e baú (D150); nulo na desistência
+            loot: battle.loot,
           }
         : null,
       startedAt: battle.startedAt,

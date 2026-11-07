@@ -66,6 +66,7 @@ export interface TemplateInput {
   rarity: Rarity
   initialDanger: DangerLevel
   exclusivity: Exclusivity
+  isStarter?: boolean
   variants: { variantKey: string; isPrimary: boolean }[]
   familyTraitKey?: string | null
   stats: StatBlock

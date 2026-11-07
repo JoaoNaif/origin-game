@@ -31,6 +31,8 @@ export interface CharacterTemplateProps {
   rarity: Rarity
   initialDanger: DangerLevel
   exclusivity: Exclusivity
+  /** Personagem inicial: toda conta nova começa com ele (D133, D150). Os outros vêm de baú. */
+  isStarter?: boolean
   /** 0 a 3; sem variante = lista vazia. */
   variants: TemplateVariant[]
   familyTraitId?: UniqueEntityId | null
@@ -77,6 +79,10 @@ export class CharacterTemplate extends Entity<CharacterTemplateProps> {
 
   get exclusivity() {
     return this.props.exclusivity
+  }
+
+  get isStarter() {
+    return this.props.isStarter ?? false
   }
 
   get variants(): readonly TemplateVariant[] {

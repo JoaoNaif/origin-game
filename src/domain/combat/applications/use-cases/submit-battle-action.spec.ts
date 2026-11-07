@@ -57,6 +57,8 @@ describe('Submit Battle Action', () => {
       world.drafts,
       world.battles,
       world.skillOffers,
+      world.wallets,
+      world.chests,
       world.clock
     ).execute({
       accountId: world.account.id.toString(),
@@ -71,6 +73,8 @@ describe('Submit Battle Action', () => {
       world.characters,
       world.skillOffers,
       world.catalogRepository,
+      world.wallets,
+      world.chests,
       world.clock
     )
   })
@@ -181,6 +185,23 @@ describe('Submit Battle Action', () => {
       squadIds.includes(c.id.toString())
     )
     expect(gained.every((c) => c.xp > 0 || c.level > 18)).toBe(true)
+
+    // moeda e fragmentos na carteira (D150): Iniciante ×0,6
+    const loot = saved!.loot!
+    const won = current.winner === 'PLAYER'
+    expect(loot.coins).toBe(won ? 78 : 42)
+    const wallet = await world.wallets.findByAccountId(
+      world.account.id.toString()
+    )
+    expect(wallet.coins).toBe(loot.coins)
+    expect(wallet.fragments).toMatchObject(loot.fragments)
+    expect(world.wallets.entries).toEqual([
+      expect.objectContaining({
+        reason: 'BATTLE_LOOT',
+        refId: current.id.toString(),
+      }),
+    ])
+    expect(world.chests.items).toHaveLength(loot.chest ? 1 : 0)
 
     // o log gravado reproduz a mesma batalha (replay, D8)
     const replayed = replayBattle(current)

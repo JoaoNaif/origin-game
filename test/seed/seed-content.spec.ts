@@ -14,10 +14,31 @@ describe('Seed Content', () => {
   const sut = loadSeedContent()
   const skills = sut.characters.flatMap((c) => c.skills)
 
-  it('should be able to load the 12 characters with valid templates and kits', () => {
-    expect(sut.characters).toHaveLength(12)
+  it('should be able to load the 12 starters and the 6 chest characters with valid templates and kits', () => {
+    expect(sut.characters).toHaveLength(18)
+    expect(sut.characters.filter((c) => c.template.isStarter)).toHaveLength(12)
     expect(sut.fields).toHaveLength(8)
     expect(sut.npcSquads).toHaveLength(20)
+  })
+
+  it('should be able to keep the chest characters out of the starters and the npc squads', () => {
+    // os de baú (D150): raridade baixa, só saem de baú
+    const chest = sut.characters.filter((c) => !c.template.isStarter)
+    const npcTemplates = new Set(
+      sut.npcSquads.flatMap((s) => s.members.map((m) => m.templateId.toValue()))
+    )
+
+    expect(chest.map((c) => c.template.rarity).sort()).toEqual([
+      'B',
+      'C',
+      'D',
+      'D',
+      'E',
+      'E',
+    ])
+    expect(chest.some((c) => npcTemplates.has(c.template.id.toValue()))).toBe(
+      false
+    )
   })
 
   it('should be able to cover every class, lineage, range and status', () => {

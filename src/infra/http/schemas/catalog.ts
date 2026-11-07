@@ -167,6 +167,7 @@ const templateSchema = z.object({
   rarity: z.nativeEnum(Rarity),
   initialDanger: z.nativeEnum(DangerLevel),
   exclusivity: z.nativeEnum(Exclusivity),
+  isStarter: z.boolean().default(false),
   variants: z.array(
     z.object({ variantKey: catalogKeySchema, isPrimary: z.boolean() })
   ),

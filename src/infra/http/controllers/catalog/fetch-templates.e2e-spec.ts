@@ -27,7 +27,7 @@ describe('Fetch Templates (e2e)', () => {
     const response = await request(app.getHttpServer()).get('/templates')
 
     expect(response.statusCode).toBe(200)
-    expect(response.body.templates).toHaveLength(12)
+    expect(response.body.templates).toHaveLength(18)
 
     const kael = response.body.templates.find(
       (t: { key: string }) => t.key === 'kael-vaz'

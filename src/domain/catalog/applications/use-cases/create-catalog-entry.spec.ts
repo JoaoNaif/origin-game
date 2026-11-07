@@ -90,7 +90,7 @@ describe('Create Catalog Entry', () => {
     })
 
     expect(result.value).toBeInstanceOf(InvalidCatalogError)
-    expect(catalogRepository.catalog.templates.size).toBe(12)
+    expect(catalogRepository.catalog.templates.size).toBe(18)
   })
 
   it('should be able to create a template after its kit skills', async () => {
@@ -113,7 +113,7 @@ describe('Create Catalog Entry', () => {
     })
 
     expect(result.isRight()).toBe(true)
-    expect(catalogRepository.catalog.templates.size).toBe(13)
+    expect(catalogRepository.catalog.templates.size).toBe(19)
   })
 
   it('should be able to create an NPC squad adding the family traits', async () => {

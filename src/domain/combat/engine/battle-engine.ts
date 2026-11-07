@@ -522,7 +522,8 @@ export class BattleEngine {
             return {
               type: 'STAT_MODIFIER',
               stat: effect.stat,
-              percent: effect.percent * potency,
+              percent:
+                effectivePower(effect.percent, skill.isEnhanced) * potency,
             }
           case 'APPLY_STATUS':
             return {
@@ -1490,7 +1491,9 @@ export class BattleEngine {
       }
 
       case 'STAT_MODIFIER': {
-        const percent = effect.percent * potency
+        // o aprimoramento rende +15% também no buff e no debuff (D100)
+        const percent =
+          effectivePower(effect.percent, skill.isEnhanced) * potency
         const result = target.conditions.addModifier({
           source: skill.key,
           stat: effect.stat,
@@ -1537,9 +1540,7 @@ export class BattleEngine {
         }
 
         if (effect.status === StatusType.LINK) {
-          if (
-            this.applyLink(target, effect.duration, actor.ref) === 'IMMUNE'
-          ) {
+          if (this.applyLink(target, effect.duration, actor.ref) === 'IMMUNE') {
             this.log.push({
               type: 'STATUS',
               ref: actor.ref,

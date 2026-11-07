@@ -47,6 +47,6 @@ export abstract class BattlesRepository {
    * (desistiu enquanto a jogada rodava): nada é gravado.
    */
   abstract save(battle: Battle, knownActions: number): Promise<boolean>
-  /** Grava o XP entregue no fim (`Battle.recordRewards`). */
+  /** Grava o que foi entregue no fim: o XP (`Battle.recordRewards`) e a moeda, fragmentos e baú (`recordLoot`). */
   abstract saveRewards(battle: Battle): Promise<void>
 }

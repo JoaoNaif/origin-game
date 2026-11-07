@@ -213,6 +213,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
               rarity: row.rarity,
               initialDanger: row.initialDanger,
               exclusivity: row.exclusivity,
+              isStarter: row.isStarter,
               variants: row.variants.map((v) => ({
                 variant: variants.get(v.variantId)!,
                 isPrimary: v.isPrimary,

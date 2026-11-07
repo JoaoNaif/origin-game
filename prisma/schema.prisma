@@ -136,6 +136,7 @@ enum Exclusivity {
 
 // Modelo de personagem (catálogo). Stats = perfil no nível 100, já com a distribuição
 // padrão dos pontos livres (base = 85%, D91). `passive` é JSON validado no domínio.
+// `isStarter`: a conta nova começa com ele (D133, D150); os outros vêm de baú.
 model CharacterTemplate {
   id             String         @id @default(uuid())
   key            String         @unique
@@ -145,6 +146,7 @@ model CharacterTemplate {
   rarity         Rarity
   initialDanger  DangerLevel    @map("initial_danger")
   exclusivity    Exclusivity    @default(NONE)
+  isStarter      Boolean        @default(false) @map("is_starter")
   familyTraitId  String?        @map("family_trait_id")
   hp             Int
   attack         Int
@@ -268,8 +270,8 @@ enum AccountRole {
 }
 
 // Conta: dona dos personagens e dos squads. Entra por username + senha (só o hash
-// fica aqui). `username` já chega normalizado (minúsculo) pelo domínio. Moeda,
-// inventário, organização e ranking entram com as suas camadas.
+// fica aqui). `username` já chega normalizado (minúsculo) pelo domínio. A moeda e os
+// fragmentos ficam na carteira (`Wallet`); inventário, organização e ranking entram com as suas camadas.
 model Account {
   id           String      @id @default(uuid())
   username     String      @unique
@@ -279,12 +281,87 @@ model Account {
   createdAt    DateTime    @default(now()) @map("created_at")
   updatedAt    DateTime    @updatedAt @map("updated_at")
 
-  characters Character[]
-  squads     Squad[]
-  battles    Battle[]
-  sessions   Session[]
+  characters    Character[]
+  squads        Squad[]
+  battles       Battle[]
+  sessions      Session[]
+  wallet        Wallet?
+  walletEntries WalletEntry[]
+  chests        Chest[]
 
   @@map("accounts")
+}
+
+// ---------------------------------------------------------------------------
+// Economia (D79, D100, D104, D150)
+// ---------------------------------------------------------------------------
+
+// Carteira da conta: a moeda e os 7 Fragmentos de Éon (`fragments` = { [Lineage]: quantidade },
+// NONE = Neutro; limite de 500 por tipo, validado no domínio). Criada no primeiro ganho.
+// `version` sobe a cada gravação: duas gravações em cima da mesma leitura, só uma entra.
+model Wallet {
+  accountId String   @id @map("account_id")
+  coins     Int      @default(0)
+  fragments Json     @default("{}")
+  version   Int      @default(1)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@map("wallets")
+}
+
+// Por que a carteira mudou.
+enum WalletReason {
+  BATTLE_LOOT
+  CHEST_PURCHASE
+  CHEST_OPEN
+  FRAGMENT_PURCHASE
+  FRAGMENT_SALE
+  SKILL_ENHANCEMENT
+}
+
+// Registro de cada entrada e saída da carteira (auditoria). `coins` e `fragments` são a variação;
+// `refId` aponta o que causou (batalha, baú, personagem).
+model WalletEntry {
+  id        String       @id @default(uuid())
+  accountId String       @map("account_id")
+  reason    WalletReason
+  coins     Int
+  fragments Json         @default("{}")
+  refId     String?      @map("ref_id")
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, createdAt])
+  @@map("wallet_entries")
+}
+
+// De onde veio o baú.
+enum ChestSource {
+  PURCHASE
+  BATTLE
+}
+
+// Baú da conta (D79, D100): o nível usa a escala de raridade. Fechado até abrir; `contents` guarda o
+// que saiu: { rarity, character, convertedTemplateKey, coins, fragments }.
+model Chest {
+  id        String      @id @default(uuid())
+  accountId String      @map("account_id")
+  tier      Rarity
+  source    ChestSource
+  battleId  String?     @map("battle_id")
+  contents  Json?
+  createdAt DateTime    @default(now()) @map("created_at")
+  openedAt  DateTime?   @map("opened_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  battle  Battle? @relation(fields: [battleId], references: [id], onDelete: SetNull)
+
+  @@index([accountId, openedAt])
+  @@index([battleId])
+  @@map("chests")
 }
 
 // Sessão de login (refresh token com rotação). Só o hash do token fica no banco.
@@ -573,6 +650,8 @@ model Battle {
   finishedAt     DateTime?        @map("finished_at")
   // XP entregue no fim (D134, D135): [{ characterId, xp, levelsGained, level, newSkillOffers }]
   rewards        Json             @default("[]")
+  // Moeda, fragmentos e baú do fim (D100, D104, D150): { coins, fragments, chest }; nulo até lá e na desistência
+  loot           Json?
   createdAt      DateTime         @default(now()) @map("created_at")
   updatedAt      DateTime         @updatedAt @map("updated_at")
 
@@ -580,6 +659,7 @@ model Battle {
   squad    Squad?         @relation(fields: [squadId], references: [id], onDelete: SetNull)
   npcSquad NpcSquad?      @relation(fields: [npcSquadId], references: [id], onDelete: SetNull)
   actions  BattleAction[]
+  chests   Chest[]
 
   @@index([accountId, startedAt])
   @@index([npcSquadId])

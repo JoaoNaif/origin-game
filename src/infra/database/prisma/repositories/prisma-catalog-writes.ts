@@ -64,6 +64,7 @@ export async function writeCatalogRow(
         rarity: entity.rarity,
         initialDanger: entity.initialDanger,
         exclusivity: entity.exclusivity,
+        isStarter: entity.isStarter,
         familyTraitId: entity.familyTraitId?.toString() ?? null,
         hp: stats.HP,
         attack: stats.ATTACK,

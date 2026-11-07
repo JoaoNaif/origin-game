@@ -55,6 +55,7 @@ export async function seedDatabase(prisma: PrismaClient): Promise<string> {
           rarity: c.rarity,
           initialDanger: c.initialDanger,
           exclusivity: c.exclusivity,
+          isStarter: c.isStarter,
           familyTraitId: c.familyTraitId ? db(c.familyTraitId) : null,
           hp: c.stats.HP,
           attack: c.stats.ATTACK,

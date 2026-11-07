@@ -384,3 +384,30 @@ Compra de moeda com dinheiro real (futuro). O caminho "Materiais" foi fechado em
   leva ~11 dias de farm com squad de uma linhagem; comprar tudo custa ~28 dias de ganho no pior caso. Farmar rende
   mais que comprar.
 - **Adiados (depois do MVP):** os caminhos Enxerto, Rede e Selo da lore.
+
+### 3.10 Implementação (D150)
+
+**[PLACEHOLDER aprovado]**. O que faltava para a economia funcionar no servidor (valores em
+`src/domain/economy/economy-values.ts`; rotas em [`api.md`](./api.md), Economia):
+
+- **Carteira:** moeda e os 7 tipos de fragmento ficam na carteira da conta, com um **registro** de cada entrada e saída
+  (motivo, variação e o que causou). Gasto é tudo ou nada; duas operações em cima da mesma leitura, só uma grava (a
+  outra recebe 409 e não gasta nada).
+- **Fim da batalha PvE:** moeda (3.1) e fragmentos (3.9) com os mesmos modificadores do XP (dificuldade e mesmo NPC).
+  Cada fragmento sorteia um personagem da squad e, dele, uma variante (sem variante = Neutro). O **baú** sai num
+  sorteio só (E 20%, D 5%, C 1%; no máximo um), **metade na derrota**, e cai junto com a moeda contra o mesmo NPC.
+  **Desistir não dá nada** (D136). Tudo fica guardado na batalha, junto com o XP.
+- **Baú = 1 item + fragmentos.** O item é da raridade sorteada pela tabela de 3.5 (com um item por baú, o retorno se
+  tudo fosse vendido bate os ~32% / 16% / 8%). Hoje o item é sempre um **personagem não exclusivo** daquela raridade
+  (equipamento vivo entra no sorteio quando a camada chegar). **Repetido** (D82) ou **raridade sem personagem no
+  catálogo** vira moeda pelo valor de venda (3.3). Fragmentos junto: **E 1, D 2, C 4** (B 8, A 16, S 32, SS 64,
+  placeholder), de tipo sorteado entre os 7.
+- **Limite de fragmentos:** o que passaria de 500 num tipo vira moeda pelo preço de venda (40 M cada). A compra que
+  passaria do limite é recusada.
+- **Personagens iniciais:** o modelo tem a marca **inicial** (`isStarter`, do admin). A conta nova recebe um de cada
+  inicial (os 12 da CORE); os outros só saem de baú. O seed tem 6 personagens de baú (Granek, Kovarik, Ignara, Kisar,
+  Virelli, Zarek; raridade E a B) para testar o sorteio.
+- **Aprimoramento:** chance fixa de **25%** até os títulos existirem; o custo usa os fragmentos da linhagem da skill
+  (Neutro na skill none). O +15% vale no dano, na cura, no escudo e no buff/debuff.
+- **Fica para depois:** mercado entre jogadores e compra de espaço no inventário (entram com o equipamento vivo, que é
+  o que o inventário guarda e o que dá sentido ao mercado).

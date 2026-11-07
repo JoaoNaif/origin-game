@@ -779,4 +779,41 @@ describe('Battle Engine (Proteger forte, formação e Engajado, D127 a D129)', (
     ).toBe(true)
     expect(sut.unit('OPPONENT:0').hp).toBeLessThan(hp)
   })
+
+  it('should be able to give the enhancement +15% to buffs too (D100)', () => {
+    const buffOf = (isEnhanced: boolean) => {
+      const snapshot = makeBattleSnapshot()
+      const unit = snapshot.player.units[0]
+      unit.skills[0] = {
+        ...makeSnapshotSkill('grito'),
+        isEnhanced,
+        target: SkillTarget.SELF,
+        range: null,
+        baseHitChance: null,
+        effects: [
+          {
+            type: 'STAT_MODIFIER',
+            stat: Stat.ATTACK,
+            percent: 20,
+            duration: 2,
+          },
+        ],
+      }
+      const sut = new BattleEngine(snapshot, new FixedRng([0]))
+      untilTurnOf(sut, 'PLAYER:0')
+      const acted = sut.act({
+        type: 'SKILL',
+        skillKey: 'grito',
+        targetSide: BattleSide.PLAYER,
+        target: { row: unit.row, column: unit.column },
+      })
+      expect(acted.isRight()).toBe(true)
+      const event = sut.events.find((e) => e.type === 'MODIFIER')
+
+      return event && event.type === 'MODIFIER' ? event.percent : 0
+    }
+
+    expect(buffOf(false)).toBeGreaterThan(0)
+    expect(buffOf(true) / buffOf(false)).toBeCloseTo(1.15)
+  })
 })

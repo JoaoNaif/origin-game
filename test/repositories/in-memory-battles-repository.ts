@@ -28,6 +28,7 @@ function copy(battle: Battle): Battle {
       startedAt: battle.startedAt,
       finishedAt: battle.finishedAt,
       rewards: [...battle.rewards],
+      loot: battle.loot,
     },
     battle.id
   )

@@ -104,7 +104,7 @@ describe('Create Catalog Entry (e2e)', () => {
     // o catálogo inteiro deixaria de valer: nada é gravado
     expect(response.statusCode).toBe(400)
     expect(response.body.message).toContain('sem-kit')
-    expect((await adminCatalog(agent)).templates).toHaveLength(12)
+    expect((await adminCatalog(agent)).templates).toHaveLength(18)
   })
 
   test('[POST] /admin/:collection with an invalid body or collection', async () => {

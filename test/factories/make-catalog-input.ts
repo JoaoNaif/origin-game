@@ -26,6 +26,7 @@ export function templateInput(
     rarity: template.rarity,
     initialDanger: template.initialDanger,
     exclusivity: template.exclusivity,
+    isStarter: template.isStarter,
     variants: template.variants.map((v) => ({
       variantKey: keyOf(catalog.variants, v.variantId)!,
       isPrimary: v.isPrimary,

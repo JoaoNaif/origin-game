@@ -52,9 +52,10 @@
 | 10 | `Battle` (+ enums `BattleMode`, `BattleStatus`, `BattleSide`, `BattleEndReason`) | Batalha | Account, Squad, NpcSquad | **feito** |
 | 11 | `BattleAction` (+ enum `BattleActionType`) | Batalha | Battle | **feito** |
 | 12 | `BattleField` (+ `BattleFieldTrait` e enum `Stat`) | Catálogo | Trait | **feito** |
+| 13 | `Wallet` + `WalletEntry` (enum `WalletReason`) e `Chest` (enum `ChestSource`) | Economia | Account, Battle | **feito** (D150, 3.13) |
 
 **Fora do MVP** (cada um vira migração própria quando a camada chegar): inventário, equipamento vivo, bestas, DOM,
-despertar, economia, mercado, baús, materiais e organizações.
+despertar, mercado e organizações.
 
 ---
 
@@ -250,6 +251,7 @@ pontos livres, traços conquistados, skills, build) mora na instância, `Charact
 | `rarity` | `Rarity` | |
 | `initialDanger` | `DangerLevel` | |
 | `exclusivity` | `Exclusivity` | padrão `NONE` |
+| `isStarter` | booleano | padrão falso; **inicial**: a conta nova recebe um de cada (D133, D150). Os outros só saem de baú |
 | `familyTraitId` | FK opcional → `Trait` | o traço precisa ser `TEMPLATE`; se ligado a uma variante, o modelo precisa tê-la |
 | `hp`, `attack`, `defense`, `speed`, `precision`, `evasion`, `will` | inteiros | **perfil no nível 100**; maiores que zero; orçamento dentro de ±3% da classe |
 | `passive` | JSON (`Passive`) | obrigatória, com pelo menos 1 efeito |
@@ -506,7 +508,7 @@ sessão nova.
 | Quando | Campos |
 |---|---|
 | Recuperar a conta | `email` (único), se um dia houver "esqueci a senha" |
-| Economia (D100) | moeda, espaços de inventário |
+| Inventário (D100) | espaços de inventário (a moeda e os fragmentos ficam na carteira, 3.13) |
 | Organizações (D101) | organização ativa, reputação por organização |
 | Ranqueado (D99) | pontos, faixa, histórico mínimo |
 
@@ -911,8 +913,9 @@ guarda **valores, não referências**, porque o personagem e o catálogo podem m
 | `finish` | só em andamento; rodadas de 1 a 30; `ROUND_LIMIT` só na 30; fim não antes do início |
 | `Battle.restore` | recompõe a partir do banco |
 
-**Fica para depois:** recompensas (XP e moeda, D92 e D100) entram no caso de uso que encerra a batalha; PvP
-(adversário conta) entra com o `opponentAccountId` quando o PvP chegar.
+**Recompensas do fim** (`deliverBattleRewards`): `rewards` guarda o XP por personagem (D134) e `loot` a moeda, os
+fragmentos e o baú da conta (`{ coins, fragments, chest }`, D150; nulo até o fim e na desistência). **Fica para
+depois:** PvP (adversário conta) entra com o `opponentAccountId` quando o PvP chegar.
 
 ### 3.11 BattleAction (batalha)
 
@@ -1034,14 +1037,54 @@ BattleField.create({ ...forest, requiredTraits: [warrior, berserker] })
 ---
 
 
+### 3.13 Wallet, WalletEntry e Chest (economia)
+
+A economia da conta (D79, D100, D104, D150; valores em `progression_brief.md` Parte 3). Domínio em
+`src/domain/economy/` (valores em `economy-values.ts`).
+
+**`Wallet`** (uma por conta, chave = `accountId`): criada no primeiro ganho; sem linha = carteira vazia.
+
+| Campo | Tipo | Regra |
+|---|---|---|
+| `accountId` | FK → `Account` (chave) | apagar a conta apaga a carteira |
+| `coins` | inteiro | nunca negativa (gasto é tudo ou nada) |
+| `fragments` | JSON `{ [Lineage]: quantidade }` | os 7 tipos (`NONE` = Neutro), até **500** por tipo; o que passaria vira moeda (40 M cada) |
+| `version` | inteiro | sobe a cada gravação; gravar exige a mesma versão da leitura (gravação otimista) |
+
+**`WalletEntry`** (registro): uma linha por mudança, gravada na mesma transação da carteira. `reason`
+(`WalletReason`: `BATTLE_LOOT`, `CHEST_PURCHASE`, `CHEST_OPEN`, `FRAGMENT_PURCHASE`, `FRAGMENT_SALE`,
+`SKILL_ENHANCEMENT`), `coins` e `fragments` com sinal (a variação), `refId` (batalha, baú ou personagem que
+causou).
+
+**Concorrência:** duas operações em cima da mesma leitura, só uma grava. Gasto que perde a corrida volta 409 sem gastar
+nada (`WalletConflictError`); ganho (fim de batalha, baú aberto) relê e tenta de novo (`creditWallet`). Quem gasta
+grava a carteira **antes** de entregar (baú comprado, tentativa de aprimorar), para nunca dar sem cobrar.
+
+**`Chest`** (baú da conta):
+
+| Campo | Tipo | Regra |
+|---|---|---|
+| `id` | uuid | |
+| `accountId` | FK → `Account` | |
+| `tier` | `Rarity` | o nível do baú usa a escala de raridade (D86) |
+| `source` | `ChestSource` | `PURCHASE` (comprado) ou `BATTLE` (caiu no fim da batalha) |
+| `battleId` | FK opcional → `Battle` | a batalha em que caiu (apagar a batalha deixa nulo) |
+| `createdAt`, `openedAt` | data | `openedAt` nulo = fechado; abre uma vez só (a gravação confere que ainda estava fechado) |
+| `contents` | JSON (`ChestContents`), nulo até abrir | `{ rarity, character: { templateKey, characterId } \| null, convertedTemplateKey, coins, fragments }` |
+
+**Abrir** (`drawChest`, sorte de uma seed nova por abertura): 1 item da raridade sorteada (peso `q^r`, 3.5) entre os
+personagens **não exclusivos** dela; novo entra no Elenco como no cadastro (nível 0, kit básico, traço de família);
+repetido ou raridade sem personagem vira moeda pelo valor de venda (3.3). Mais os fragmentos do nível (E 1, D 2, C 4).
+
 ## 4. Seed do MVP (conteúdo)
 
 Código: `prisma/seed/content/` (o conteúdo, criado pelas entidades do domínio e validado por elas) e `prisma/seed.ts`
 (grava no banco). Rodar: `npm run db:seed` (precisa do Postgres e da migração). Idempotente: atualiza pela `key` e
 recria as ligações. O simulador usa o mesmo conteúdo sem banco (`loadSeedContent()`).
 
-**Variantes (13):** antimatéria, tempo e alma (Fundamental); relâmpago, gelo superiônico (Elemental); explosão
-(Vetorial); endurecimento, terra (Material); regeneração, ossos (Biológica); sombra, ilusão, telecinese (Psíquica).
+**Variantes (18):** antimatéria, tempo e alma (Fundamental); relâmpago, gelo superiônico, combustão, névoa
+(Elemental); explosão, som (Vetorial); endurecimento, terra, rocha, metal (Material); regeneração, ossos (Biológica);
+sombra, ilusão, telecinese (Psíquica).
 
 **Personagens (12).** Reformulados a partir das fichas do usuário (`art_direction.md` 4). Stats = perfil da classe
 (`classes_brief.md` 2). O elenco foi montado para **testar tudo** com poucos personagens: cada passiva usa um gatilho
@@ -1061,6 +1104,22 @@ diferente (só o `ON_HEAL` fica de fora: 12 personagens, 13 gatilhos) e, juntas,
 | Tyir Ossvald | Tático | ossos | A | | **Veterano** (ao ser Atordoado): todas as recargas −1 |
 | Isis Maccarthy | Artilharia | telecinese | B | | **Explosiva** (ao pagar Desgaste): +10% Velocidade |
 | Tank Valen | Guardião | sem variante | C | | **Constância** (HP < 40%): 15% menos dano |
+
+**Personagens de baú (6, D150).** Não são iniciais (`isStarter` falso): só saem de baú, para testar o sorteio. Randoms
+de famílias ancestrais (`world_build.md` 4.2), de raridade baixa (D85), sem traço de família e fora dos squads de NPC.
+Mesmo molde dos 12 (kit de 4 + Reforçada, Forte e Final).
+
+| Personagem | Classe | Variante | Raridade | Passiva |
+|---|---|---|---|---|
+| Brann Granek | Guardião | rocha | E | **Rocha Rachada** (HP < 50%): +15% Defesa |
+| Vesna Kovarik | Vanguarda | metal | E | **Reaproveitar** (ao derrubar): cura 10% do HP máx. |
+| Oren Ignara | Artilharia | combustão | D | **Pavio Curto** (ao atacar): 15% de Dano contínuo no alvo |
+| Mira Kisar | Executora | névoa | D | **Forma Difusa** (a cada 3 turnos): +15% Esquiva |
+| Lio Virelli | Controlador | som | C | **Eco** (ao ser atingido): 20% de Silenciar quem bateu |
+| Dax Zarek | Atirador | relâmpago | B | **Hierarquia da Velocidade** (ao derrubar): adianta a vez 25% |
+
+**Carteiras de teste:** `tester_01` e `admin` começam com 20.000 M e 50 de cada fragmento (só na criação da carteira;
+rodar o seed de novo não repõe).
 
 **Skills (97):** 7 a 9 por personagem, todas com os números de `skillReference` (tipo + forma, D92, D108, D109) e
 acerto base 0,8. Kit básico (nível 0): Básica, Padrão, Função da classe, Assinatura (0,8 do Poder + efeito pequeno).

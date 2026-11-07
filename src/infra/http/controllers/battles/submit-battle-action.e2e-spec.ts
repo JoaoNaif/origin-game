@@ -142,6 +142,15 @@ describe('Submit Battle Action (e2e)', () => {
     const view = await agent.get(`/battles/${battleId}`)
     expect(view.body.battle.result.rewards).toEqual(last.rewards)
 
+    // moeda, fragmentos e baú (D150): na carteira e guardados na batalha (Iniciante ×0,6)
+    const won = last.battle.result.winner === 'PLAYER'
+    expect(last.loot.coins).toBe(won ? 78 : 42)
+    expect(view.body.battle.result.loot).toEqual(last.loot)
+    const wallet = await agent.get('/me/wallet')
+    expect(wallet.body.wallet.coins).toBe(last.loot.coins)
+    const chests = await agent.get('/me/chests')
+    expect(chests.body.chests).toHaveLength(last.loot.chest ? 1 : 0)
+
     // batalha encerrada não aceita jogada
     const after = await agent
       .post(`/battles/${battleId}/actions`)

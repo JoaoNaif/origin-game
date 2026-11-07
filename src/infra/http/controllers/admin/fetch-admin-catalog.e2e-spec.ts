@@ -36,7 +36,7 @@ describe('Fetch Admin Catalog (e2e)', () => {
     expect(response.statusCode).toBe(200)
     const catalog = response.body.catalog
     expect(catalog.version).toEqual(expect.any(String))
-    expect(catalog.templates).toHaveLength(12)
+    expect(catalog.templates).toHaveLength(18)
     expect(catalog.traits).toHaveLength(9)
     expect(catalog.fields).toHaveLength(8)
     expect(catalog.npcSquads).toHaveLength(20)

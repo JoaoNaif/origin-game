@@ -9,6 +9,9 @@ import { EquipSkillsUseCase } from '@/domain/characters/applications/use-cases/e
 import { FetchAccountCharactersUseCase } from '@/domain/characters/applications/use-cases/fetch-account-characters'
 import { FetchPendingSkillOffersUseCase } from '@/domain/characters/applications/use-cases/fetch-pending-skill-offers'
 import { GetCharacterUseCase } from '@/domain/characters/applications/use-cases/get-character'
+import { EnhanceSkillUseCase } from '@/domain/characters/applications/use-cases/enhance-skill'
+import { SeedGenerator } from '@/domain/combat/applications/gateways/seed-generator'
+import { WalletsRepository } from '@/domain/economy/applications/repositories/wallets-repository'
 
 export const charactersUseCases: Provider[] = [
   {
@@ -59,5 +62,14 @@ export const charactersUseCases: Provider[] = [
       catalog: CatalogRepository,
       clock: Clock
     ) => new ChooseSkillOfferUseCase(offers, characters, catalog, clock),
+  },
+  {
+    provide: EnhanceSkillUseCase,
+    inject: [CharactersRepository, WalletsRepository, SeedGenerator],
+    useFactory: (
+      characters: CharactersRepository,
+      wallets: WalletsRepository,
+      seeds: SeedGenerator
+    ) => new EnhanceSkillUseCase(characters, wallets, seeds),
   },
 ]

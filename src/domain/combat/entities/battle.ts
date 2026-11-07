@@ -23,6 +23,7 @@ import {
   BattleActionPayload,
   BattleActionRecord,
 } from '../value-objects/battle-action'
+import { BattleLoot } from '@/domain/economy/value-objects/battle-loot'
 import { BattleReward } from '../value-objects/battle-reward'
 import { BattleSnapshot, SnapshotSide } from '../value-objects/battle-snapshot'
 
@@ -51,6 +52,8 @@ export interface BattleProps {
   finishedAt: Date | null
   /** O XP entregue no fim (vazio até lá, e na desistência). */
   rewards: BattleReward[]
+  /** Moeda, fragmentos e baú do fim (D150); nulo até lá, e na desistência. */
+  loot: BattleLoot | null
 }
 
 export interface StartPveBattleInput {
@@ -149,6 +152,10 @@ export class Battle extends Entity<BattleProps> {
     return this.props.rewards
   }
 
+  get loot(): BattleLoot | null {
+    return this.props.loot
+  }
+
   get isFinished() {
     return this.props.status === BattleStatus.FINISHED
   }
@@ -196,6 +203,7 @@ export class Battle extends Entity<BattleProps> {
           startedAt: input.startedAt,
           finishedAt: null,
           rewards: [],
+          loot: null,
         },
         id
       )
@@ -306,6 +314,21 @@ export class Battle extends Entity<BattleProps> {
     }
 
     this.props.rewards = [...rewards]
+
+    return right(undefined)
+  }
+
+  /** Guarda a moeda, os fragmentos e o baú entregues no fim (só numa batalha encerrada, uma vez). */
+  recordLoot(loot: BattleLoot): Either<InvalidBattleError, void> {
+    if (!this.isFinished) {
+      return left(new InvalidBattleError('a batalha ainda não terminou'))
+    }
+
+    if (this.props.loot) {
+      return left(new InvalidBattleError('as recompensas já foram entregues'))
+    }
+
+    this.props.loot = { ...loot }
 
     return right(undefined)
   }

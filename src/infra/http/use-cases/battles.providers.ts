@@ -14,6 +14,8 @@ import { GetBattleUseCase } from '@/domain/combat/applications/use-cases/get-bat
 import { GetTurnOptionsUseCase } from '@/domain/combat/applications/use-cases/get-turn-options'
 import { StartPveBattleUseCase } from '@/domain/combat/applications/use-cases/start-pve-battle'
 import { SubmitBattleActionUseCase } from '@/domain/combat/applications/use-cases/submit-battle-action'
+import { ChestsRepository } from '@/domain/economy/applications/repositories/chests-repository'
+import { WalletsRepository } from '@/domain/economy/applications/repositories/wallets-repository'
 import { SquadsRepository } from '@/domain/squads/applications/repositories/squads-repository'
 
 export const battlesUseCases: Provider[] = [
@@ -44,6 +46,8 @@ export const battlesUseCases: Provider[] = [
       BattleDraftsRepository,
       BattlesRepository,
       SkillOffersRepository,
+      WalletsRepository,
+      ChestsRepository,
       Clock,
     ],
     useFactory: (
@@ -54,6 +58,8 @@ export const battlesUseCases: Provider[] = [
       drafts: BattleDraftsRepository,
       battles: BattlesRepository,
       offers: SkillOffersRepository,
+      wallets: WalletsRepository,
+      chests: ChestsRepository,
       clock: Clock
     ) =>
       new StartPveBattleUseCase(
@@ -64,6 +70,8 @@ export const battlesUseCases: Provider[] = [
         drafts,
         battles,
         offers,
+        wallets,
+        chests,
         clock
       ),
   },
@@ -74,6 +82,8 @@ export const battlesUseCases: Provider[] = [
       CharactersRepository,
       SkillOffersRepository,
       CatalogRepository,
+      WalletsRepository,
+      ChestsRepository,
       Clock,
     ],
     useFactory: (
@@ -81,6 +91,8 @@ export const battlesUseCases: Provider[] = [
       characters: CharactersRepository,
       offers: SkillOffersRepository,
       catalog: CatalogRepository,
+      wallets: WalletsRepository,
+      chests: ChestsRepository,
       clock: Clock
     ) =>
       new SubmitBattleActionUseCase(
@@ -88,6 +100,8 @@ export const battlesUseCases: Provider[] = [
         characters,
         offers,
         catalog,
+        wallets,
+        chests,
         clock
       ),
   },

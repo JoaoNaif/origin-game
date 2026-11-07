@@ -4,6 +4,9 @@ import { ResourceNotFoundError } from '@/core/errors/err/resource-not-found-erro
 import { CatalogRepository } from '@/domain/catalog/applications/repositories/catalog-repository'
 import { CharactersRepository } from '@/domain/characters/applications/repositories/characters-repository'
 import { SkillOffersRepository } from '@/domain/characters/applications/repositories/skill-offers-repository'
+import { ChestsRepository } from '@/domain/economy/applications/repositories/chests-repository'
+import { WalletsRepository } from '@/domain/economy/applications/repositories/wallets-repository'
+import { BattleLoot } from '@/domain/economy/value-objects/battle-loot'
 import { BattleEngine } from '../../engine/battle-engine'
 import { BattleEvent } from '../../engine/battle-events'
 import { Battle } from '../../entities/battle'
@@ -12,7 +15,10 @@ import { InvalidBattleError } from '../../errors/invalid-battle-error'
 import { BattleActionPayload } from '../../value-objects/battle-action'
 import { Clock } from '@/core/gateways/clock'
 import { BattlesRepository } from '../repositories/battles-repository'
-import { CharacterReward, grantBattleXp } from '../services/battle-rewards'
+import {
+  CharacterReward,
+  deliverBattleRewards,
+} from '../services/battle-rewards'
 import { findOwnedBattle } from '../services/owned-battle'
 import {
   eventsSince,
@@ -39,12 +45,13 @@ type SubmitBattleActionUseCaseResponse = Either<
     /** O que esta jogada produziu: a ação do jogador e as vezes da máquina que vieram depois. */
     events: readonly BattleEvent[]
     rewards: CharacterReward[]
+    loot: BattleLoot | null
   }
 >
 
 /**
  * Jogada do jogador (o servidor é a autoridade, D9): refaz a batalha pelo replay, valida a ação no motor, grava e
- * joga as vezes da máquina até a próxima vez do jogador. No fim, entrega o XP.
+ * joga as vezes da máquina até a próxima vez do jogador. No fim, entrega o XP, a moeda, os fragmentos e o baú.
  */
 export class SubmitBattleActionUseCase {
   constructor(
@@ -52,6 +59,8 @@ export class SubmitBattleActionUseCase {
     private charactersRepository: CharactersRepository,
     private skillOffersRepository: SkillOffersRepository,
     private catalogRepository: CatalogRepository,
+    private walletsRepository: WalletsRepository,
+    private chestsRepository: ChestsRepository,
     private clock: Clock
   ) {}
 
@@ -96,22 +105,22 @@ export class SubmitBattleActionUseCase {
       )
     }
 
-    const rewards = await grantBattleXp(battle, engine, {
+    const { rewards, loot } = await deliverBattleRewards(battle, engine, {
       charactersRepository: this.charactersRepository,
       battlesRepository: this.battlesRepository,
       skillOffersRepository: this.skillOffersRepository,
+      walletsRepository: this.walletsRepository,
+      chestsRepository: this.chestsRepository,
       catalog: await this.catalogRepository.load(),
       now: this.clock.now(),
     })
-    if (rewards.length > 0 && battle.recordRewards(rewards).isRight()) {
-      await this.battlesRepository.saveRewards(battle)
-    }
 
     return right({
       battle,
       engine,
       events: eventsSince(engine, from),
       rewards,
+      loot,
     })
   }
 }

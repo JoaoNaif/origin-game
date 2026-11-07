@@ -16,7 +16,7 @@ import { BattleActionPayload } from '../../value-objects/battle-action'
 import { SnapshotField } from '../../value-objects/battle-snapshot'
 
 /** Versão das regras do motor gravada na batalha: o replay só é garantido com a mesma versão (`data_model.md` 3.10). */
-export const ENGINE_VERSION = '0.2.0'
+export const ENGINE_VERSION = '0.2.1'
 
 /** Sal da sorte do campo: o sorteio do campo não consome a sorte do motor (o replay começa do zero). */
 const FIELD_SEED_SALT = 0x5bd1e995

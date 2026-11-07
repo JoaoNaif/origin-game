@@ -15,6 +15,8 @@ import {
 } from 'test/repositories/in-memory-catalog-repository'
 import { InMemoryCharactersRepository } from 'test/repositories/in-memory-characters-repository'
 import { InMemorySkillOffersRepository } from 'test/repositories/in-memory-skill-offers-repository'
+import { InMemoryWalletsRepository } from 'test/repositories/in-memory-wallets-repository'
+import { InMemoryChestsRepository } from 'test/repositories/in-memory-chests-repository'
 import { InMemorySquadsRepository } from 'test/repositories/in-memory-squads-repository'
 import { makeAccount } from './make-account'
 import { characterOf, makeRoster } from './make-roster'
@@ -66,6 +68,8 @@ export async function makePveWorld(level = 18) {
     drafts: new InMemoryBattleDraftsRepository(),
     battles: new InMemoryBattlesRepository(),
     skillOffers: new InMemorySkillOffersRepository(),
+    wallets: new InMemoryWalletsRepository(),
+    chests: new InMemoryChestsRepository(),
     seeds: new FakeSeedGenerator(),
     clock: new FakeClock(),
   }
@@ -94,6 +98,8 @@ export async function startWorldBattle(world: PveWorld) {
     world.drafts,
     world.battles,
     world.skillOffers,
+    world.wallets,
+    world.chests,
     world.clock
   ).execute({
     accountId,

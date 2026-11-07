@@ -6,17 +6,17 @@ import { Character } from '../entities/character'
 import { InvalidCharacterError } from '../errors/invalid-character-error'
 
 /**
- * Personagens com que toda conta começa (D133): no MVP, um de cada modelo do catálogo, no nível 0, com o kit básico
- * na build e o traço de família copiado. Os sistemas de ganho (baú, mercado) entram depois.
+ * Personagens com que toda conta começa (D133, D150): um de cada modelo marcado como inicial (`isStarter`), no nível 0,
+ * com o kit básico na build e o traço de família copiado. Os outros vêm de baú.
  */
 export function startingRoster(
   account: Account,
   catalog: GameCatalog
 ): Either<InvalidCharacterError, Character[]> {
   const characters: Character[] = []
-  const templates = [...catalog.templates.values()].sort((a, b) =>
-    a.key.localeCompare(b.key)
-  )
+  const templates = [...catalog.templates.values()]
+    .filter((t) => t.isStarter)
+    .sort((a, b) => a.key.localeCompare(b.key))
 
   for (const template of templates) {
     const created = Character.create({

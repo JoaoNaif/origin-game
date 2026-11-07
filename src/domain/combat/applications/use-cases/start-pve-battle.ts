@@ -6,6 +6,9 @@ import { CatalogRepository } from '@/domain/catalog/applications/repositories/ca
 import { CharactersRepository } from '@/domain/characters/applications/repositories/characters-repository'
 import { SkillOffersRepository } from '@/domain/characters/applications/repositories/skill-offers-repository'
 import { SquadsRepository } from '@/domain/squads/applications/repositories/squads-repository'
+import { ChestsRepository } from '@/domain/economy/applications/repositories/chests-repository'
+import { WalletsRepository } from '@/domain/economy/applications/repositories/wallets-repository'
+import { BattleLoot } from '@/domain/economy/value-objects/battle-loot'
 import { BattleEngine } from '../../engine/battle-engine'
 import { BattleEvent } from '../../engine/battle-events'
 import { Battle } from '../../entities/battle'
@@ -16,7 +19,10 @@ import { buildPveSnapshot } from '../../services/build-snapshot'
 import { Clock } from '@/core/gateways/clock'
 import { BattleDraftsRepository } from '../repositories/battle-drafts-repository'
 import { BattlesRepository } from '../repositories/battles-repository'
-import { CharacterReward, grantBattleXp } from '../services/battle-rewards'
+import {
+  CharacterReward,
+  deliverBattleRewards,
+} from '../services/battle-rewards'
 import {
   catalogFields,
   ENGINE_VERSION,
@@ -42,6 +48,7 @@ type StartPveBattleUseCaseResponse = Either<
     engine: BattleEngine
     events: readonly BattleEvent[]
     rewards: CharacterReward[]
+    loot: BattleLoot | null
   }
 >
 
@@ -58,6 +65,8 @@ export class StartPveBattleUseCase {
     private battleDraftsRepository: BattleDraftsRepository,
     private battlesRepository: BattlesRepository,
     private skillOffersRepository: SkillOffersRepository,
+    private walletsRepository: WalletsRepository,
+    private chestsRepository: ChestsRepository,
     private clock: Clock
   ) {}
 
@@ -129,17 +138,16 @@ export class StartPveBattleUseCase {
 
     await this.battlesRepository.create(battle)
 
-    const rewards = await grantBattleXp(battle, engine, {
+    const { rewards, loot } = await deliverBattleRewards(battle, engine, {
       charactersRepository: this.charactersRepository,
       battlesRepository: this.battlesRepository,
       skillOffersRepository: this.skillOffersRepository,
+      walletsRepository: this.walletsRepository,
+      chestsRepository: this.chestsRepository,
       catalog,
       now: this.clock.now(),
     })
-    if (rewards.length > 0 && battle.recordRewards(rewards).isRight()) {
-      await this.battlesRepository.saveRewards(battle)
-    }
 
-    return right({ battle, engine, events: engine.events, rewards })
+    return right({ battle, engine, events: engine.events, rewards, loot })
   }
 }
