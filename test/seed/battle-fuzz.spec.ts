@@ -6,6 +6,10 @@ import { generateCandidates } from '@/domain/ai/services/action-generator'
 import { BattleEngine } from '@/domain/combat/engine/battle-engine'
 import { BattleSide, MAX_ROUNDS } from '@/domain/combat/enums/battle-enums'
 import { toSnapshotField } from '@/domain/combat/services/build-snapshot'
+import { domSkills, snapshotDom } from '@/domain/combat/services/dom-skills'
+import { DomPillar } from '@/domain/characters/enums/dom-pillar'
+import { DOM_LEVEL_ORDER } from '@/domain/characters/services/dom-rules'
+import { DomPillars } from '@/domain/characters/value-objects/dom-state'
 import { BattleActionPayload } from '@/domain/combat/value-objects/battle-action'
 import { BattleSnapshot } from '@/domain/combat/value-objects/battle-snapshot'
 import { SkillArea } from '@/domain/skills/enums/skill-area'
@@ -64,10 +68,26 @@ function randomSnapshot(seed: number): BattleSnapshot {
       skills: randomBuild(m.key, level, draw),
     }))
 
-  return makeDuelSnapshot(content, squad(), squad(), level, {
+  const snapshot = makeDuelSnapshot(content, squad(), squad(), level, {
     initial: fields[seed % fields.length],
     catalog: fields,
   })
+
+  // DOM sorteado (D152): metade das unidades com pilares, e as skills únicas dos avançados no fim da build
+  for (const unit of [...snapshot.player.units, ...snapshot.opponent.units]) {
+    if (draw.next() < 0.5) continue
+    const pillars: DomPillars = {}
+    for (const pillar of Object.values(DomPillar)) {
+      const roll = draw.int(0, 3)
+      if (roll > 0) pillars[pillar] = DOM_LEVEL_ORDER[roll - 1]
+    }
+    const dom = snapshotDom(pillars)
+    if (!dom) continue
+    unit.dom = dom
+    unit.skills.push(...domSkills(pillars))
+  }
+
+  return snapshot
 }
 
 const refsOf = (snapshot: BattleSnapshot) =>

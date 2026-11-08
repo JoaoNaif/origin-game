@@ -6,6 +6,7 @@ import { Character } from '@/domain/characters/entities/character'
 import { CharacterTemplate } from '@/domain/characters/entities/character-template'
 import { Trait } from '@/domain/characters/entities/trait'
 import { Variant } from '@/domain/characters/entities/variant'
+import { DomLevel } from '@/domain/characters/enums/dom-level'
 import { Lineage } from '@/domain/characters/enums/lineage'
 import { Stat } from '@/domain/characters/enums/stat'
 import { TraitSource } from '@/domain/characters/enums/trait-source'
@@ -164,6 +165,41 @@ describe('Build Snapshot', () => {
         expect(kael.skills).toHaveLength(4)
         expect(kael).toMatchObject({ row: 0, column: 0 })
       }
+    })
+
+    it('should be able to take the DOM and add one unique skill per advanced pillar (D93)', () => {
+      characters[0].setDomPillars({
+        BODY: DomLevel.ADVANCED,
+        AURA: DomLevel.ADVANCED,
+        MIND: DomLevel.BASIC,
+      })
+
+      const sut = buildPlayerSide({ account, squad, characters, catalog })
+
+      if (sut.isLeft()) throw sut.value
+      const [kael, recruit] = sut.value.units
+      expect(kael.skills.map((s) => s.key).slice(4)).toEqual([
+        'dom:body',
+        'dom:aura',
+      ])
+      expect(kael.skills[4]).toMatchObject({
+        name: 'Indestrutível',
+        singleUse: true,
+        domPillar: 'BODY',
+        desgastePercent: 0,
+      })
+      expect(kael.dom).toEqual({
+        pillars: { BODY: 'ADVANCED', AURA: 'ADVANCED', MIND: 'BASIC' },
+        statPercents: {
+          PRECISION: 3,
+          EVASION: 2,
+          SPEED: 6,
+          ATTACK: 8,
+          WILL: 6,
+        },
+      })
+      expect(recruit.dom).toBeUndefined()
+      expect(recruit.skills).toHaveLength(4)
     })
 
     it('should keep values, not references, of the skills', () => {

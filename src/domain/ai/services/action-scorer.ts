@@ -159,6 +159,14 @@ function hostileValue(
       case 'REPOSITION':
         support += effect.chance * MOVE_VALUE
         break
+      case 'WEAKEN':
+        // Rei (DOM): o debuff em todos os stats, pela chance de pegar
+        support +=
+          effect.chance *
+          Object.values(Stat).length *
+          -effect.percent *
+          MODIFIER_VALUE_PER_PERCENT
+        break
     }
   }
 
@@ -242,6 +250,11 @@ function allyValue(
         break
       case 'PROTECT':
         // pelo perigo real (2026-10-23): o dano que o aliado levaria antes da próxima vez do protetor
+        value +=
+          incomingDanger(engine, context.actorRef, target.ref) * (1 + missing)
+        break
+      case 'INVULNERABLE':
+        // Indestrutível (DOM): o dano que ele levaria até a próxima vez, como o Proteger
         value +=
           incomingDanger(engine, context.actorRef, target.ref) * (1 + missing)
         break

@@ -1,93 +1,16 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { aiDecisionRng, MachineAi } from '@/domain/ai/machine-ai'
 import { Character } from '@/domain/characters/entities/character'
 import { characterOf } from 'test/factories/make-roster'
 import { makePveWorld, PveWorld } from 'test/factories/make-pve-world'
-import { BattleEngine } from '../../engine/battle-engine'
-import { Battle } from '../../entities/battle'
-import { BattleSide } from '../../enums/battle-enums'
-import { BattleActionPayload } from '../../value-objects/battle-action'
-import { DraftPveBattleUseCase } from '../use-cases/draft-pve-battle'
-import { StartPveBattleUseCase } from '../use-cases/start-pve-battle'
-import { SubmitBattleActionUseCase } from '../use-cases/submit-battle-action'
-import { replayBattle } from './pve-session'
+import { playPveBattle } from 'test/factories/play-pve-battle'
 import { CharacterReward } from './battle-rewards'
 
 let world: PveWorld
 let gaia: Character
 
-/** O "jogador" do teste: a IA iniciante jogando pelo lado do jogador. */
-function playerMove(current: Battle): BattleActionPayload {
-  const engine = replayBattle(current)
-  if (engine.isLeft()) throw engine.value
-  const turn = (engine.value as BattleEngine).nextTurn()!
-
-  return new MachineAi(
-    {
-      side: BattleSide.PLAYER,
-      profile: 'BALANCED',
-      difficulty: 'BEGINNER',
-      planning: false,
-    },
-    aiDecisionRng(current.seed, BattleSide.PLAYER, current.actions.length)
-  ).decide(engine.value, turn.ref).payload
-}
-
 /** Joga uma batalha inteira contra o squad de NPC e devolve o que o fim entregou. */
 async function playBattle(npcSquadKey: string): Promise<CharacterReward[]> {
-  const accountId = world.account.id.toString()
-  const drafted = await new DraftPveBattleUseCase(
-    world.accounts,
-    world.catalogRepository,
-    world.drafts,
-    world.seeds,
-    world.clock
-  ).execute({ accountId, npcSquadKey })
-  if (drafted.isLeft()) throw drafted.value
-
-  const started = await new StartPveBattleUseCase(
-    world.accounts,
-    world.characters,
-    world.squads,
-    world.catalogRepository,
-    world.drafts,
-    world.battles,
-    world.skillOffers,
-    world.wallets,
-    world.chests,
-    world.clock
-  ).execute({
-    accountId,
-    draftId: drafted.value.draft.id.toString(),
-    squadId: world.squad.id.toString(),
-  })
-  if (started.isLeft()) throw started.value
-
-  const submit = new SubmitBattleActionUseCase(
-    world.battles,
-    world.characters,
-    world.skillOffers,
-    world.catalogRepository,
-    world.wallets,
-    world.chests,
-    world.clock
-  )
-
-  let current = started.value.battle
-  let rewards = started.value.rewards
-  for (let i = 0; i < 400 && !current.isFinished; i++) {
-    const result = await submit.execute({
-      battleId: current.id.toString(),
-      accountId,
-      payload: playerMove(current),
-    })
-    if (result.isLeft()) throw result.value
-    current = result.value.battle
-    rewards = result.value.rewards
-  }
-  if (!current.isFinished) throw new Error('a batalha não acabou')
-
-  return rewards
+  return (await playPveBattle(world, npcSquadKey)).rewards
 }
 
 /** A Gaia com o Cristal sorteado e as 3 missões já cumpridas: desperta na próxima batalha que contar. */

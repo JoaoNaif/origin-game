@@ -1,4 +1,7 @@
 import { CharacterClass } from '@/domain/characters/enums/character-class'
+import { DomLevel } from '@/domain/characters/enums/dom-level'
+import { DomPillar } from '@/domain/characters/enums/dom-pillar'
+import { DomPillars } from '@/domain/characters/value-objects/dom-state'
 import { Lineage } from '@/domain/characters/enums/lineage'
 import { Passive } from '@/domain/characters/value-objects/passive'
 import { Stat } from '@/domain/characters/enums/stat'
@@ -8,9 +11,32 @@ import { SkillArea } from '@/domain/skills/enums/skill-area'
 import { SkillRange } from '@/domain/skills/enums/skill-range'
 import { SkillTarget } from '@/domain/skills/enums/skill-target'
 import { SkillTier } from '@/domain/skills/enums/skill-tier'
-import { SkillEffect } from '@/domain/skills/value-objects/skill-effect'
+import {
+  EffectRecipient,
+  SkillEffect,
+} from '@/domain/skills/value-objects/skill-effect'
 import { GridPosition } from '@/domain/squads/value-objects/grid-position'
 import { BattleSide } from '../enums/battle-enums'
+
+/**
+ * Efeitos que só as skills únicas do DOM têm (D93, D152): ficam fora do catálogo (o admin não monta skill com eles).
+ */
+export type DomSkillEffect = { appliesTo?: EffectRecipient } &
+  /** Rei: −% em todos os stats por N turnos do afetado; chance pela fórmula de status (uma por alvo). */
+  (
+    | { type: 'WEAKEN'; percent: number; duration: number; baseChance: number }
+    /** Vidente: Atordoado por N turnos; a chance vem do DOM da Mente do alvo, não da fórmula de status. */
+    | {
+        type: 'FORESIGHT'
+        duration: number
+        chanceByMind: Record<DomLevel | 'NONE', number>
+      }
+    /** Indestrutível: anula todo dano recebido até o próximo turno de quem usou, inclusive o dano contínuo dele. */
+    | { type: 'INVULNERABLE' }
+  )
+
+/** Efeito de uma skill na batalha: os do catálogo e os das skills únicas do DOM. */
+export type SnapshotEffect = SkillEffect | DomSkillEffect
 
 /** Skill como estava no início da batalha (valores, não referência: o catálogo pode mudar depois). */
 export interface SnapshotSkill {
@@ -26,7 +52,17 @@ export interface SnapshotSkill {
   cooldown: number
   desgastePercent: number
   baseHitChance: number | null
-  effects: SkillEffect[]
+  effects: SnapshotEffect[]
+  /** Uso único por batalha (skill única do DOM, D60). */
+  singleUse?: boolean
+  /** Pilar da skill única do DOM (D93). */
+  domPillar?: DomPillar
+}
+
+/** DOM da unidade no início (D93): os níveis (a Vidente lê a Mente do alvo) e os % de stat que eles dão. */
+export interface SnapshotDom {
+  pillars: DomPillars
+  statPercents: Partial<Record<Stat, number>>
 }
 
 /** Personagem como estava no início: tudo que o motor precisa para calcular stats e jogar. */
@@ -54,8 +90,10 @@ export interface SnapshotUnit extends GridPosition {
    */
   lineageCostPercent: Partial<Record<Lineage, number>>
   passive: Passive
-  /** As 4 skills da build, na ordem dos slots. */
+  /** As 4 skills da build, na ordem dos slots, e depois as skills únicas do DOM (uma por pilar avançado). */
   skills: SnapshotSkill[]
+  /** DOM no início; ausente = sem DOM (NPC, ou batalha de antes do DOM). */
+  dom?: SnapshotDom
 }
 
 export interface SnapshotSide {

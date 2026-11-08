@@ -10,7 +10,6 @@ import { SkillRange } from '@/domain/skills/enums/skill-range'
 import { SkillTarget } from '@/domain/skills/enums/skill-target'
 import { SkillTier } from '@/domain/skills/enums/skill-tier'
 import { StatusType } from '@/domain/skills/enums/status-type'
-import { SkillEffect } from '@/domain/skills/value-objects/skill-effect'
 import { PassiveEffect } from '@/domain/characters/value-objects/passive'
 import { GridPosition } from '@/domain/squads/value-objects/grid-position'
 import { BattleSide, MAX_ROUNDS } from '../enums/battle-enums'
@@ -18,6 +17,7 @@ import { InvalidActionError } from '../errors/invalid-action-error'
 import { BattleActionPayload } from '../value-objects/battle-action'
 import {
   BattleSnapshot,
+  SnapshotEffect,
   SnapshotField,
   SnapshotSkill,
   SnapshotUnit,
@@ -98,6 +98,8 @@ interface EngineUnit {
   protectedBy: string | null
   /** Parceiro do Ligado (D146). */
   linkedWith: string | null
+  /** Indestrutível (DOM, D93): não leva dano até o próximo turno dele (o dano contínuo desse turno incluso). */
+  invulnerable: boolean
 }
 
 /** Contexto de um gatilho de passiva. */
@@ -137,7 +139,7 @@ export type PreviewEffect =
   | { type: 'APPLY_STATUS'; status: StatusType; chance: number }
   | {
       type: 'REPOSITION'
-      kind: Extract<SkillEffect, { type: 'REPOSITION' }>['kind']
+      kind: Extract<SnapshotEffect, { type: 'REPOSITION' }>['kind']
       chance: number
     }
   | { type: 'TURN_SHIFT'; percent: number }
@@ -149,6 +151,10 @@ export type PreviewEffect =
   /** O dano já vem multiplicado na prévia. */
   | { type: 'EXPLOIT' }
   | { type: 'CLEANSE'; status: StatusType | null }
+  /** Rei (DOM, D93): −% em todos os stats, com a chance de pegar. */
+  | { type: 'WEAKEN'; percent: number; chance: number }
+  /** Indestrutível (DOM, D93): anula o dano até o próximo turno. */
+  | { type: 'INVULNERABLE' }
 
 export interface PreviewHit {
   ref: string
@@ -415,6 +421,7 @@ export class BattleEngine {
       traitKeys: unit.snapshot.traitKeys,
       tauntedBy: unit.conditions.has(StatusType.TAUNT) ? unit.tauntedBy : null,
       protectedBy: unit.protectedBy,
+      invulnerable: unit.invulnerable,
       get statuses(): StatusType[] {
         return unit.conditions.active()
       },
@@ -562,6 +569,24 @@ export class BattleEngine {
             }
           case 'CLEANSE':
             return { type: 'CLEANSE', status: target.conditions.worstNegative }
+          case 'WEAKEN':
+            return {
+              type: 'WEAKEN',
+              percent: effect.percent,
+              chance: statusChanceOf(effect.baseChance),
+            }
+          case 'FORESIGHT':
+            return {
+              type: 'APPLY_STATUS',
+              status: StatusType.STUN,
+              chance: this.canReceive(target, StatusType.STUN)
+                ? effect.chanceByMind[
+                    target.snapshot.dom?.pillars.MIND ?? 'NONE'
+                  ]
+                : 0,
+            }
+          case 'INVULNERABLE':
+            return { type: 'INVULNERABLE' }
         }
       })
 
@@ -661,21 +686,27 @@ export class BattleEngine {
       for (const other of this.units.values()) {
         if (other.protectedBy === unit.ref) other.protectedBy = null
       }
-      this.log.push({
+      const turnEvent: Extract<BattleEvent, { type: 'TURN' }> = {
         type: 'TURN',
         ref: unit.ref,
         round: turn.round,
         tick: turn.tick,
-      })
+      }
+      this.log.push(turnEvent)
 
       const start = unit.conditions.startTurn(unit.desgaste.maxHp)
+      const statuses = unit.conditions.active()
+      if (statuses.length > 0) turnEvent.statuses = statuses
       if (start.dotDamage > 0) {
-        const damage = applyDamage(start.dotDamage, unit)
+        // Indestrutível (D152): o dano contínuo do início do próximo turno também é anulado
+        const amount = unit.invulnerable ? 0 : start.dotDamage
+        const damage = applyDamage(amount, unit)
         this.setHp(unit, damage.hpLeft, damage.shieldLeft)
         this.damageDealt[other(unit.side)] +=
           damage.hpLost + damage.shieldAbsorbed
-        this.log.push({ type: 'DOT', ref: unit.ref, amount: start.dotDamage })
+        this.log.push({ type: 'DOT', ref: unit.ref, amount })
       }
+      unit.invulnerable = false
       this.syncLink(unit)
 
       if (!unit.alive) {
@@ -884,17 +915,19 @@ export class BattleEngine {
     if (!protector?.alive || !attacker.alive) return
 
     const round = this.current?.round ?? this.queue.currentRound
-    const amount = finalDamage(
-      baseDamage(
-        PROTECT_COUNTER_POWER,
-        this.stat(protector, Stat.ATTACK),
-        this.stat(attacker, Stat.DEFENSE),
-        this.damageScale
-      ) *
-        damageMultiplier(round) *
-        attacker.conditions.damageTakenMultiplier *
-        (1 - this.passiveDamageReduction(attacker) / 100)
-    )
+    const amount = attacker.invulnerable
+      ? 0
+      : finalDamage(
+          baseDamage(
+            PROTECT_COUNTER_POWER,
+            this.stat(protector, Stat.ATTACK),
+            this.stat(attacker, Stat.DEFENSE),
+            this.damageScale
+          ) *
+            damageMultiplier(round) *
+            attacker.conditions.damageTakenMultiplier *
+            (1 - this.passiveDamageReduction(attacker) / 100)
+        )
     const result = applyDamage(amount, attacker)
     this.setHp(attacker, result.hpLeft, result.shieldLeft)
     this.damageDealt[protector.side] += result.hpLost + result.shieldAbsorbed
@@ -904,6 +937,7 @@ export class BattleEngine {
       targetRef: attacker.ref,
       amount: result.hpLost,
       shieldAbsorbed: result.shieldAbsorbed,
+      hpLeft: result.hpLeft,
     })
   }
 
@@ -1012,7 +1046,7 @@ export class BattleEngine {
     partner: EngineUnit,
     dealt: number
   ) {
-    if (!partner.alive || dealt <= 0) return
+    if (!partner.alive || dealt <= 0 || partner.invulnerable) return
 
     const amount = Math.round(
       (dealt * STATUS_RULES.LINK.sharedDamagePercent) / 100
@@ -1027,6 +1061,7 @@ export class BattleEngine {
       targetRef: partner.ref,
       amount: result.hpLost,
       shieldAbsorbed: result.shieldAbsorbed,
+      hpLeft: result.hpLeft,
       linked: true,
     })
     this.wakeUp(partner)
@@ -1398,7 +1433,7 @@ export class BattleEngine {
     actor: EngineUnit,
     target: EngineUnit,
     skill: SnapshotSkill,
-    effect: SkillEffect,
+    effect: SnapshotEffect,
     potency: number,
     falloff: number,
     payload: Extract<BattleActionPayload, { type: 'SKILL' }>
@@ -1408,15 +1443,18 @@ export class BattleEngine {
 
     switch (effect.type) {
       case 'DAMAGE': {
-        const amount = this.damageOf(
-          actor,
-          target,
-          skill,
-          effect.power,
-          potency,
-          falloff,
-          round
-        )
+        const targetStatuses = target.conditions.active()
+        const amount = target.invulnerable
+          ? 0
+          : this.damageOf(
+              actor,
+              target,
+              skill,
+              effect.power,
+              potency,
+              falloff,
+              round
+            )
         const result = applyDamage(
           amount,
           target,
@@ -1431,6 +1469,8 @@ export class BattleEngine {
           targetRef: target.ref,
           amount: result.hpLost,
           shieldAbsorbed: result.shieldAbsorbed,
+          hpLeft: result.hpLeft,
+          ...(targetStatuses.length > 0 ? { targetStatuses } : {}),
         })
         if (result.hpLost + result.shieldAbsorbed > 0) this.wakeUp(target)
         if (target.side !== actor.side) {
@@ -1672,6 +1712,86 @@ export class BattleEngine {
         })
         return
 
+      case 'WEAKEN': {
+        // Rei (D93): uma chance por alvo pela fórmula de status; pegou, −% em todos os stats (1 fonte por stat)
+        if (target.side !== actor.side) {
+          const chance = this.statusLandChance(actor, target, effect.baseChance)
+          if (!roll(this.rng, chance)) {
+            for (const stat of Object.values(Stat)) {
+              this.log.push({
+                type: 'MODIFIER',
+                ref: actor.ref,
+                targetRef: target.ref,
+                stat,
+                percent: effect.percent,
+                result: 'RESISTED',
+              })
+            }
+            return
+          }
+        }
+        for (const stat of Object.values(Stat)) {
+          const result = target.conditions.addModifier({
+            source: skill.key,
+            stat,
+            percent: effect.percent,
+            turnsLeft: effect.duration,
+          })
+          this.log.push({
+            type: 'MODIFIER',
+            ref: actor.ref,
+            targetRef: target.ref,
+            stat,
+            percent: effect.percent,
+            result,
+          })
+        }
+        this.refreshSpeeds()
+        return
+      }
+
+      case 'FORESIGHT': {
+        // Vidente (D93): a chance vem do DOM da Mente do alvo; o Atordoado segue a imunidade anti-cadeia (D152)
+        const mind = target.snapshot.dom?.pillars.MIND ?? 'NONE'
+        if (!roll(this.rng, effect.chanceByMind[mind])) {
+          this.log.push({
+            type: 'STATUS',
+            ref: actor.ref,
+            targetRef: target.ref,
+            status: StatusType.STUN,
+            result: 'RESISTED',
+          })
+          return
+        }
+        const result = target.conditions.applyStatus(
+          StatusType.STUN,
+          effect.duration
+        )
+        this.log.push({
+          type: 'STATUS',
+          ref: actor.ref,
+          targetRef: target.ref,
+          status: StatusType.STUN,
+          result,
+        })
+        if (result !== 'IMMUNE') {
+          this.firePassive(target, 'ON_STATUS', {
+            attacker: actor,
+            status: StatusType.STUN,
+          })
+        }
+        return
+      }
+
+      case 'INVULNERABLE':
+        target.invulnerable = true
+        this.log.push({
+          type: 'INVULNERABLE',
+          ref: actor.ref,
+          targetRef: target.ref,
+        })
+        return
+
       case 'RECOVER': {
         // alivia 50% de todo o Desgaste, inclusive o HP máximo perdido pela Fundamental (9.4b, D59, D120)
         const before = target.desgaste.totalFraction()
@@ -1830,7 +1950,7 @@ export class BattleEngine {
   private reposition(
     actor: EngineUnit,
     target: EngineUnit,
-    kind: Extract<SkillEffect, { type: 'REPOSITION' }>['kind'],
+    kind: Extract<SnapshotEffect, { type: 'REPOSITION' }>['kind'],
     payload: Extract<BattleActionPayload, { type: 'SKILL' }>
   ) {
     const grid = this.grids[target.side]
@@ -2421,6 +2541,7 @@ function createUnit(snapshot: SnapshotUnit, side: BattleSide): EngineUnit {
     level: snapshot.level,
     freePoints: snapshot.freePoints,
     traitEffects: snapshot.traitEffects,
+    domPercents: snapshot.dom?.statPercents,
   })
 
   return {
@@ -2446,6 +2567,7 @@ function createUnit(snapshot: SnapshotUnit, side: BattleSide): EngineUnit {
     tauntedBy: null,
     protectedBy: null,
     linkedWith: null,
+    invulnerable: false,
   }
 }
 

@@ -16,6 +16,8 @@ export type BattleEvent =
       tick: number
       /** Ação cedida pelo Comando (não é um turno novo: sem início de turno nem recarga). */
       extra?: boolean
+      /** Status que seguem valendo neste turno (depois de baixar as durações); ausente = nenhum. */
+      statuses?: StatusType[]
     }
   | { type: 'SKIP'; ref: string; reason: 'STUN' | 'SLEEP' }
   /** Adormecido levou dano e acordou (D146). */
@@ -37,6 +39,10 @@ export type BattleEvent =
       targetRef: string
       amount: number
       shieldAbsorbed: number
+      /** HP do alvo depois do golpe (feitos do DOM: o escudo que salvou, D152). */
+      hpLeft?: number
+      /** Status do alvo antes do golpe de skill; ausente = nenhum. */
+      targetStatuses?: StatusType[]
       /** Parte do dano que veio pelo Ligado (D146). */
       linked?: boolean
     }
@@ -97,6 +103,8 @@ export type BattleEvent =
       /** Última rodada da troca; nulo = é o campo inicial. */
       untilRound: number | null
     }
+  /** Indestrutível (DOM, D93): `targetRef` não leva dano até o próximo turno dele. */
+  | { type: 'INVULNERABLE'; ref: string; targetRef: string }
   | { type: 'DEFEATED'; ref: string }
   | { type: 'ROUND_END'; round: number }
   | {

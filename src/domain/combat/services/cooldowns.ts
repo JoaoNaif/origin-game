@@ -1,5 +1,5 @@
 import { SkillTier } from '@/domain/skills/enums/skill-tier'
-import { SkillEffect } from '@/domain/skills/value-objects/skill-effect'
+import { SnapshotEffect } from '../value-objects/battle-snapshot'
 import { STATUS_RULES } from './conditions'
 
 /** O que a recarga precisa saber de cada skill da build. */
@@ -7,7 +7,9 @@ export interface CooldownSkill {
   key: string
   tier: SkillTier
   cooldown: number
-  effects: readonly SkillEffect[]
+  effects: readonly SnapshotEffect[]
+  /** Uso único por batalha (skill única do DOM, D60): depois de usada, nunca mais fica pronta. */
+  singleUse?: boolean
 }
 
 const TIER_RANK: Record<SkillTier, number> = {
@@ -30,6 +32,8 @@ function mainPower(skill: CooldownSkill): number {
 export class SkillCooldowns {
   private readonly remaining = new Map<string, number>()
   private readonly usedThisTurn = new Set<string>()
+  /** Skills de uso único já usadas. */
+  private readonly spent = new Set<string>()
 
   /** `skills` na ordem dos slots da build. */
   constructor(private readonly skills: readonly CooldownSkill[]) {
@@ -41,6 +45,7 @@ export class SkillCooldowns {
     const copy = new SkillCooldowns(this.skills)
     for (const [key, left] of this.remaining) copy.remaining.set(key, left)
     for (const key of this.usedThisTurn) copy.usedThisTurn.add(key)
+    for (const key of this.spent) copy.spent.add(key)
 
     return copy
   }
@@ -50,7 +55,12 @@ export class SkillCooldowns {
   }
 
   isReady(key: string): boolean {
-    return this.turnsLeft(key) === 0
+    return !this.spent.has(key) && this.turnsLeft(key) === 0
+  }
+
+  /** A skill de uso único já foi usada nesta batalha. */
+  isSpent(key: string): boolean {
+    return this.spent.has(key)
   }
 
   /** Skills prontas, na ordem da build. */
@@ -63,6 +73,7 @@ export class SkillCooldowns {
     const skill = this.find(key)
     this.remaining.set(key, skill.cooldown)
     this.usedThisTurn.add(key)
+    if (skill.singleUse) this.spent.add(key)
   }
 
   /** Reduz a recarga das skills que estão recarregando (passiva, ex.: Lucky, D83). Nunca abaixo de 0. */
@@ -87,7 +98,12 @@ export class SkillCooldowns {
    * primeira da build). Se nenhuma está pronta, trava a que ficaria pronta primeiro. Devolve a `key` travada.
    */
   lock(): string {
-    const target = strongest(this.ready()) ?? soonestReady(this.skills, this)
+    const target =
+      strongest(this.ready()) ??
+      soonestReady(
+        this.skills.filter((s) => !this.spent.has(s.key)),
+        this
+      )
     const extra = STATUS_RULES.LOCK.extraCooldown
 
     this.remaining.set(target.key, this.turnsLeft(target.key) + extra)

@@ -24,6 +24,8 @@ import { Battle } from '../../entities/battle'
 import { BattleSide, BattleStatus } from '../../enums/battle-enums'
 import { BattleReward } from '../../value-objects/battle-reward'
 import { awakeningBattleStats } from '../../services/awakening-stats'
+import { domBattleFeats, DOM_PVE_WEIGHT } from '../../services/dom-feats'
+import { DomFeat } from '@/domain/characters/value-objects/dom-state'
 import {
   battleMetrics,
   battleXp,
@@ -117,7 +119,7 @@ export async function deliverBattleRewards(
 }
 
 /**
- * XP do fim (D76, D92) e o despertar (D151): as missões ocultas de quem já sorteou (se a batalha conta), o despertar
+ * XP do fim (D76, D92), o DOM (D93, D152: os feitos da batalha na janela, com o peso da dificuldade) e o despertar (D151): as missões ocultas de quem já sorteou (se a batalha conta), o despertar
  * de quem cumpriu as 3 (com os blocos de recuperação) e o sorteio de quem já está no nível 80. Personagem que já não
  * está na conta fica sem nada.
  */
@@ -172,6 +174,7 @@ async function grantBattleXp(
   })
 
   const awakeningStats = playerAwakeningStats(battle, engine)
+  const domFeats = playerDomFeats(battle, engine)
   const rng = new SeededRng((battle.seed ^ SKILL_OFFER_SEED_SALT) >>> 0)
   const awakeningRng = new SeededRng((battle.seed ^ AWAKENING_SEED_SALT) >>> 0)
   const rewards: CharacterReward[] = []
@@ -212,8 +215,14 @@ async function grantBattleXp(
       )
     }
 
-    // sorteio depois das missões: elas só contam a partir da batalha seguinte
     const template = deps.catalog.templates.get(character.templateId.toValue())
+    const domChanges = character.recordDomBattle({
+      weight: DOM_PVE_WEIGHT[battle.aiDifficulty!],
+      feats: domFeats.get(unit.ref) ?? [],
+      hasVariant: (template?.variants.length ?? 0) > 0,
+    })
+
+    // sorteio depois das missões: elas só contam a partir da batalha seguinte
     const drawn = template
       ? drawAwakening({
           character,
@@ -235,6 +244,7 @@ async function grantBattleXp(
       level: character.level,
       newSkillOffers: offers.length,
       ...(awakened ? { awakened: true } : {}),
+      ...(domChanges.length > 0 ? { domChanges } : {}),
     })
   }
 
@@ -263,6 +273,29 @@ function playerAwakeningStats(
       player.units
         .find((u) => u.ref === ref)
         ?.skills.find((s) => s.key === skillKey)?.tier ?? null,
+  })
+}
+
+/** Feitos do DOM de cada personagem do jogador (D152). */
+function playerDomFeats(
+  battle: Battle,
+  engine: BattleEngine
+): Map<string, DomFeat[]> {
+  const { player, opponent } = battle.snapshot
+  const units = [...player.units, ...opponent.units]
+
+  return domBattleFeats({
+    events: engine.events,
+    side: BattleSide.PLAYER,
+    units: units.map((u) => ({ ref: u.ref, level: u.level })),
+    won: battle.winner === BattleSide.PLAYER,
+    end: (ref) => {
+      const unit = engine.unit(ref)
+      return { alive: unit.alive, hp: unit.hp, maxHp: unit.maxHp }
+    },
+    areaOf: (ref, skillKey) =>
+      units.find((u) => u.ref === ref)?.skills.find((s) => s.key === skillKey)
+        ?.area ?? null,
   })
 }
 

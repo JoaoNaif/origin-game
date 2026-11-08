@@ -14,6 +14,7 @@ import { Squad, SQUAD_SIZE } from '@/domain/squads/entities/squad'
 import { BattleSide } from '../enums/battle-enums'
 import { BuildSnapshotError } from '../errors/build-snapshot-error'
 import { BattleField } from '../entities/battle-field'
+import { domSkills, snapshotDom } from './dom-skills'
 import {
   BattleSnapshot,
   SnapshotField,
@@ -204,6 +205,8 @@ export function buildPlayerSide(
       )
     }
 
+    const dom = snapshotDom(character.domPillars)
+
     units.push({
       ref: unitRef(BattleSide.PLAYER, index),
       characterId: character.id.toString(),
@@ -222,7 +225,12 @@ export function buildPlayerSide(
         catalog
       ),
       passive: template.value.passive,
-      skills: build.map((s) => toSnapshotSkill(s.skill, s.isEnhanced)),
+      // as 4 da build e as skills únicas do DOM (uma por pilar avançado, D93)
+      skills: [
+        ...build.map((s) => toSnapshotSkill(s.skill, s.isEnhanced)),
+        ...domSkills(character.domPillars),
+      ],
+      ...(dom ? { dom } : {}),
       row: member.row,
       column: member.column,
     })

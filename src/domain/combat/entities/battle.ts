@@ -393,8 +393,13 @@ function validateSnapshot(snapshot: BattleSnapshot): string | null {
       if (refs.has(unit.ref)) return `ref repetida: ${unit.ref}`
       refs.add(unit.ref)
 
-      if (unit.skills.length !== BUILD_SIZE) {
+      // as 4 da build; as skills únicas do DOM vêm depois e ficam fora da conta (D93)
+      const build = unit.skills.filter((s) => !s.domPillar)
+      if (build.length !== BUILD_SIZE) {
         return `${unit.ref}: a build tem ${BUILD_SIZE} skills`
+      }
+      if (unit.skills.slice(BUILD_SIZE).some((s) => !s.domPillar)) {
+        return `${unit.ref}: as skills únicas do DOM vêm depois da build`
       }
     }
   }
