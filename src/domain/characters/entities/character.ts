@@ -16,6 +16,8 @@ import {
   isMissionComplete,
 } from '../services/awakening-missions'
 import { awakeningError } from '../services/awakening-rules'
+import { recordDomBattle } from '../services/dom-progress'
+import { DOM_PILLAR_ORDER } from '../services/dom-rules'
 import {
   availableFreePoints,
   maxFreePointsPerStat,
@@ -32,6 +34,13 @@ import {
   AwakeningBattleStats,
   AwakeningProgress,
 } from '../value-objects/awakening-progress'
+import {
+  DomChange,
+  DomFeat,
+  DomPillars,
+  DomState,
+  emptyDomState,
+} from '../value-objects/dom-state'
 import { LearnedSkill } from '../value-objects/learned-skill'
 import { StatBlock } from '../value-objects/stat-block'
 import { CharacterTemplate } from './character-template'
@@ -60,6 +69,8 @@ export interface CharacterProps {
   awakenedVariantId: UniqueEntityId | null
   /** Despertar sorteado e as missões ocultas (D151); nulo = ainda não sorteou. */
   awakening: AwakeningProgress | null
+  /** DOM (D60, D61, D93): níveis dos pilares e a janela de feitos. */
+  dom: DomState
   /** Pontos livres por stat (HP em pontos: 1 ponto = 5 de HP). */
   freePoints: StatBlock
   /** Até 5, incluindo o de família copiado do modelo. */
@@ -120,6 +131,14 @@ export class Character extends Entity<CharacterProps> {
     return awakeningHint(this.isAwakened, this.props.awakening)
   }
 
+  get dom(): Readonly<DomState> {
+    return this.props.dom
+  }
+
+  get domPillars(): Readonly<DomPillars> {
+    return this.props.dom.pillars
+  }
+
   get freePoints(): Readonly<StatBlock> {
     return this.props.freePoints
   }
@@ -171,6 +190,7 @@ export class Character extends Entity<CharacterProps> {
           dangerPoints: 0,
           awakenedVariantId: null,
           awakening: null,
+          dom: emptyDomState(),
           freePoints: { ...EMPTY_FREE_POINTS },
           traits: familyTrait ? [familyTrait] : [],
           skills: kitSkills.map((skill, index) => ({
@@ -417,6 +437,44 @@ export class Character extends Entity<CharacterProps> {
     if (error) return left(new InvalidCharacterError(error))
 
     this.props.awakenedVariantId = variant.id
+
+    return right(undefined)
+  }
+
+  /**
+   * Soma uma batalha no DOM (D61, D93): 1 feito por pilar, a janela de 150 de peso, a perda a cada 25 e no máximo 1
+   * nível a mais por pilar. Devolve os pilares que mudaram.
+   */
+  recordDomBattle(input: {
+    weight: number
+    feats: readonly DomFeat[]
+    hasVariant: boolean
+  }): DomChange[] {
+    const { state, changes } = recordDomBattle(this.props.dom, input)
+    this.props.dom = state
+
+    return changes
+  }
+
+  /**
+   * Define os níveis dos pilares direto (admin, para testar). A janela fica como está e a perda volta a contar do zero:
+   * sem feitos, o pilar cai 1 nível a cada 25 de peso.
+   */
+  setDomPillars(pillars: DomPillars): Either<InvalidCharacterError, void> {
+    const unknown = Object.keys(pillars).filter(
+      (p) => !DOM_PILLAR_ORDER.includes(p as never)
+    )
+    if (unknown.length > 0) {
+      return left(
+        new InvalidCharacterError(`pilar desconhecido: ${unknown.join(', ')}`)
+      )
+    }
+
+    this.props.dom = {
+      ...this.props.dom,
+      pillars: { ...pillars },
+      weightSinceCheck: 0,
+    }
 
     return right(undefined)
   }

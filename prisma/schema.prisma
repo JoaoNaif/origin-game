@@ -418,6 +418,9 @@ model Character {
   awakeningId       String?     @map("awakening_id")
   awakeningMissions Json        @default("[]") @map("awakening_missions")
   awakeningDrawnAt  DateTime?   @map("awakening_drawn_at")
+  // DOM (D60, D93, D152): { pillars: { MIND?: 'BASIC'|..., ... }, history: [{ weight, feats: [{ pillar, role }] }],
+  // weightSinceCheck }. A janela soma até 150 de peso; batalhas seguidas sem feito ficam numa entrada só.
+  dom               Json        @default("{\"pillars\":{},\"history\":[],\"weightSinceCheck\":0}")
   freeHp            Int         @default(0) @map("free_hp")
   freeAttack        Int         @default(0) @map("free_attack")
   freeDefense       Int         @default(0) @map("free_defense")

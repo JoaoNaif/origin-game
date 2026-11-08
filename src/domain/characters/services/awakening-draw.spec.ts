@@ -50,6 +50,7 @@ function withTraits(character: Character, traits: Character['traits']) {
       dangerPoints: character.dangerPoints,
       awakenedVariantId: character.awakenedVariantId,
       awakening: null,
+      dom: { pillars: {}, history: [], weightSinceCheck: 0 },
       freePoints: { ...character.freePoints },
       traits: [...traits],
       skills: [...character.skills],

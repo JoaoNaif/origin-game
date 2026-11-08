@@ -55,6 +55,7 @@ describe('Character', () => {
         dangerPoints: 0,
         awakenedVariantId: null,
         awakening: null,
+        dom: { pillars: {}, history: [], weightSinceCheck: 0 },
         freePoints: { ...EMPTY_FREE_POINTS },
         traits: [],
         skills: character.skills.map((s) => ({ ...s })),

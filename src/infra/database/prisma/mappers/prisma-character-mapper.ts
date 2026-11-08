@@ -3,6 +3,10 @@ import { UniqueEntityId } from '@/core/entities/unique-entity-id'
 import { GameCatalog } from '@/domain/catalog/applications/repositories/catalog-repository'
 import { Character } from '@/domain/characters/entities/character'
 import { AwakeningMissionProgress } from '@/domain/characters/value-objects/awakening-progress'
+import {
+  DomState,
+  emptyDomState,
+} from '@/domain/characters/value-objects/dom-state'
 
 export const characterInclude = {
   traits: { orderBy: { acquiredAt: 'asc' } },
@@ -35,6 +39,7 @@ export class PrismaCharacterMapper {
                 raw.awakeningMissions as unknown as AwakeningMissionProgress[],
             }
           : null,
+        dom: { ...emptyDomState(), ...(raw.dom as unknown as DomState) },
         freePoints: {
           HP: raw.freeHp,
           ATTACK: raw.freeAttack,
@@ -73,6 +78,7 @@ export class PrismaCharacterMapper {
       awakeningMissions: (character.awakening?.missions ??
         []) as unknown as Prisma.InputJsonValue,
       awakeningDrawnAt: character.awakening?.drawnAt ?? null,
+      dom: character.dom as unknown as Prisma.InputJsonValue,
       freeHp: free.HP,
       freeAttack: free.ATTACK,
       freeDefense: free.DEFENSE,
