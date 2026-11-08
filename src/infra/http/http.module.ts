@@ -11,6 +11,7 @@ import { FetchBattlesByUsernameController } from './controllers/admin/fetch-batt
 import { FetchCharactersByUsernameController } from './controllers/admin/fetch-characters-by-username.controller'
 import { GetSkillReferenceController } from './controllers/admin/get-skill-reference.controller'
 import { GrantCharacterController } from './controllers/admin/grant-character.controller'
+import { SetCharacterDomController } from './controllers/admin/set-character-dom.controller'
 import { UpdateCatalogEntryController } from './controllers/admin/update-catalog-entry.controller'
 import { AllocateFreePointsController } from './controllers/characters/allocate-free-points.controller'
 import { AuthenticateController } from './controllers/accounts/authenticate.controller'
@@ -28,6 +29,7 @@ import { FetchAccountCharactersController } from './controllers/characters/fetch
 import { FetchAccountSquadsController } from './controllers/squads/fetch-account-squads.controller'
 import { FetchPendingSkillOffersController } from './controllers/characters/fetch-pending-skill-offers.controller'
 import { FetchFormationBonusesController } from './controllers/catalog/fetch-formation-bonuses.controller'
+import { FetchDomRulesController } from './controllers/catalog/fetch-dom-rules.controller'
 import { FetchNpcSquadsController } from './controllers/catalog/fetch-npc-squads.controller'
 import { FetchTraitsController } from './controllers/catalog/fetch-traits.controller'
 import { FetchTemplatesController } from './controllers/catalog/fetch-templates.controller'
@@ -66,6 +68,7 @@ import { squadsUseCases } from './use-cases/squads.providers'
     FetchNpcSquadsController,
     FetchTraitsController,
     FetchFormationBonusesController,
+    FetchDomRulesController,
     // accounts
     CreateAccountController,
     AuthenticateController,
@@ -111,6 +114,7 @@ import { squadsUseCases } from './use-cases/squads.providers'
     FetchCharactersByUsernameController,
     FetchBattlesByUsernameController,
     GrantCharacterController,
+    SetCharacterDomController,
     CreateCatalogEntryController,
     UpdateCatalogEntryController,
     DeleteCatalogEntryController,

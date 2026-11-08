@@ -8,6 +8,7 @@ import { UpdateCatalogEntryUseCase } from '@/domain/catalog/applications/use-cas
 import { CharactersRepository } from '@/domain/characters/applications/repositories/characters-repository'
 import { FetchCharactersByUsernameUseCase } from '@/domain/characters/applications/use-cases/fetch-characters-by-username'
 import { GrantCharacterUseCase } from '@/domain/characters/applications/use-cases/grant-character'
+import { SetCharacterDomUseCase } from '@/domain/characters/applications/use-cases/set-character-dom'
 import { BattlesRepository } from '@/domain/combat/applications/repositories/battles-repository'
 import { FetchBattlesByUsernameUseCase } from '@/domain/combat/applications/use-cases/fetch-battles-by-username'
 
@@ -59,5 +60,11 @@ export const adminUseCases: Provider[] = [
       characters: CharactersRepository,
       catalog: CatalogRepository
     ) => new GrantCharacterUseCase(accounts, characters, catalog),
+  },
+  {
+    provide: SetCharacterDomUseCase,
+    inject: [CharactersRepository],
+    useFactory: (characters: CharactersRepository) =>
+      new SetCharacterDomUseCase(characters),
   },
 ]

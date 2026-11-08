@@ -19,6 +19,9 @@ const skillView = (skill: SnapshotSkill) => ({
   baseHitChance: skill.baseHitChance,
   isEnhanced: skill.isEnhanced,
   effects: skill.effects,
+  // skill única do DOM (D93): uso único, fora das 4 da build
+  singleUse: skill.singleUse ?? false,
+  domPillar: skill.domPillar ?? null,
 })
 
 /** Skills que o inimigo já usou: o jogador só conhece as skills do outro lado vendo (`pvp_brief.md` 3). */
@@ -75,6 +78,7 @@ export class BattlePresenter {
         tauntedBy: state.tauntedBy,
         linkedWith: state.linkedWith,
         protectedBy: state.protectedBy,
+        invulnerable: state.invulnerable,
         engaged: state.engaged,
         stats: own ? state.stats : null,
         skills: visibleSkills.map((s) => ({

@@ -37,6 +37,18 @@ describe('Get Character (e2e)', () => {
       // conta nova: nada sorteado (D151)
       awakeningHint: 'SILENT',
     })
+    // conta nova: sem DOM, os 4 pilares zerados (D152)
+    expect(response.body.character.dom.pillars).toHaveLength(4)
+    expect(response.body.character.dom.pillars[0]).toEqual({
+      pillar: 'MIND',
+      level: null,
+      points: 0,
+      roles: { DAMAGE: 0, TANK: 0, SUPPORT: 0, CONTROL: 0 },
+      nextLevel: 'BASIC',
+      nextThreshold: 8,
+      lossBelow: null,
+      title: null,
+    })
   })
 
   test('[GET] /characters/:id of another account fails', async () => {

@@ -1,5 +1,19 @@
 import { GameCatalog } from '@/domain/catalog/applications/repositories/catalog-repository'
 import { Character } from '@/domain/characters/entities/character'
+import { CharacterTemplate } from '@/domain/characters/entities/character-template'
+import { DomLevel } from '@/domain/characters/enums/dom-level'
+import {
+  domPillarPoints,
+  domRolePoints,
+} from '@/domain/characters/services/dom-progress'
+import {
+  DOM_PILLAR_ORDER,
+  DOM_RULES,
+  DOM_TITLES,
+  domStatPercents,
+  domThreshold,
+  nextDomLevel,
+} from '@/domain/characters/services/dom-rules'
 import {
   availableFreePoints,
   maxFreePointsPerStat,
@@ -35,7 +49,9 @@ export class CharacterPresenter {
         level: character.level,
         freePoints: character.freePoints,
         traitEffects: character.traits.flatMap((t) => [...t.effects]),
+        domPercents: domStatPercents(character.domPillars),
       }),
+      dom: CharacterPresenter.dom(character, template),
       freePoints: {
         allocated: character.freePoints,
         available: availableFreePoints(character.level),
@@ -52,6 +68,37 @@ export class CharacterPresenter {
         isEnhanced: s.isEnhanced,
         buildSlot: s.buildSlot,
       })),
+    }
+  }
+
+  /**
+   * DOM (D60, D93, D152): por pilar, o nível, os pontos na janela (e por papel, para os 3 do avançado), o limiar do
+   * próximo nível, o piso da perda e o título do avançado.
+   */
+  static dom(character: Character, template: CharacterTemplate) {
+    const { pillars, history } = character.dom
+    const hasVariant = template.variants.length > 0
+
+    return {
+      windowWeight:
+        Math.round(history.reduce((sum, e) => sum + e.weight, 0) * 1000) / 1000,
+      pillars: DOM_PILLAR_ORDER.map((pillar) => {
+        const level = pillars[pillar] ?? null
+        const next = nextDomLevel(level ?? undefined)
+
+        return {
+          pillar,
+          level,
+          points: domPillarPoints(history, pillar),
+          roles: domRolePoints(history, pillar),
+          nextLevel: next,
+          nextThreshold: next ? domThreshold(next, hasVariant) : null,
+          lossBelow: level
+            ? domThreshold(level, hasVariant) * DOM_RULES.lossShare
+            : null,
+          title: level === DomLevel.ADVANCED ? DOM_TITLES[pillar] : null,
+        }
+      }),
     }
   }
 }
