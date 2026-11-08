@@ -62,6 +62,7 @@ cada fragmento, para testar baús e aprimoramento.
 | `GET /traits` | 200 `{ traits }`: os 9 traços com `key`, nome, descrição, categoria, origem (`TEMPLATE` família / `CONQUERED`), variante (família) e efeitos. É o que a tela mostra no lugar das `traitKeys` dos personagens, das unidades e do `requiredTraitKeys` dos campos |
 | `GET /npc-squads?difficulty=` | 200 `{ npcSquads }`: `{ key, name, description, profile, difficulty, level }`, do mais fácil ao mais difícil. `difficulty` opcional (`BEGINNER` a `GRANDMASTER`); outro valor dá 400 |
 | `GET /formation-bonuses` | 200 `{ formationBonuses: { statAuras: [{ characterClass, stat, percent }], supportHealPercent, artilleryBackDamagePercent, executorLoneAttackPercent } }`: os valores do D128, lidos das constantes que o motor aplica |
+| `GET /dom-rules` | 200 `{ domRules: { pillars: [{ pillar, primaryStat, secondaryStat, title, uniqueSkill: { name, description }, feats: [{ role, description }] }], levels: [{ level, threshold, thresholdWithoutVariant, primaryPercent, secondaryPercent }], window, checkEvery, lossShare, advancedRoles, advancedRolePoints, pveWeights } }`: as regras do DOM (D93, D152) para o guia, lidas das constantes do servidor; o texto dos feitos já vem com os números |
 
 Como cada bônus de formação vale (D128): `statAuras` e `supportHealPercent` (cura recebida, Suporte) vão para os aliados
 adjacentes nas 4 direções, e auras da mesma classe não somam. `artilleryBackDamagePercent` é da própria Artilharia, de
@@ -88,9 +89,17 @@ A conta: `{ id, username, displayName }` (a senha nunca sai, nem como hash).
 ## Personagens (`characters`)
 
 O personagem: `{ id, templateKey, name, characterClass, level, xp, xpToNextLevel, danger, awakenedVariantKey,
-awakeningHint, stats, freePoints: { allocated, available, maxPerStat }, traitKeys, skills: [{ key, name, source,
-isEnhanced, buildSlot }] }`. `stats` são os de fora da batalha (nível + pontos livres + traços). `buildSlot` 1 a 4 =
-na build.
+awakeningHint, dom, stats, freePoints: { allocated, available, maxPerStat }, traitKeys, skills: [{ key, name, source,
+isEnhanced, buildSlot }] }`. `stats` são os de fora da batalha (nível + pontos livres + traços + DOM). `buildSlot` 1
+a 4 = na build.
+
+**DOM (D60, D93, D152):** visível, é treino e não segredo. `dom: { windowWeight, pillars: [{ pillar, level, points,
+roles: { DAMAGE, TANK, SUPPORT, CONTROL }, nextLevel, nextThreshold, lossBelow, title }] }`, os 4 pilares na ordem
+`MIND`, `HEART`, `BODY`, `AURA`. `level` nulo = sem o pilar. `points` = pontos na janela (as últimas batalhas até
+150 de peso; `windowWeight` diz quanto já tem). `nextThreshold` = pontos para o próximo nível (nulo no avançado);
+o avançado pede também 8 pontos em 3 papéis (`roles`). `lossBelow` = abaixo disso o pilar cai um nível na próxima
+conferência (a cada 25 de peso). `title` só no avançado (Vidente, Resiliente, Indestrutível, Rei), que dá a skill
+única na batalha. Os feitos, os pesos e as skills únicas estão em `GET /dom-rules`.
 
 **Despertar (D67, D151):** tudo oculto. A partir do nível 80, o servidor sorteia o despertar no fim de uma batalha e
 abre 3 missões que o jogador não vê. `awakeningHint` é a única pista: `SILENT` (nada, ou nenhuma missão cumprida),
@@ -175,19 +184,26 @@ sai da seed. Em mover, trocar e defender, `preview` é nulo.
 | `status`, `mode`, `opponent` | `IN_PROGRESS` / `FINISHED`; `PVE`; nome, perfil e dificuldade da máquina |
 | `round`, `turn`, `timeline` | rodada (até 30); de quem é a vez (`{ ref, side }`, nulo no fim); as próximas 8 vezes |
 | `field`, `fields` | o campo valendo (`key`, `untilRound`, `isInitial`) e o catálogo para as trocas |
-| `units` | as 8 unidades (`PLAYER:0..3`, `OPPONENT:0..3`): modelo (`templateKey`, também o nome da imagem em `origin-front/public/characters/`), HP, escudo, posição, status, Provocado/Protegido, parceiro do Ligado (`linkedWith`), Engajado, classe, nível e traços |
+| `units` | as 8 unidades (`PLAYER:0..3`, `OPPONENT:0..3`): modelo (`templateKey`, também o nome da imagem em `origin-front/public/characters/`), HP, escudo, posição, status, Provocado/Protegido, parceiro do Ligado (`linkedWith`), `invulnerable` (Indestrutível do DOM, até o próximo turno dele), Engajado, classe, nível e traços |
 | `result` | no fim: `winner`, `endReason` (`ELIMINATION`, `ROUND_LIMIT` ou `ABANDON`), `rounds`, `rewards` (o XP entregue, o mesmo da resposta da última jogada; vazio na desistência) e `loot` (moeda, fragmentos e baú; nulo na desistência) |
 
 **O que o jogador vê do inimigo** (`pvp_brief.md` 3): classe, nível, traços e o estado em campo. **Não** vê os
 `stats` (vêm nulos) nem as skills que ele ainda não usou: `skills` do inimigo só traz as já vistas. Das próprias
 unidades vem tudo, com `ready` em cada skill (fora de recarga).
 
-**`events`:** a lista de `BattleEvent` (`src/domain/combat/engine/battle-events.ts`), em ordem: `TURN`, `SKILL`,
-`DAMAGE` (com `linked: true` quando veio pelo Ligado), `HEAL`, `STATUS`, `MOVE`, `DEFEATED`, `BATTLE_END` e os demais, como `SKIP` (`reason`: `STUN` ou `SLEEP`), `WOKE` (acordou) e `CLEANSE` (Purificar; `status` é o que saiu). É o que a tela anima.
+**Skills únicas do DOM (D93, D152):** cada pilar avançado acrescenta uma skill depois das 4 da build, com
+`singleUse: true` e `domPillar` (nas outras, `false` e nulo). Uso único (depois de usada, `ready` fica falso até o
+fim), sem Desgaste e sem teste de acerto; jogam-se como qualquer skill (`skillKey` `dom:mind`, `dom:heart`,
+`dom:body` ou `dom:aura`). Na prévia, a do Rei vem como `WEAKEN { percent, chance }`, a da Vidente como
+`APPLY_STATUS` (Atordoado) e a do Indestrutível como `INVULNERABLE`.
 
-**`rewards`** (só quando a batalha acaba): `[{ characterId, xp, levelsGained, level, newSkillOffers, awakened? }]`
+**`events`:** a lista de `BattleEvent` (`src/domain/combat/engine/battle-events.ts`), em ordem: `TURN`, `SKILL`,
+`DAMAGE` (com `linked: true` quando veio pelo Ligado, `hpLeft` = HP do alvo depois e `targetStatuses` = status dele antes do golpe), `HEAL`, `STATUS`, `MOVE`, `DEFEATED`, `BATTLE_END` e os demais, como `SKIP` (`reason`: `STUN` ou `SLEEP`), `WOKE` (acordou), `CLEANSE` (Purificar; `status` é o que saiu) e `INVULNERABLE` (Indestrutível). `TURN` traz `statuses` (os que seguem valendo naquele turno). O golpe anulado pelo Indestrutível vem como `DAMAGE` com `amount: 0`. É o que a tela anima.
+
+**`rewards`** (só quando a batalha acaba): `[{ characterId, xp, levelsGained, level, newSkillOffers, awakened?, domChanges? }]`
 dos 4 que entraram (D134); `newSkillOffers` = blocos de skill que a subida abriu (D135), mais os de recuperação;
-`awakened: true` só em quem despertou nesta batalha (D151). Ficam guardados na batalha:
+`awakened: true` só em quem despertou nesta batalha (D151); `domChanges: [{ pillar, from, to }]` só em quem subiu ou
+caiu um pilar do DOM (`from`/`to` nulo = sem o pilar, D152). Ficam guardados na batalha:
 `GET /battles/:id` traz os mesmos em `result.rewards`, para a tela de resultado depois de uma reconexão.
 
 **`loot`** (só quando a batalha acaba; nulo antes): `{ coins, fragments: { [linhagem]: quantidade }, chest: { id, tier } | null }`.
@@ -309,3 +325,4 @@ Nenhuma rota muda o papel. O username da URL é normalizado como no cadastro.
 | `GET /admin/accounts/:username/characters` | 200 `{ characters }` (formato de `GET /me/characters`); 404 conta |
 | `GET /admin/accounts/:username/battles?status=` | 200 `{ battles }` (formato de `GET /me/battles`); 404 conta |
 | `POST /admin/accounts/:username/characters` `{ templateKey }` | 201 `{ character }`: dá o personagem como no cadastro (nível 0, kit na build, traço de família), por exemplo de um modelo criado depois da conta; 404 conta ou modelo; 409 a conta já tem esse modelo |
+| `PUT /admin/characters/:characterId/dom` `{ pillars: { MIND?, HEART?, BODY?, AURA? } }` | 200 `{ character }`: define o nível de cada pilar do DOM (`BASIC`, `INTERMEDIATE`, `ADVANCED`; nulo ou ausente = sem o pilar), para testar sem farmar feitos (D152). A janela de feitos não muda e a perda volta a contar do zero: sem feitos, o pilar cai um nível a cada 25 de peso. 400 nível ou pilar desconhecido; 404 personagem. O id vem de `GET /admin/accounts/:username/characters` |

@@ -54,8 +54,9 @@
 | 12 | `BattleField` (+ `BattleFieldTrait` e enum `Stat`) | Catálogo | Trait | **feito** |
 | 13 | `Wallet` + `WalletEntry` (enum `WalletReason`) e `Chest` (enum `ChestSource`) | Economia | Account, Battle | **feito** (D150, 3.13) |
 | 14 | `Awakening` (+ colunas do despertar em `Character` e enum `SkillOfferSource`) | Catálogo | Variant | **feito** (D151, 3.14) |
+| 15 | Coluna `dom` em `Character` (DOM: níveis e janela de feitos) | Jogador | Character | **feito** (D152, 3.15) |
 
-**Fora do MVP** (cada um vira migração própria quando a camada chegar): inventário, equipamento vivo, bestas, DOM,
+**Fora do MVP** (cada um vira migração própria quando a camada chegar): inventário, equipamento vivo, bestas,
 mercado e organizações.
 
 ---
@@ -481,7 +482,8 @@ Skill.create({ ...flameWave, target: SkillTarget.ALLY })
 **Domínio:** `src/domain/skills/entities/skill.ts`; referência em `src/domain/skills/services/skill-reference.ts`.
 Fábrica de teste em `test/factories/make-skill.ts`.
 
-**Fora do MVP:** a skill única do DOM entra com a camada dele. O catálogo do despertar está em 3.14.
+As skills únicas do DOM **não são do catálogo**: o servidor monta cada uma como valor da batalha (3.15). O catálogo do
+despertar está em 3.14.
 
 ### 3.5 Account (jogador)
 
@@ -578,6 +580,7 @@ fica no modelo (`CharacterTemplate`, 3.3).
 | `awakeningId` | FK opcional → `Awakening` | o despertar sorteado (D151); nulo = ainda não sorteou. Restrict: o admin não apaga um despertar sorteado |
 | `awakeningMissions` | JSON `[{ kind, threshold, progress }]` | as 3 missões ocultas (uma de cada categoria), cópia do pool com o limiar de sangue puro |
 | `awakeningDrawnAt` | data, opcional | quando sorteou |
+| `dom` | JSON `{ pillars, history, weightSinceCheck }` | DOM (D152, 3.15): nível de cada pilar, a janela de feitos (até 150 de peso) e o peso desde a última conferência da perda |
 | `freeHp` … `freeWill` | 7 inteiros | pontos livres por stat; **HP em pontos** (1 ponto = 5 de HP, D69) |
 | `createdAt`, `updatedAt` | data | |
 
@@ -606,6 +609,8 @@ traços, DOM e equipamento quando essas camadas entrarem). Guardar o valor criar
 | `awaken` | só com **exatamente 1 variante**; nível ≥ 80; a variante é uma despertada **da variante do personagem**; um despertar só (D67, D96) |
 | `startAwakening` | guarda o despertar sorteado e as 3 missões; uma vez só, nível ≥ 80, sem ter despertado (D151) |
 | `recordAwakeningBattle` | soma uma batalha que conta nas missões (sem passar do limiar); devolve se as 3 estão cumpridas. `awakeningHint` dá a dica (`SILENT`, `SIGNS`, `IMMINENT`, `AWAKENED`) |
+| `recordDomBattle` | soma uma batalha no DOM: 1 feito por pilar, janela de 150 de peso, perda a cada 25, no máximo 1 nível a mais por pilar; devolve o que mudou (D152) |
+| `setDomPillars` | admin define os níveis (pilar conhecido); a janela fica e a perda volta a contar do zero |
 | `Character.restore` | recompõe a partir do banco, sem as regras de criação |
 
 **Exemplo** (fictício): a Kael (Vanguarda, perfil 700 / 100 / 120 / 75 / 85 / 55 / 95) de `tester_01`.
@@ -1108,6 +1113,27 @@ batalha com um sal próprio.
 **`SkillOffer.source`** (`SkillOfferSource`): `LEVEL_UP` (subida, D77) ou `AWAKENING` (recuperação, D151). A chave
 única é `characterId` + `level` + `source`: o bloco de recuperação do 85 convive com o bloco normal do 85.
 
+### 3.15 DOM do personagem
+
+O DOM (D60, D61, D93, D152; regra em `dom_brief.md` 9). Sem tabela própria: é a coluna `dom` do `Character` (JSON),
+porque só o personagem lê e escreve. Domínio em `src/domain/characters/services/dom-rules.ts` (valores) e
+`dom-progress.ts` (janela, subir e cair); feitos em `src/domain/combat/services/dom-feats.ts`; skills únicas em
+`dom-skills.ts`.
+
+| Campo | O que é |
+|---|---|
+| `pillars` | `{ MIND?, HEART?, BODY?, AURA? }` com `BASIC`, `INTERMEDIATE` ou `ADVANCED`; pilar ausente = sem DOM nele |
+| `history` | `[{ weight, feats: [{ pillar, role }] }]`, da mais antiga para a mais nova, somando até 150 de peso. No máximo 1 feito por pilar por entrada. Batalhas seguidas sem feito ficam numa entrada só (o tamanho cresce com os feitos, não com as batalhas) |
+| `weightSinceCheck` | peso jogado desde a última conferência da perda (a cada 25) |
+
+**Na batalha:** o snapshot da unidade do jogador ganha `dom: { pillars, statPercents }` (os % já calculados entram nos
+stats) e as **skills únicas** dos pilares avançados depois das 4 da build, como `SnapshotSkill` com `singleUse: true`
+e `domPillar` (efeitos `WEAKEN`, `FORESIGHT`, `INVULNERABLE` ou `HEAL`, que não existem no catálogo). Batalha antiga,
+sem `dom` no snapshot, joga como antes. O NPC não tem DOM no MVP.
+
+**No fim da batalha** (`battle-rewards.ts`): os feitos de cada personagem (`domBattleFeats`, pelos eventos) entram com
+o peso da dificuldade; a recompensa traz `domChanges` quando um pilar sobe ou cai.
+
 ## 4. Seed do MVP (conteúdo)
 
 Código: `prisma/seed/content/` (o conteúdo, criado pelas entidades do domínio e validado por elas) e `prisma/seed.ts`
@@ -1156,7 +1182,7 @@ Mesmo molde dos 12 (kit de 4 + Reforçada, Forte e Final).
 | Lio Virelli | Controlador | som | C | **Eco** (ao ser atingido): 20% de Silenciar quem bateu |
 | Dax Zarek | Atirador | relâmpago | B | **Hierarquia da Velocidade** (ao derrubar): adianta a vez 25% |
 
-**Carteiras de teste:** `tester_01` e `admin` começam com 20.000 M e 50 de cada fragmento (só na criação da carteira;
+**Carteiras de teste:** `tester_01`, `admin` e `veterano` começam com 20.000 M e 50 de cada fragmento (só na criação da carteira;
 rodar o seed de novo não repõe).
 
 **Skills (165, 20 delas despertadas):** 7 a 9 por personagem (mais as despertadas), todas com os números de `skillReference` (tipo + forma, D92, D108, D109) e
@@ -1203,6 +1229,14 @@ A conta `admin` também leva os personagens ao 18; se já existe, só sobe quem 
 padrão só entram em quem não distribuiu nenhum). A gravação do conteúdo está em `prisma/seed/seed-database.ts` (usada
 também pelos testes e2e, um schema por arquivo), as contas em `prisma/seed/seed-test-account.ts` e
 `seed-admin-account.ts`, e a subida ao 18 em `seed-character-level.ts`.
+
+**Conta de vitrine** (`veterano` / `origin123`, `prisma/seed/seed-showcase-account.ts`): para ver o despertar e o DOM
+no front. Kael Vaz (85), Nox (95), Gaia (90) e Oren Ignara (90, de baú, dado à conta) no squad "Vitrine"; os outros
+personagens ficam no nível 0. Nox, Gaia e Oren despertados (Sombra Abissal, Cristal e Plasma) com 3 skills despertadas
+na build; o DOM treinado por feitos de verdade na janela (60 batalhas de peso 1), cobrindo as 4 skills únicas: Nox com
+Mente avançada (Vidente) e Corpo intermediário, Gaia com Coração avançado (Resiliente) e Aura básica, Oren com Aura e
+Corpo avançados (Rei e Indestrutível) e Kael com os 4 pilares sem avançado (Corpo e Coração intermediários, Mente e
+Aura básicas). Se a conta já existe, fica como está.
 
 ## 5. Servidor (infra)
 

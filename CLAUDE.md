@@ -1,11 +1,12 @@
 # CLAUDE.md
 
-> O **design de jogo está fechado até o D151** (regras e valores iniciais do MVP). **Feito:** motor de combate, IA e
+> O **design de jogo está fechado até o D152** (regras e valores iniciais do MVP). **Feito:** motor de combate, IA e
 > simulação (D122 a D132), schema do Prisma, seed e o **servidor do MVP** (contas, catálogo, personagens, squads e
 > batalha contra a máquina, com XP no fim e as ações possíveis da vez), com login (username + senha), as **rotas de
 > admin** (editar o catálogo, ver contas, dar personagem) e a **economia** (carteira com moeda e fragmentos, baús,
 > aprimoramento de skill e a recompensa em moeda do fim da batalha, D150) e o **despertar** (catálogo `Awakening`, sorteio
-> no nível 80, missões ocultas, dica e blocos de recuperação, D151). Contrato da API em [`docs/api.md`](./docs/api.md).
+> no nível 80, missões ocultas, dica e blocos de recuperação, D151) e o **DOM** (4 pilares, feitos medidos na batalha,
+> janela de 150 de peso, skills únicas do avançado e rota de admin, D152). Contrato da API em [`docs/api.md`](./docs/api.md).
 > Contexto permanente do projeto para o Claude. Leia antes de mexer em qualquer coisa.
 
 ## O que é Origin
@@ -19,7 +20,7 @@ e **escrever a resposta no doc**. Não inventar regra de combate.
 
 ## Estado atual
 
-**As regras e os valores iniciais estão fechados** (registro das decisões D1 a D151 em
+**As regras e os valores iniciais estão fechados** (registro das decisões D1 a D152 em
 [`docs/game_design.md`](./docs/game_design.md)). Combate: fila em barra de ação (0 a 1000, Velocidade soma por tick),
 grade 3x3, 4 personagens com 4 skills cada, 7 stats, fórmula de dano `Poder × Ataque² / (Ataque + Defesa) × escala` (×1,2 até o nível 20, descendo até ×0,9 no 40; D131, D137, D148), Exaustão a partir da rodada 4 para a batalha fechar em ~12 rodadas (D138), Desgaste
 como risco x retorno (piso de 80%), vitória por eliminação ou por dano causado na rodada 30 (D122). Os valores são **placeholders
@@ -78,7 +79,7 @@ src/
     errors/err/               erros genéricos de use-case: ResourceNotFound, ResourceAlreadyExists, NotAllowed
   domain/
     combat/                   motor: batalha, grade 3x3, fila de turnos, resolução de ações
-    characters/               personagens, linhagens, atributos, despertar (catálogo, sorteio, missões ocultas)
+    characters/               personagens, linhagens, atributos, despertar (catálogo, sorteio, missões ocultas), DOM (níveis e janela)
     skills/                   modelo de skill (ver `docs/skills_brief.md` seção 12)
     ai/                       IA da máquina: pontuação, sorteio com Rng, log do jogador
     squads/                   formação (4 personagens na grade 3x3)
@@ -154,9 +155,9 @@ test/                         factories, in-memory repositories, fakes (incluind
 - **Conflitos do `world_build.md`** (seção 13) que viram dado, só os que importam.
 - **Depois do MVP:** PvP (pontos do Elo, limites de pontos, temporada, reconexão, top 3, fila), perfil próprio para
   chefes, previsão de turnos da IA, memória entre batalhas, e os caminhos Enxerto, Rede e Selo. Das camadas de
-  aprimoramento, o despertar está feito (D151); faltam DOM, equipamento vivo e contratos.
+  aprimoramento, o despertar (D151) e o DOM (D152) estão feitos; faltam equipamento vivo e contratos.
 - **Economia, depois:** mercado entre jogadores e espaço de inventário entram com o equipamento vivo (D150).
-- **Servidor, a seguir:** o front (inclusive a dica do despertar, o aviso no fim da batalha e o form de despertares no admin). O relógio do turno (20 s, Defender automático) entra com o PvP; no PvE não há limite (D147).
+- **Servidor, a seguir:** o front do DOM (pilares na ficha, skills únicas na batalha, aviso no fim, feitos no guia e o DOM no admin); o do despertar já está feito. O relógio do turno (20 s, Defender automático) entra com o PvP; no PvE não há limite (D147).
 
 **Regra de trabalho:** valores numéricos novos, o Claude **propõe** e o usuário aprova; depois registra em uma nova
 linha D do `game_design.md` e no brief de origem.

@@ -1122,3 +1122,22 @@ Detalhes e pontos fora da meta no relatório da conversa de 2026-10-20.
 
 **Resultado com o D141 a D144 (2026-11-02, IA Equilibrado Mestre; 60 batalhas por par, 300 por nível nos personagens):** ver a linha D144 de `game_design.md`. Escada da IA, um nível acima (200 batalhas, ±7 pontos): 66 / 56 / 79 / 63%, meta ~65%. Com o D145: 65 / 62 / 76 / 66%.
 
+## DOM no motor (D152)
+
+- **Stats:** `computeStats` recebe `domPercents` (do `snapshot.dom.statPercents`) e soma com o % dos traços, fora do
+  teto deles.
+- **Skills únicas** vêm no fim de `snapshot.skills`, com `singleUse` e `domPillar`. `SkillCooldowns` marca a de uso
+  único como gasta ao usar (nunca mais fica pronta; o Travado e a recarga passiva a ignoram). Efeitos só delas
+  (`DomSkillEffect` em `battle-snapshot.ts`):
+  - `WEAKEN` (Rei): uma chance por alvo (`statusLandChance`); pegou, um modificador de −15% em cada stat com a `key`
+    da skill como fonte; não pegou, `MODIFIER` com `result: 'RESISTED'`.
+  - `FORESIGHT` (Vidente): chance pela Mente do alvo (`snapshot.dom.pillars.MIND`), sem a fórmula de status; aplica
+    `STUN` com a duração do efeito (2), sujeito à imunidade do Atordoado.
+  - `INVULNERABLE` (Indestrutível): `unit.invulnerable` até o início do próximo turno dele, depois do dano contínuo
+    desse início. Os quatro caminhos de dano recebido (golpe, contra-ataque, Ligado e dano contínuo) dão 0.
+  - Resiliente é um `HEAL` comum de Poder 5 em si.
+- **Eventos novos ou com campo novo:** `INVULNERABLE`; `TURN.statuses` (os que seguem valendo no turno, depois de
+  baixar as durações); `DAMAGE.hpLeft` e `DAMAGE.targetStatuses`. Servem aos feitos do DOM (`dom-feats.ts`), que só
+  leem eventos.
+- **Prévia e IA:** `WEAKEN` e `INVULNERABLE` viram `PreviewEffect` próprios; a IA pontua o Rei como debuff nos 7 stats
+  pela chance e o Indestrutível pelo perigo até a próxima vez (como o Proteger).
