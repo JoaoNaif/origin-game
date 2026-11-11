@@ -13,6 +13,10 @@ import {
   DomFeat,
   DomPillars,
 } from '@/domain/characters/value-objects/dom-state'
+import { GearTemplate } from '@/domain/gear/entities/gear-template'
+import { Gear } from '@/domain/gear/entities/gear'
+import { GEAR_GRADE_ORDER } from '@/domain/gear/gear-values'
+import { characterGearBond } from '@/domain/gear/services/gear-bond'
 import { CreateSquadUseCase } from '@/domain/squads/applications/use-cases/create-squad'
 import { BcryptHasher } from '@/infra/cryptography/bcrypt-hasher'
 import { PrismaService } from '@/infra/database/prisma/prisma.service'
@@ -20,6 +24,7 @@ import { PrismaAccountsRepository } from '@/infra/database/prisma/repositories/p
 import { PrismaCatalogRepository } from '@/infra/database/prisma/repositories/prisma-catalog-repository'
 import { PrismaCharactersRepository } from '@/infra/database/prisma/repositories/prisma-characters-repository'
 import { PrismaSquadsRepository } from '@/infra/database/prisma/repositories/prisma-squads-repository'
+import { PrismaGearRepository } from '@/infra/database/prisma/repositories/prisma-gear-repository'
 
 /** Conta de vitrine do despertar e do DOM (D151, D152): entra com `veterano` / `origin123`. */
 export const SHOWCASE_ACCOUNT = {
@@ -167,10 +172,47 @@ export function prepareShowcaseCharacter(
   trainDom(character, spec.dom, template.variants.length > 0)
 }
 
+/** Equipamentos guardados no inventário da vitrine (um Rei, o Divino e um Cavaleiro), para testar o elo de cada um. */
+export const SHOWCASE_STORED_GEAR = [
+  'espada-flamejante',
+  'relicario-de-alpha',
+  'tiara-do-eco',
+]
+
+const BOND_ORDER = ['FULL', 'PARTIAL', 'NONE']
+
+/**
+ * O equipamento do seed com o melhor elo para o personagem (pleno antes de parcial; no empate, o grau mais alto), fora
+ * o Divino e os já usados.
+ */
+export function bestShowcaseGear(
+  character: Character,
+  template: CharacterTemplate,
+  catalog: GameCatalog,
+  used: ReadonlySet<string>
+): GearTemplate {
+  const ranked = [...catalog.gearTemplates.values()]
+    .filter((g) => !g.isDivine && !used.has(g.key))
+    .map((gear) => ({
+      gear,
+      bond: characterGearBond(gear, character, template).bond,
+    }))
+    .sort(
+      (a, b) =>
+        BOND_ORDER.indexOf(a.bond) - BOND_ORDER.indexOf(b.bond) ||
+        GEAR_GRADE_ORDER.indexOf(b.gear.grade) -
+          GEAR_GRADE_ORDER.indexOf(a.gear.grade) ||
+        a.gear.key.localeCompare(b.gear.key)
+    )
+
+  return ranked[0].gear
+}
+
 /**
  * Conta de vitrine (D151, D152): Kael, Nox, Gaia e Oren de nível 85 a 95, os três últimos despertados (com as skills
- * despertadas na build) e todos com DOM treinado, no squad "Vitrine". Os outros personagens ficam no nível 0. Se a
- * conta já existe, fica como está.
+ * despertadas na build) e todos com DOM treinado, no squad "Vitrine". Cada um usa o equipamento vivo do seed com o
+ * melhor elo, e 3 outros ficam guardados (D153). Os outros personagens ficam no nível 0. Se a conta já existe, fica
+ * como está.
  */
 export async function seedShowcaseAccount(
   prisma: PrismaService
@@ -195,6 +237,9 @@ export async function seedShowcaseAccount(
   const catalog = await catalogRepository.load()
   const roster = [...created.value.characters]
   const members: { characterId: string; row: number; column: number }[] = []
+  const gearRepository = new PrismaGearRepository(prisma)
+  const usedGear = new Set<string>(SHOWCASE_STORED_GEAR)
+  const now = new Date()
 
   for (const spec of SHOWCASE_CHARACTERS) {
     const template = [...catalog.templates.values()].find(
@@ -217,11 +262,36 @@ export async function seedShowcaseAccount(
 
     prepareShowcaseCharacter(character, spec, template, catalog)
     await characters.save(character)
+
+    const best = bestShowcaseGear(character, template, catalog, usedGear)
+    usedGear.add(best.key)
+    const gear = Gear.create({
+      accountId: account.id,
+      templateId: best.id,
+      source: 'ADMIN',
+      acquiredAt: now,
+    })
+    gear.equipOn(account.id, character.id)
+    await gearRepository.create(gear)
     members.push({
       characterId: character.id.toString(),
       row: spec.row,
       column: spec.column,
     })
+  }
+
+  for (const key of SHOWCASE_STORED_GEAR) {
+    const template = [...catalog.gearTemplates.values()].find(
+      (g) => g.key === key
+    )!
+    await gearRepository.create(
+      Gear.create({
+        accountId: account.id,
+        templateId: template.id,
+        source: 'ADMIN',
+        acquiredAt: now,
+      })
+    )
   }
 
   const squad = await new CreateSquadUseCase(
@@ -231,5 +301,5 @@ export async function seedShowcaseAccount(
   ).execute({ accountId: account.id.toString(), name: 'Vitrine', members })
   if (squad.isLeft()) throw squad.value
 
-  return `conta ${SHOWCASE_ACCOUNT.username}: Kael, Nox, Gaia e Oren com despertar e DOM no squad Vitrine (senha ${SHOWCASE_ACCOUNT.password})`
+  return `conta ${SHOWCASE_ACCOUNT.username}: Kael, Nox, Gaia e Oren com despertar, DOM e equipamento vivo no squad Vitrine (senha ${SHOWCASE_ACCOUNT.password})`
 }

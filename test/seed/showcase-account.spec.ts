@@ -9,9 +9,12 @@ import { makeAccount } from 'test/factories/make-account'
 import { makeRoster } from 'test/factories/make-roster'
 import { seedCatalog } from 'test/repositories/in-memory-catalog-repository'
 import {
+  bestShowcaseGear,
   prepareShowcaseCharacter,
   SHOWCASE_CHARACTERS,
+  SHOWCASE_STORED_GEAR,
 } from '../../prisma/seed/seed-showcase-account'
+import { characterGearBond } from '@/domain/gear/services/gear-bond'
 
 describe('Showcase Account', () => {
   let catalog: GameCatalog
@@ -88,5 +91,19 @@ describe('Showcase Account', () => {
     expect(unique.sort()).toEqual(
       ['Indestrutível', 'Rei', 'Resiliente', 'Vidente'].sort()
     )
+  })
+
+  it('should be able to give each one the seed gear with the best bond, all different', () => {
+    const used = new Set<string>(SHOWCASE_STORED_GEAR)
+    const picked = sut.map((character) => {
+      const template = catalog.templates.get(character.templateId.toValue())!
+      const gear = bestShowcaseGear(character, template, catalog, used)
+      used.add(gear.key)
+      return { gear, bond: characterGearBond(gear, character, template).bond }
+    })
+
+    expect(new Set(picked.map((p) => p.gear.key)).size).toBe(4)
+    expect(picked.every((p) => !p.gear.isDivine)).toBe(true)
+    expect(picked.some((p) => p.bond === 'FULL')).toBe(true)
   })
 })
