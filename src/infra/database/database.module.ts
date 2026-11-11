@@ -8,6 +8,7 @@ import { CharactersRepository } from '@/domain/characters/applications/repositor
 import { SkillOffersRepository } from '@/domain/characters/applications/repositories/skill-offers-repository'
 import { ChestsRepository } from '@/domain/economy/applications/repositories/chests-repository'
 import { WalletsRepository } from '@/domain/economy/applications/repositories/wallets-repository'
+import { GearRepository } from '@/domain/gear/applications/repositories/gear-repository'
 import { SquadsRepository } from '@/domain/squads/applications/repositories/squads-repository'
 import { MemoryBattleDraftsRepository } from './memory/memory-battle-drafts-repository'
 import { PrismaService } from './prisma/prisma.service'
@@ -20,6 +21,7 @@ import { PrismaSkillOffersRepository } from './prisma/repositories/prisma-skill-
 import { PrismaSquadsRepository } from './prisma/repositories/prisma-squads-repository'
 import { PrismaChestsRepository } from './prisma/repositories/prisma-chests-repository'
 import { PrismaWalletsRepository } from './prisma/repositories/prisma-wallets-repository'
+import { PrismaGearRepository } from './prisma/repositories/prisma-gear-repository'
 
 @Module({
   providers: [
@@ -33,6 +35,7 @@ import { PrismaWalletsRepository } from './prisma/repositories/prisma-wallets-re
     { provide: BattlesRepository, useClass: PrismaBattlesRepository },
     { provide: WalletsRepository, useClass: PrismaWalletsRepository },
     { provide: ChestsRepository, useClass: PrismaChestsRepository },
+    { provide: GearRepository, useClass: PrismaGearRepository },
     // pré-batalha dura minutos: fica em memória no MVP (memory-battle-drafts-repository.ts)
     { provide: BattleDraftsRepository, useClass: MemoryBattleDraftsRepository },
   ],
@@ -48,6 +51,7 @@ import { PrismaWalletsRepository } from './prisma/repositories/prisma-wallets-re
     BattleDraftsRepository,
     WalletsRepository,
     ChestsRepository,
+    GearRepository,
   ],
 })
 export class DatabaseModule {}

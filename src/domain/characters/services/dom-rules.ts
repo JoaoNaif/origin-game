@@ -66,6 +66,19 @@ export const DOM_TITLES: Record<DomPillar, string> = {
   AURA: 'Rei',
 }
 
+/**
+ * Títulos do personagem (D55, `progression_brief.md` 2.9). Por ora só os do DOM avançado; os de evento, ranqueado e
+ * história entram com as suas camadas.
+ */
+export function characterTitles(pillars: DomPillars): string[] {
+  return DOM_PILLAR_ORDER.filter((p) => pillars[p] === DomLevel.ADVANCED).map(
+    (p) => DOM_TITLES[p]
+  )
+}
+
+/** Todos os títulos que existem hoje (a lista de um equipamento só aceita estes). */
+export const KNOWN_TITLES: readonly string[] = Object.values(DOM_TITLES)
+
 /** Limiar do nível, menor para quem não tem variante (6 / 16 / 36). */
 export function domThreshold(level: DomLevel, hasVariant: boolean): number {
   const points = DOM_THRESHOLDS[level]

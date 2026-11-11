@@ -2,9 +2,15 @@ import { Either, left, right } from '@/core/either'
 import { Entity } from '@/core/entities/entity'
 import { UniqueEntityId } from '@/core/entities/unique-entity-id'
 import { Lineage } from '@/domain/characters/enums/lineage'
-import { FRAGMENT_CAP, FRAGMENT_PRICE } from '../economy-values'
+import {
+  FRAGMENT_CAP,
+  FRAGMENT_PRICE,
+  INVENTORY_SLOTS,
+  inventoryExpansionPrice,
+} from '../economy-values'
 import { WalletReason } from '../enums/wallet-reason'
 import { InsufficientFundsError } from '../errors/insufficient-funds-error'
+import { InvalidEconomyActionError } from '../errors/invalid-economy-action-error'
 import {
   FRAGMENT_TYPES,
   Fragments,
@@ -24,6 +30,8 @@ export interface WalletProps {
   accountId: UniqueEntityId
   coins: number
   fragments: Fragments
+  /** Espaços do inventário (D100): 30 no início, +5 por compra, até 100. */
+  inventorySlots: number
   /** Versão lida do banco; 0 = a conta ainda não tem carteira gravada. */
   version: number
   /** Mudanças desta operação, gravadas junto com a carteira. */
@@ -59,6 +67,15 @@ export class Wallet extends Entity<WalletProps> {
     ) as Record<Lineage, number>
   }
 
+  get inventorySlots() {
+    return this.props.inventorySlots
+  }
+
+  /** Preço da próxima compra de espaços; nulo = já está no máximo. */
+  get nextInventoryExpansionPrice(): number | null {
+    return inventoryExpansionPrice(this.props.inventorySlots)
+  }
+
   get version() {
     return this.props.version
   }
@@ -74,7 +91,14 @@ export class Wallet extends Entity<WalletProps> {
   /** Carteira de quem ainda não ganhou nada (não gravada). */
   static empty(accountId: UniqueEntityId): Wallet {
     return new Wallet(
-      { accountId, coins: 0, fragments: {}, version: 0, entries: [] },
+      {
+        accountId,
+        coins: 0,
+        fragments: {},
+        inventorySlots: INVENTORY_SLOTS.initial,
+        version: 0,
+        entries: [],
+      },
       accountId
     )
   }
@@ -147,6 +171,31 @@ export class Wallet extends Entity<WalletProps> {
     this.record(change, -coins, negateFragments(fragments))
 
     return right(undefined)
+  }
+
+  /** Compra +5 espaços no inventário (D100), com preço crescente, até 100. */
+  expandInventory(): Either<
+    InvalidEconomyActionError | InsufficientFundsError,
+    { price: number }
+  > {
+    const price = this.nextInventoryExpansionPrice
+    if (price === null) {
+      return left(
+        new InvalidEconomyActionError(
+          `o inventário já tem o máximo de ${INVENTORY_SLOTS.max} espaços`
+        )
+      )
+    }
+
+    const spent = this.spend({
+      reason: WalletReason.INVENTORY_EXPANSION,
+      coins: price,
+    })
+    if (spent.isLeft()) return left(spent.value)
+
+    this.props.inventorySlots += INVENTORY_SLOTS.step
+
+    return right({ price })
   }
 
   private record(change: WalletChange, coins: number, fragments: Fragments) {

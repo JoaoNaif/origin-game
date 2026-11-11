@@ -6,6 +6,8 @@ export const WalletReason = {
   FRAGMENT_PURCHASE: 'FRAGMENT_PURCHASE',
   FRAGMENT_SALE: 'FRAGMENT_SALE',
   SKILL_ENHANCEMENT: 'SKILL_ENHANCEMENT',
+  INVENTORY_EXPANSION: 'INVENTORY_EXPANSION',
+  GEAR_SALE: 'GEAR_SALE',
 } as const
 
 export type WalletReason = (typeof WalletReason)[keyof typeof WalletReason]

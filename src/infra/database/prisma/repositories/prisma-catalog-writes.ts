@@ -202,6 +202,29 @@ export async function writeCatalogRow(
       })
       return
     }
+
+    case 'GEAR': {
+      const data = {
+        key: entity.key,
+        name: entity.name,
+        description: entity.description,
+        kind: entity.kind,
+        grade: entity.grade,
+        lineage: entity.lineage,
+        primaryStat: entity.primaryStat,
+        secondaryStat: entity.secondaryStat,
+        primaryPercent: entity.primaryPercent,
+        secondaryPercent: entity.secondaryPercent,
+        requirements: json(entity.requirements),
+        titles: json(entity.titles),
+      }
+      await tx.gearTemplate.upsert({
+        where: { id },
+        create: { id, ...data },
+        update: data,
+      })
+      return
+    }
   }
 }
 
@@ -234,6 +257,9 @@ export async function deleteCatalogRow(
       return
     case 'AWAKENING':
       await tx.awakening.delete(where)
+      return
+    case 'GEAR':
+      await tx.gearTemplate.delete(where)
       return
   }
 }

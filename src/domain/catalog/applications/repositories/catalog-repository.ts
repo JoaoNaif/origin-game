@@ -4,6 +4,7 @@ import { Awakening } from '@/domain/characters/entities/awakening'
 import { CharacterTemplate } from '@/domain/characters/entities/character-template'
 import { Trait } from '@/domain/characters/entities/trait'
 import { Variant } from '@/domain/characters/entities/variant'
+import { GearTemplate } from '@/domain/gear/entities/gear-template'
 import { BattleField } from '@/domain/combat/entities/battle-field'
 import { SnapshotCatalog } from '@/domain/combat/services/build-snapshot'
 import { Skill } from '@/domain/skills/entities/skill'
@@ -19,6 +20,8 @@ export interface GameCatalog extends SnapshotCatalog {
   npcSquads: readonly NpcSquad[]
   /** Despertares por id (D151). Não entram na `version`: não mudam o replay de uma batalha. */
   awakenings: ReadonlyMap<string, Awakening>
+  /** Modelos de equipamento vivo por id (D94). Também fora da `version`: a batalha guarda o equipamento como valor. */
+  gearTemplates: ReadonlyMap<string, GearTemplate>
   /** Identifica o conteúdo (gravado na batalha: o replay só é garantido com o mesmo conteúdo). */
   version: string
 }
@@ -32,6 +35,7 @@ export type CatalogEntry =
   | { kind: 'FIELD'; entity: BattleField }
   | { kind: 'NPC_SQUAD'; entity: NpcSquad }
   | { kind: 'AWAKENING'; entity: Awakening }
+  | { kind: 'GEAR'; entity: GearTemplate }
 
 export type CatalogKind = CatalogEntry['kind']
 

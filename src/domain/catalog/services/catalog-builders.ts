@@ -31,6 +31,14 @@ import { Passive } from '@/domain/characters/value-objects/passive'
 import { StatBlock } from '@/domain/characters/value-objects/stat-block'
 import { TraitEffect } from '@/domain/characters/value-objects/trait-effect'
 import { BattleField } from '@/domain/combat/entities/battle-field'
+import {
+  GearRequirement,
+  GearTemplate,
+  GearLineage,
+} from '@/domain/gear/entities/gear-template'
+import { GearGrade } from '@/domain/gear/enums/gear-grade'
+import { GearKind } from '@/domain/gear/enums/gear-kind'
+import { InvalidGearError } from '@/domain/gear/errors/invalid-gear-error'
 import { Skill } from '@/domain/skills/entities/skill'
 import { SkillArea } from '@/domain/skills/enums/skill-area'
 import { SkillKitSlot } from '@/domain/skills/enums/skill-kit-slot'
@@ -136,6 +144,21 @@ export interface AwakeningInput {
   missions: AwakeningMissionTemplate[]
 }
 
+export interface GearInput {
+  name: string
+  description?: string | null
+  kind: GearKind
+  grade: GearGrade
+  lineage: GearLineage
+  primaryStat: Stat
+  secondaryStat: Stat
+  /** Padrão: o do grau (D94); o admin ajusta em até ±15%. */
+  primaryPercent?: number
+  secondaryPercent?: number
+  requirements: GearRequirement[]
+  titles: string[]
+}
+
 /** O pedido do admin, pelo tipo do item. */
 export type CatalogInput =
   | { kind: 'VARIANT'; data: VariantInput }
@@ -145,6 +168,7 @@ export type CatalogInput =
   | { kind: 'FIELD'; data: FieldInput }
   | { kind: 'NPC_SQUAD'; data: NpcSquadInput }
   | { kind: 'AWAKENING'; data: AwakeningInput }
+  | { kind: 'GEAR'; data: GearInput }
 
 /** Ligação (`key`) que não existe, ou regra do `create` do item. */
 export type CatalogEntryError =
@@ -157,6 +181,7 @@ export type CatalogEntryError =
   | InvalidBattleFieldError
   | InvalidNpcSquadError
   | InvalidAwakeningError
+  | InvalidGearError
 
 type Built = Either<CatalogEntryError, CatalogEntry>
 
@@ -341,6 +366,13 @@ function build(
         { key, ...data, variant: lookup(variants(), variantKey, 'variante') },
         id
       )
+      return result.isLeft()
+        ? left(result.value)
+        : right({ kind: input.kind, entity: result.value })
+    }
+
+    case 'GEAR': {
+      const result = GearTemplate.create({ key, ...input.data }, id)
       return result.isLeft()
         ? left(result.value)
         : right({ kind: input.kind, entity: result.value })

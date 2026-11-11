@@ -76,6 +76,46 @@ model Awakening {
   @@map("awakenings")
 }
 
+// Grau do equipamento vivo (living_gear_brief.md 3).
+enum GearGrade {
+  SQUIRE
+  KNIGHT
+  MASTER
+  KING
+  DIVINE
+}
+
+// Arma ou armadura (D62): mesmo sistema, um slot só por personagem (D94).
+enum GearKind {
+  WEAPON
+  ARMOR
+}
+
+// Modelo de equipamento vivo (catálogo do admin, D62, D94). JSON validado no domínio:
+// requirements = [{ stat, level: HIGH | LOW }] (2/2/3/4/4 pelo grau), titles = [nome do título] (2 a 5).
+// A linhagem é a da variante que habita o material (nunca NONE).
+model GearTemplate {
+  id               String    @id @default(uuid())
+  key              String    @unique
+  name             String
+  description      String?
+  kind             GearKind
+  grade            GearGrade
+  lineage          Lineage
+  primaryStat      Stat      @map("primary_stat")
+  secondaryStat    Stat      @map("secondary_stat")
+  primaryPercent   Float     @map("primary_percent")
+  secondaryPercent Float     @map("secondary_percent")
+  requirements     Json
+  titles           Json
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  gear Gear[]
+
+  @@map("gear_templates")
+}
+
 // Categoria do traço (D47).
 enum TraitCategory {
   COMBAT
@@ -309,6 +349,7 @@ model Account {
   wallet        Wallet?
   walletEntries WalletEntry[]
   chests        Chest[]
+  gear          Gear[]
 
   @@map("accounts")
 }
@@ -321,11 +362,13 @@ model Account {
 // NONE = Neutro; limite de 500 por tipo, validado no domínio). Criada no primeiro ganho.
 // `version` sobe a cada gravação: duas gravações em cima da mesma leitura, só uma entra.
 model Wallet {
-  accountId String   @id @map("account_id")
-  coins     Int      @default(0)
-  fragments Json     @default("{}")
-  version   Int      @default(1)
-  updatedAt DateTime @updatedAt @map("updated_at")
+  accountId      String   @id @map("account_id")
+  coins          Int      @default(0)
+  fragments      Json     @default("{}")
+  // Espaços do inventário (D100): 30 no início, +5 por compra, até 100.
+  inventorySlots Int      @default(30) @map("inventory_slots")
+  version        Int      @default(1)
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
@@ -340,6 +383,8 @@ enum WalletReason {
   FRAGMENT_PURCHASE
   FRAGMENT_SALE
   SKILL_ENHANCEMENT
+  INVENTORY_EXPANSION
+  GEAR_SALE
 }
 
 // Registro de cada entrada e saída da carteira (auditoria). `coins` e `fragments` são a variação;
@@ -383,6 +428,31 @@ model Chest {
   @@index([accountId, openedAt])
   @@index([battleId])
   @@map("chests")
+}
+
+// De onde veio o equipamento da conta.
+enum GearSource {
+  CHEST
+  ADMIN
+}
+
+// Equipamento vivo da conta (D62, D100): ocupa 1 espaço do inventário. characterId = no slot daquele personagem
+// (um por personagem, D94); nulo = guardado. O elo não é guardado: sai dos stats do personagem na hora.
+model Gear {
+  id          String     @id @default(uuid())
+  accountId   String     @map("account_id")
+  templateId  String     @map("template_id")
+  characterId String?    @unique @map("character_id")
+  source      GearSource
+  acquiredAt  DateTime   @default(now()) @map("acquired_at")
+
+  account   Account      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  template  GearTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  character Character?   @relation(fields: [characterId], references: [id], onDelete: SetNull)
+
+  @@index([accountId])
+  @@index([templateId])
+  @@map("gear")
 }
 
 // Sessão de login (refresh token com rotação). Só o hash do token fica no banco.
@@ -439,6 +509,7 @@ model Character {
   skills          CharacterSkill[]
   squadMembers    SquadMember[]
   skillOffers     SkillOffer[]
+  gear            Gear?
 
   @@index([accountId])
   @@index([templateId])

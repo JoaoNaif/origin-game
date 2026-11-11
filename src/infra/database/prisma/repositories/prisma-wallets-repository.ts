@@ -23,6 +23,7 @@ export class PrismaWalletsRepository implements WalletsRepository {
       accountId: new UniqueEntityId(accountId),
       coins: row.coins,
       fragments: row.fragments as Fragments,
+      inventorySlots: row.inventorySlots,
       version: row.version,
     })
   }
@@ -33,7 +34,11 @@ export class PrismaWalletsRepository implements WalletsRepository {
    */
   async save(wallet: Wallet): Promise<boolean> {
     const accountId = wallet.accountId.toString()
-    const data = { coins: wallet.coins, fragments: json(wallet.fragments) }
+    const data = {
+      coins: wallet.coins,
+      fragments: json(wallet.fragments),
+      inventorySlots: wallet.inventorySlots,
+    }
 
     try {
       await this.prisma.$transaction(async (tx) => {

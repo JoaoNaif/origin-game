@@ -42,6 +42,10 @@ export function findCatalogEntry(
       const entity = byKey(catalog.awakenings.values())
       return entity ? { kind, entity } : null
     }
+    case 'GEAR': {
+      const entity = byKey(catalog.gearTemplates.values())
+      return entity ? { kind, entity } : null
+    }
   }
 }
 
@@ -104,6 +108,9 @@ export function catalogUsages(
       break
     // só o personagem que sorteou aponta para o despertar (dado de jogador: quem confere é o repositório)
     case 'AWAKENING':
+      break
+    // só o equipamento das contas aponta para o modelo (dado de jogador: quem confere é o repositório)
+    case 'GEAR':
       break
   }
 

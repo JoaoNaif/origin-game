@@ -97,3 +97,34 @@ export const ENHANCEMENT_COST: Record<
   STRONG: { coins: 2_000, fragments: 12 },
   FINAL: { coins: 4_000, fragments: 20 },
 }
+
+/** Inventário (3.2): 30 espaços no início, +5 por compra, até 100. Equipamento ocupa 1 espaço. */
+export const INVENTORY_SLOTS = { initial: 30, step: 5, max: 100 } as const
+
+/**
+ * Preço de cada compra de +5 espaços (3.2): 300, 600, 1.000, 1.500, 2.000 M e, "assim por diante", +500 M a cada
+ * compra seguinte (2.500, 3.000…), até chegar a 100 espaços.
+ */
+export const INVENTORY_EXPANSION_PRICES: readonly number[] = [
+  300, 600, 1_000, 1_500, 2_000,
+]
+export const INVENTORY_EXPANSION_STEP_PRICE = 500
+
+/** Preço da próxima compra para quem tem `slots` espaços; nulo = já no máximo. */
+export function inventoryExpansionPrice(slots: number): number | null {
+  if (slots >= INVENTORY_SLOTS.max) return null
+
+  const purchase = Math.max(
+    0,
+    Math.floor((slots - INVENTORY_SLOTS.initial) / INVENTORY_SLOTS.step)
+  )
+  const listed = INVENTORY_EXPANSION_PRICES[purchase]
+  if (listed !== undefined) return listed
+
+  const last = INVENTORY_EXPANSION_PRICES[INVENTORY_EXPANSION_PRICES.length - 1]
+  return (
+    last +
+    (purchase - INVENTORY_EXPANSION_PRICES.length + 1) *
+      INVENTORY_EXPANSION_STEP_PRICE
+  )
+}

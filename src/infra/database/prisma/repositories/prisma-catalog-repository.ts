@@ -23,6 +23,10 @@ import { Variant } from '@/domain/characters/entities/variant'
 import { Passive } from '@/domain/characters/value-objects/passive'
 import { TraitEffect } from '@/domain/characters/value-objects/trait-effect'
 import { BattleField } from '@/domain/combat/entities/battle-field'
+import {
+  GearRequirement,
+  GearTemplate,
+} from '@/domain/gear/entities/gear-template'
 import { Skill } from '@/domain/skills/entities/skill'
 import { SkillEffect } from '@/domain/skills/value-objects/skill-effect'
 import { NpcSquad } from '@/domain/squads/entities/npc-squad'
@@ -138,6 +142,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
       fieldRows,
       npcRows,
       awakeningRows,
+      gearRows,
     ] = await Promise.all([
       db.variant.findMany({ orderBy: { key: 'asc' } }),
       db.trait.findMany({ orderBy: { key: 'asc' } }),
@@ -163,6 +168,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
         orderBy: { key: 'asc' },
       }),
       db.awakening.findMany({ orderBy: { key: 'asc' } }),
+      db.gearTemplate.findMany({ orderBy: { key: 'asc' } }),
     ])
 
     // despertadas dependem da base: as bases entram primeiro
@@ -213,6 +219,33 @@ export class PrismaCatalogRepository implements CatalogRepository {
             id(row.id)
           ),
           `despertar ${row.key}`
+        )
+      )
+    }
+
+    const gearTemplates = new Map<string, GearTemplate>()
+    for (const row of gearRows) {
+      gearTemplates.set(
+        row.id,
+        unwrap(
+          GearTemplate.create(
+            {
+              key: row.key,
+              name: row.name,
+              description: row.description,
+              kind: row.kind,
+              grade: row.grade,
+              lineage: row.lineage as GearTemplate['lineage'],
+              primaryStat: row.primaryStat,
+              secondaryStat: row.secondaryStat,
+              primaryPercent: row.primaryPercent,
+              secondaryPercent: row.secondaryPercent,
+              requirements: row.requirements as unknown as GearRequirement[],
+              titles: row.titles as unknown as string[],
+            },
+            id(row.id)
+          ),
+          `equipamento ${row.key}`
         )
       )
     }
@@ -378,6 +411,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
       fields,
       npcSquads,
       awakenings,
+      gearTemplates,
       version,
     }
   }

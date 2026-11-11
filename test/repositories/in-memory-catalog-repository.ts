@@ -21,6 +21,9 @@ export function seedCatalog(): GameCatalog {
     awakenings: new Map(
       [...content.awakenings.values()].map((a) => [a.id.toValue(), a])
     ),
+    gearTemplates: new Map(
+      [...content.gear.values()].map((g) => [g.id.toValue(), g])
+    ),
     version: 'seed-test',
   }
 }
@@ -57,6 +60,7 @@ function withEntry(
     fields: list(catalog.fields, kind === 'FIELD'),
     npcSquads: list(catalog.npcSquads, kind === 'NPC_SQUAD'),
     awakenings: map(catalog.awakenings, kind === 'AWAKENING'),
+    gearTemplates: map(catalog.gearTemplates, kind === 'GEAR'),
     version: `${catalog.version}+`,
   }
 }

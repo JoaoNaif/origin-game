@@ -7,6 +7,7 @@ interface StoredWallet {
   accountId: string
   coins: number
   fragments: Fragments
+  inventorySlots: number
   version: number
 }
 
@@ -23,6 +24,7 @@ export class InMemoryWalletsRepository implements WalletsRepository {
       accountId: new UniqueEntityId(accountId),
       coins: stored.coins,
       fragments: { ...stored.fragments },
+      inventorySlots: stored.inventorySlots,
       version: stored.version,
     })
   }
@@ -37,6 +39,7 @@ export class InMemoryWalletsRepository implements WalletsRepository {
       accountId,
       coins: wallet.coins,
       fragments: { ...wallet.fragments },
+      inventorySlots: wallet.inventorySlots,
       version: currentVersion + 1,
     }
     if (index < 0) this.items.push(stored)

@@ -21,6 +21,8 @@ export interface StatInput {
   traitEffects?: readonly TraitEffect[]
   /** % do DOM por stat (D93), fora do teto dos traços (`domStatPercents`). */
   domPercents?: Partial<Record<Stat, number>>
+  /** % do equipamento vivo (D94): o bônus e, na batalha, a queda do parcial e do sem elo. Também fora do teto. */
+  gearPercents?: Partial<Record<Stat, number>>
 }
 
 /** Crescimento da base no nível (0,40 no nível 0 até 1,0 no 100). */
@@ -55,14 +57,17 @@ export function traitPercents(effects: readonly TraitEffect[]): StatBlock {
 
 /**
  * Stats do personagem fora de batalha (antes de buffs, debuffs e Desgaste), arredondados para inteiro (D91):
- * `(perfil × 85% × crescimento do nível + pontos livres) × (1 + (% dos traços + % do DOM) / 100)`. O DOM vem depois
- * dos tetos (D93): fora do teto de +15% dos traços (D152). O equipamento vivo entra aqui quando chegar.
+ * `(perfil × 85% × crescimento do nível + pontos livres) × (1 + (% dos traços + % do DOM + % do equipamento) / 100)`.
+ * DOM e equipamento vêm depois dos tetos (D93): fora do teto de +15% dos traços (D152, D153).
  */
 export function computeStats(input: StatInput): StatBlock {
   const growth = baseGrowth(input.level)
   const traits = traitPercents(input.traitEffects ?? [])
   const percents = mapBlock(
-    (stat) => traits[stat] + (input.domPercents?.[stat] ?? 0)
+    (stat) =>
+      traits[stat] +
+      (input.domPercents?.[stat] ?? 0) +
+      (input.gearPercents?.[stat] ?? 0)
   )
 
   return mapBlock((stat) => {
