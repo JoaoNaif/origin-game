@@ -1,6 +1,7 @@
 # ORIGIN — Armas e armaduras vivas (brief)
 
-> Regras do equipamento vivo no jogo, decididas na conversa própria. Decisões resumidas em `game_design.md` (D62, D63).
+> Regras do equipamento vivo no jogo, decididas na conversa própria. Decisões resumidas em `game_design.md` (D62, D63,
+> D94; aplicação no servidor no D153, seção 10).
 > Lore em [`world_build.md`](./world_build.md) 3.7. Personagem em [`character_brief.md`](./character_brief.md).
 > **[ENRAIZADO]** = decidido · **[PLACEHOLDER]** = número provisório · **[ABERTO]** = a decidir.
 
@@ -97,7 +98,8 @@ das **faixas** do ranqueado (D63), onde nível, DOM e equipamento escalam juntos
 ## 8. Pendências
 
 Fechadas em D94 (seção 9). Resta só o **ajuste fino por simulação** e o conteúdo do admin (catálogo de equipamentos,
-requisitos e listas de títulos de cada um).
+requisitos e listas de títulos de cada um). **Implementado no D153** (seção 10); o mercado entre jogadores vem na etapa
+seguinte.
 
 ## 9. Valores (D94)
 
@@ -169,3 +171,69 @@ Valores nas tabelas acima. Só por **evento único** (chefes guardados pela IA d
 ### 9.7 Sem variante
 
 Personagem sem variante recebe o **bônus de stats do equipamento ×1,25**. A regra de elo não muda.
+
+## 10. Na prática (D153)
+
+Como o servidor aplica o equipamento vivo. Código em `src/domain/gear/` (modelo, item da conta, elo e efeito; valores
+em `gear-values.ts`), no motor em `src/domain/combat/engine/battle-engine.ts` e no baú em
+`src/domain/economy/services/chest-draw.ts`.
+
+### 10.1 Catálogo e item da conta
+
+- **Modelo (`GearTemplate`, admin):** arma ou armadura, grau, linhagem, os 2 stats do bônus, os requisitos e os
+  títulos. O **grau é fixo no modelo**: a afinidade do material (seção 3) fica só na lore.
+- A **linhagem** é a da variante que habita o material (nunca none) e decide a passiva (9.5).
+- **Bônus:** o padrão do grau (9.2); o admin ajusta cada um em até ±15%.
+- **Requisitos:** quantos o grau pede (9.4), no máximo 2 altos e 2 baixos (alto e baixo são os 2 maiores e os 2
+  menores), sem repetir stat, ao menos 1 baixo do Mestre para cima.
+- **Títulos:** de 2 a 5, só os que existem. Hoje são os 4 do DOM avançado (Vidente, Resiliente, Indestrutível, Rei).
+- **Item da conta (`Gear`):** cópia do modelo no inventário, com o personagem que está usando (ou nenhum). Um slot por
+  personagem: equipar num personagem tira o item do outro, e o que estava no slot volta para o inventário.
+
+### 10.2 Elo
+
+- Mesma régua do despertar (D151): cada stat fora da batalha do portador (nível, pontos livres e traços, **sem o
+  próprio equipamento**) dividido pela média daquele stat nas 8 classes. Alto = entre os 2 maiores, baixo = entre os 2
+  menores.
+- Título da lista ou traço Prodígio valem 1 requisito cumprido, com **teto de 1 somando os dois** (o Prodígio vale
+  "como um título").
+- Todos cumpridos = pleno; metade ou mais = parcial; menos = sem elo.
+- O elo é calculado quando a batalha começa e fica fixo nela. Fora da batalha, a ficha mostra o elo atual, que muda se
+  os pontos livres mudarem.
+
+### 10.3 Na batalha
+
+- **Bônus:** entra nos stats como o DOM, fora do teto de +15% dos traços, com o fator do elo (100% / 60% / 30%) e
+  ×1,25 sem variante.
+- **Quedas do parcial e do sem elo:** só na batalha. No parcial do Escudeiro e do Cavaleiro, a queda cai nos mesmos
+  stats do sem elo (Velocidade e Esquiva; Precisão e Esquiva).
+- **Custo do elo pleno:** Desgaste já no início, no stat da linhagem (9.2), até o piso de 80%. Na Elemental vira dano
+  no HP atual; na Fundamental, perda de HP máximo. Como qualquer Desgaste, a cura e o Defender também o aliviam.
+- **Passivas** (9.5, com o fator do grau e do elo):
+
+| Linhagem | Como funciona |
+|---|---|
+| Elemental | A cada golpe que causa dano num inimigo, chance de aplicar Dano contínuo pela fórmula de status (Precisão contra Vontade) |
+| Material | Menos dano recebido de golpe de alvo único (contra-ataque incluso). Não soma com a redução da passiva do personagem: vale a maior |
+| Vetorial | Ignora o % da Defesa do alvo no cálculo do dano |
+| Psíquica | Vontade ×(1 + %) quando alguém tenta aplicar um status nele |
+| Biológica | Regenera no início de cada turno, como uma cura (Exaustão e Ferida valem). Não conta para o XP nem para as missões de despertar |
+| Fundamental | Começa a batalha com escudo, calculado sobre o HP máximo já com o custo |
+
+- **Perder a ação** (parcial e sem elo, do Mestre para cima): sorteio no início de cada turno do portador, depois do
+  Atordoado e do Adormecido. A chance é `início + passo × (turnos − 1)`, até o máximo, e zera na batalha seguinte. O
+  evento é `SKIP` com motivo `GEAR`.
+- O NPC não usa equipamento no MVP.
+
+### 10.4 Inventário, baú e venda
+
+- **Inventário:** 30 espaços, guardados na carteira. Compra de +5 por 300, 600, 1.000, 1.500 e 2.000 M e, depois,
+  +500 M a cada compra (2.500 a 6.500), até 100 espaços. Os 70 espaços somam ≈ 43.900 M. **Valor proposto, a
+  confirmar.** Por ora só o equipamento ocupa espaço.
+- **Baú:** a raridade sorteada (progressão 3.5) vale para o grau equivalente: Escudeiro ≈ E, Cavaleiro ≈ C,
+  Mestre ≈ A, Rei ≈ SS. Se a raridade tem personagem e equipamento, a chance é 50% para cada. Equipamento que não
+  cabe no inventário vira moeda pelo valor de venda. O Divino nunca sai de baú.
+- **Venda ao sistema:** Escudeiro 40, Cavaleiro 250, Mestre 1.500 e Rei 9.000 M. O Divino não se vende, e o item
+  equipado precisa ser tirado do personagem antes.
+- **Admin:** dá um equipamento a uma conta, se houver espaço. Serve para testar e para o Divino de um evento único.
+- **Mercado entre jogadores:** fica para a etapa seguinte (escolha do usuário).

@@ -62,7 +62,8 @@ crescimento(nível) = 0,40 + 0,60 × nível / 100        (0,40 no nível 0, 1,0 
 - **Ordem:** os traços multiplicam a base **com** os pontos livres.
 - **Traço de família:** só vale para quem tem a variante da família, e isso já é garantido pelo modelo (um
   `CharacterTemplate` com família sempre tem a variante dela, `data_model.md` 3.3). Por isso o snapshot não filtra.
-- **Depois:** DOM e equipamento vivo entram como novas fontes nesta mesma função.
+- **DOM e equipamento vivo** entram nesta mesma função (`domPercents`, `gearPercents`), somados ao % dos traços e
+  fora do teto deles (D152, D153).
 
 **Distribuição padrão dos pontos livres** (`defaultFreePoints`, usada pelo NPC): os 15% do perfil na mesma proporção do
 próprio perfil, limitados aos pontos que o nível já concedeu (10 a cada 10 níveis), arredondando para baixo. No nível
@@ -366,8 +367,8 @@ const { potency, selfDamage } = desgaste.charge(skill, currentHp) // só se a sk
 const defense = desgaste.stat(Stat.DEFENSE) // entra no dano já com o Desgaste
 ```
 
-**Fica para depois:** o custo do equipamento vivo no elo pleno (D94) e a Vontade da Dominância (D95), quando essas
-camadas entrarem.
+**Equipamento vivo (D153):** o custo do elo pleno entra por `chargeFlat(linhagem, %, hpAtual)`, cobrado uma vez ao
+criar a unidade, até o piso. **Fica para depois:** a Vontade da Dominância (D95), com os contratos.
 
 ### 3.6 Alcance, bloqueio, área e queda
 
@@ -1141,3 +1142,28 @@ Detalhes e pontos fora da meta no relatório da conversa de 2026-10-20.
   leem eventos.
 - **Prévia e IA:** `WEAKEN` e `INVULNERABLE` viram `PreviewEffect` próprios; a IA pontua o Rei como debuff nos 7 stats
   pela chance e o Indestrutível pelo perigo até a próxima vez (como o Proteger).
+
+## Equipamento vivo no motor (D153)
+
+Regra em `living_gear_brief.md` 10. A unidade traz `snapshot.gear` (`SnapshotGear`) com o efeito já calculado
+(`gearEffects`, em `src/domain/gear/services/gear-effects.ts`): o motor só aplica.
+
+- **Stats:** `createUnit` passa `gearPercents` = `bonusPercents` + `penaltyPercents` para `computeStats`.
+- **Custo do elo pleno:** `desgaste.chargeFlat(gear.lineage, initialDesgastePercent, hp)` ao criar a unidade. Na
+  Elemental vira dano no HP inicial; na Fundamental, HP máximo a menos.
+- **Escudo inicial** (Fundamental): `maxHp × %`, já com o custo.
+- **Início do turno:** depois do dano contínuo e antes da passiva do personagem, a regeneração (Biológica, `HEAL`
+  com `source: 'GEAR'`, com Exaustão e Ferida). Depois, se o turno não foi perdido por Atordoado ou Adormecido, o
+  sorteio de perder a ação (`loseAction`): `min(max, start + step × (turnos começados − 1)) / 100` pela sorte da
+  batalha. Perdeu: `SKIP` com `reason: 'GEAR'` e o turno acaba (como no Atordoado). Só unidades com `loseAction`
+  gastam essa sorte, então batalhas sem equipamento seguem iguais no replay.
+- **Dano:** a Vetorial multiplica a Defesa do alvo por `1 − %`; a Material entra em `damageReduction(alvo,
+  alvoÚnico)`, que fica com a maior entre ela (só em golpe de alvo único e no contra-ataque) e a `REDUCE_DAMAGE` da
+  passiva do personagem.
+- **Elemental:** depois de cada `DAMAGE` com dano num inimigo que segue vivo, `roll(statusLandChance(chance))`; o
+  evento é `STATUS` `DOT` com `source: 'GEAR'` (`RESISTED` se não pegou).
+- **Psíquica:** `statusLandChance` multiplica a Vontade do alvo por `1 + %` (vale para skill, passiva e a própria
+  Elemental).
+- **XP e missões:** a regeneração não conta como cura (`battle-xp.ts` e `awakening-stats.ts` pulam `source: 'GEAR'`).
+  O Dano contínuo da Elemental conta como status aplicado por quem bateu.
+- **IA:** nada de novo; a prévia (`previewSkill`) já sai com a redução, a Defesa ignorada e a Vontade a mais.

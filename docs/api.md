@@ -62,6 +62,7 @@ cada fragmento, para testar baús e aprimoramento.
 | `GET /traits` | 200 `{ traits }`: os 9 traços com `key`, nome, descrição, categoria, origem (`TEMPLATE` família / `CONQUERED`), variante (família) e efeitos. É o que a tela mostra no lugar das `traitKeys` dos personagens, das unidades e do `requiredTraitKeys` dos campos |
 | `GET /npc-squads?difficulty=` | 200 `{ npcSquads }`: `{ key, name, description, profile, difficulty, level }`, do mais fácil ao mais difícil. `difficulty` opcional (`BEGINNER` a `GRANDMASTER`); outro valor dá 400 |
 | `GET /formation-bonuses` | 200 `{ formationBonuses: { statAuras: [{ characterClass, stat, percent }], supportHealPercent, artilleryBackDamagePercent, executorLoneAttackPercent } }`: os valores do D128, lidos das constantes que o motor aplica |
+| `GET /gear-rules` | 200 `{ gearRules: { grades: [{ grade, statPercents: { primary, secondary }, requirements, fullBondCostPercent, passiveFactor, rarity, saleValue, partial, none }], bondFactor, adminTuning, maxWaivers, noVariantBonus, lineagePassives, inventory: { initial, step, max } }, gear }`: as regras do equipamento vivo (D94, D153), lidas das constantes, e o catálogo de equipamentos (o formato do item de `GET /me/gear`, sem os campos da conta). `partial` e `none` = `{ statPercents, loseAction: { start, step, max } \| null }`; `rarity` e `saleValue` nulos no Divino |
 | `GET /dom-rules` | 200 `{ domRules: { pillars: [{ pillar, primaryStat, secondaryStat, title, uniqueSkill: { name, description }, feats: [{ role, description }] }], levels: [{ level, threshold, thresholdWithoutVariant, primaryPercent, secondaryPercent }], window, checkEvery, lossShare, advancedRoles, advancedRolePoints, pveWeights } }`: as regras do DOM (D93, D152) para o guia, lidas das constantes do servidor; o texto dos feitos já vem com os números |
 
 Como cada bônus de formação vale (D128): `statAuras` e `supportHealPercent` (cura recebida, Suporte) vão para os aliados
@@ -90,8 +91,10 @@ A conta: `{ id, username, displayName }` (a senha nunca sai, nem como hash).
 
 O personagem: `{ id, templateKey, name, characterClass, level, xp, xpToNextLevel, danger, awakenedVariantKey,
 awakeningHint, dom, stats, freePoints: { allocated, available, maxPerStat }, traitKeys, skills: [{ key, name, source,
-isEnhanced, buildSlot }] }`. `stats` são os de fora da batalha (nível + pontos livres + traços + DOM). `buildSlot` 1
-a 4 = na build.
+isEnhanced, buildSlot }], gear? }`. `stats` são os de fora da batalha (nível + pontos livres + traços + DOM), **sem o
+equipamento**. `buildSlot` 1 a 4 = na build. `gear` só vem em `GET /me/characters` e `GET /characters/:id`: o
+equipamento no slot (formato de `GET /me/gear`, com o `bond` deste personagem) mais `stats` já com o bônus dele, ou
+nulo sem equipamento.
 
 **DOM (D60, D93, D152):** visível, é treino e não segredo. `dom: { windowWeight, pillars: [{ pillar, level, points,
 roles: { DAMAGE, TANK, SUPPORT, CONTROL }, nextLevel, nextThreshold, lossBelow, title }] }`, os 4 pilares na ordem
@@ -198,7 +201,7 @@ fim), sem Desgaste e sem teste de acerto; jogam-se como qualquer skill (`skillKe
 `APPLY_STATUS` (Atordoado) e a do Indestrutível como `INVULNERABLE`.
 
 **`events`:** a lista de `BattleEvent` (`src/domain/combat/engine/battle-events.ts`), em ordem: `TURN`, `SKILL`,
-`DAMAGE` (com `linked: true` quando veio pelo Ligado, `hpLeft` = HP do alvo depois e `targetStatuses` = status dele antes do golpe), `HEAL`, `STATUS`, `MOVE`, `DEFEATED`, `BATTLE_END` e os demais, como `SKIP` (`reason`: `STUN` ou `SLEEP`), `WOKE` (acordou), `CLEANSE` (Purificar; `status` é o que saiu) e `INVULNERABLE` (Indestrutível). `TURN` traz `statuses` (os que seguem valendo naquele turno). O golpe anulado pelo Indestrutível vem como `DAMAGE` com `amount: 0`. É o que a tela anima.
+`DAMAGE` (com `linked: true` quando veio pelo Ligado, `hpLeft` = HP do alvo depois e `targetStatuses` = status dele antes do golpe), `HEAL`, `STATUS`, `MOVE`, `DEFEATED`, `BATTLE_END` e os demais, como `SKIP` (`reason`: `STUN`, `SLEEP` ou `GEAR`, o equipamento vivo agindo sozinho), `WOKE` (acordou), `CLEANSE` (Purificar; `status` é o que saiu) e `INVULNERABLE` (Indestrutível). `TURN` traz `statuses` (os que seguem valendo naquele turno). O golpe anulado pelo Indestrutível vem como `DAMAGE` com `amount: 0`. É o que a tela anima.
 
 **`rewards`** (só quando a batalha acaba): `[{ characterId, xp, levelsGained, level, newSkillOffers, awakened?, domChanges? }]`
 dos 4 que entraram (D134); `newSkillOffers` = blocos de skill que a subida abriu (D135), mais os de recuperação;
@@ -222,8 +225,10 @@ Neutro), zero nos que faltam, e `fragmentCap` = 500 por tipo. O que passaria do 
 
 O baú: `{ id, tier, source, battleId, createdAt, openedAt, contents }`. `tier` usa a escala de raridade (`E` a `SS`);
 `source` é `PURCHASE` ou `BATTLE`. `contents` é nulo até abrir; depois, `{ rarity, character, convertedTemplateKey,
-coins, fragments }`: `character` (`{ templateKey, characterId }`) é o personagem novo que entrou no Elenco;
-`convertedTemplateKey` é o repetido que virou moeda; `coins` é o valor do repetido ou da raridade sem personagem.
+gear, convertedGearKey, coins, fragments }`: `character` (`{ templateKey, characterId }`) é o personagem novo que
+entrou no Elenco; `convertedTemplateKey` é o repetido que virou moeda; `gear` (`{ templateKey, gearId }`) é o
+equipamento que entrou no inventário (D153); `convertedGearKey` é o equipamento que não coube e virou moeda; `coins` é
+o valor do que virou moeda. Baús abertos antes do D153 não têm `gear` nem `convertedGearKey`.
 
 | Rota | Respostas |
 |---|---|
@@ -233,10 +238,49 @@ coins, fragments }`: `character` (`{ templateKey, characterId }`) é o personage
 | `POST /me/fragments/sell` `{ type, amount }` | 200 `{ wallet }`: 40 M cada; 400 fragmentos insuficientes |
 | `GET /me/chests` | 200 `{ chests }`: os baús **fechados**, do mais antigo para o mais novo |
 | `POST /me/chests` `{ tier }` | 201 `{ chest, wallet }`: compra um baú (E 300, D 1.000, C 3.500 M), que chega fechado; 400 nível que não se compra (B a SS) ou saldo insuficiente; 409 a carteira mudou no meio |
-| `POST /chests/:id/open` | 200 `{ chest, character, wallet }`: abre (1 item + fragmentos, D150). `character` é o personagem novo (formato de `GET /characters/:id`) ou nulo; 400 já aberto (inclusive por um clique duplo: só a primeira abertura entrega); 403 de outra conta; 404 |
+| `POST /chests/:id/open` | 200 `{ chest, character, gear, wallet }`: abre (1 item + fragmentos, D150, D153). `character` é o personagem novo (formato de `GET /characters/:id`) ou nulo; `gear` é o equipamento novo (formato de `GET /me/gear`) ou nulo; 400 já aberto (inclusive por um clique duplo: só a primeira abertura entrega); 403 de outra conta; 404 |
+
+**Inventário** (D100, D153): `POST /me/inventory/expand` → 200 `{ price, inventory: { slots, nextExpansionPrice }, wallet }`:
++5 espaços por 300, 600, 1.000, 1.500, 2.000 M e +500 M a cada compra seguinte, até 100; 400 saldo insuficiente ou já
+no máximo (`nextExpansionPrice` nulo); 409 a carteira mudou no meio.
 
 **Gasto ao mesmo tempo** (duas abas): de dois gastos em cima do mesmo saldo, só um entra; o outro recebe 409 sem gastar
 nada. Ganhos (fim de batalha, baú aberto) nunca se perdem.
+
+## Equipamento vivo (`gear`, D153)
+
+Regras em `living_gear_brief.md` 10. O item: `{ id, key, name, description, kind, grade, lineage, primaryStat,
+secondaryStat, primaryPercent, secondaryPercent, requirements: [{ stat, level }], titles, saleValue, source, acquiredAt,
+characterId, bond }`. `kind` = `WEAPON` ou `ARMOR`; `grade` = `SQUIRE`, `KNIGHT`, `MASTER`, `KING` ou `DIVINE`;
+`saleValue` nulo = Divino (não se vende); `characterId` nulo = guardado.
+
+O elo (`bond`, com quem está usando; nulo se guardado): `{ characterId, bond, requirements: [{ stat, level, met }],
+met, waived, matchingTitles, effects }`. `bond` = `FULL`, `PARTIAL` ou `NONE`; `met` = requisitos cumpridos de
+verdade; `waived` = substituídos por título da lista ou Prodígio (no máximo 1). `effects` = `{ bond, bonusPercents,
+penaltyPercents, initialDesgastePercent, passive, loseAction }`:
+
+- `bonusPercents`: o bônus por stat, já com o elo e o ×1,25 sem variante.
+- `penaltyPercents`: a queda na batalha (parcial e sem elo).
+- `initialDesgastePercent`: o custo do pleno (Desgaste inicial no stat da linhagem).
+- `passive`: a passiva da linhagem já escalada: `DOT_ON_HIT { chance }`, `SINGLE_TARGET_REDUCTION { percent }`,
+  `IGNORE_DEFENSE { percent }`, `STATUS_WILL { percent }`, `REGEN { percentOfMaxHp }` ou
+  `INITIAL_SHIELD { percentOfMaxHp }`.
+- `loseAction`: a chance de perder a ação (`{ start, step, max }` em %), ou nulo.
+
+O elo muda com os pontos livres; na batalha, vale o do início.
+
+| Rota | Respostas |
+|---|---|
+| `GET /me/gear` | 200 `{ inventory: { used, slots, nextExpansionPrice }, gear }`: o inventário, do mais antigo para o mais novo |
+| `GET /gear/:id/bonds` | 200 `{ gear, bonds }`: o elo com cada personagem da conta (para escolher quem usa); 403 de outra conta; 404 |
+| `POST /gear/:id/equip` `{ characterId }` | 200 `{ gear, unequipped }`: põe no slot do personagem (um só). Se estava em outro personagem, sai de lá; o que estava no slot volta para o inventário (`unequipped`, ou nulo). Qualquer elo vale. 403 equipamento ou personagem de outra conta; 404 |
+| `POST /gear/:id/unequip` | 200 `{ gear }`: volta para o inventário; 403; 404 |
+| `POST /gear/:id/sell` | 200 `{ coins, wallet }`: vende ao sistema (Escudeiro 40, Cavaleiro 250, Mestre 1.500, Rei 9.000 M); 400 equipado (tire antes) ou Divino; 403; 404 |
+
+**Na batalha:** cada unidade traz `gear` (nulo sem equipamento). Dos dois lados aparecem `key`, `name`, `kind`,
+`grade`, `lineage` e `passive`; da própria unidade, também `bond`, `bonusPercents`, `penaltyPercents`,
+`initialDesgastePercent` e `loseAction`. Eventos: `SKIP` com `reason: 'GEAR'` (o equipamento agiu sozinho); `STATUS` e
+`HEAL` com `source: 'GEAR'` (Dano contínuo da Elemental, regeneração da Biológica).
 
 ## Admin (`/admin/...`, papel `ADMIN`)
 
@@ -246,18 +290,18 @@ Toda rota daqui dá 403 para quem não é admin (401 sem login). O front mostra 
 
 | Rota | Resposta |
 |---|---|
-| `GET /admin/catalog` | 200 `{ catalog: { version, variants, traits, templates, skills, fields, npcSquads, awakenings } }`: tudo, pela `key`, inclusive a formação e as skills dos NPCs (que o jogador não vê). Cada item vem **no formato do corpo da edição** (abaixo) mais campos só de leitura, então a tela pode editar e devolver o mesmo objeto |
-| `GET /admin/options` | 200 `{ options }`: as listas dos selects (linhagens, classes, raridades, periculosidade, exclusividade, stats, categorias e origens de traço, tiers, alvos, alcances, áreas, papéis do kit, status, perfis e dificuldades da IA, `awakeningRequirementLevels`, `awakeningMissionCategories` e `awakeningMissionKinds` com a categoria e o limiar padrão de cada tipo), os tipos de efeito (`effectTypes.trait`, `.skill`, `.passiveTrigger`, `.passiveEffect`) e as regras (`rules`: orçamento por classe e tolerância, referência por tier, Poder máximo, nível do despertar, faixa de nível dos NPCs por dificuldade, limites de traços, variantes e campos, `awakeningRequirements` e `awakeningMissionRules`) |
+| `GET /admin/catalog` | 200 `{ catalog: { version, variants, traits, templates, skills, fields, npcSquads, awakenings, gear } }`: tudo, pela `key`, inclusive a formação e as skills dos NPCs (que o jogador não vê). Cada item vem **no formato do corpo da edição** (abaixo) mais campos só de leitura, então a tela pode editar e devolver o mesmo objeto |
+| `GET /admin/options` | 200 `{ options }`: as listas dos selects (linhagens, classes, raridades, periculosidade, exclusividade, stats, categorias e origens de traço, tiers, alvos, alcances, áreas, papéis do kit, status, perfis e dificuldades da IA, `awakeningRequirementLevels`, `awakeningMissionCategories` e `awakeningMissionKinds` com a categoria e o limiar padrão de cada tipo, `gearGrades`, `gearKinds` e `titles`, os títulos que existem), os tipos de efeito (`effectTypes.trait`, `.skill`, `.passiveTrigger`, `.passiveEffect`) e as regras (`rules`: orçamento por classe e tolerância, referência por tier, Poder máximo, nível do despertar, faixa de nível dos NPCs por dificuldade, limites de traços, variantes e campos, `awakeningRequirements`, `awakeningMissionRules` e `gear`: bônus por grau, ajuste do admin, requisitos por grau e limites dos títulos) |
 | `GET /admin/skills/reference?tier=&target=&range=&area=&isNone=&isAwakened=` | 200 `{ reference: { power, desgastePercent, cooldown, minLevel } }`: os valores de referência do tipo + forma (D16, D92) enquanto o admin monta a skill. `range` só em skill de inimigo; `isNone=true` para skill sem variante; `isAwakened=true` para skill de variante despertada (Poder ×1,25 até 2,5, Desgaste ×1,5, nível mínimo 80, D96) |
 
 Campos só de leitura no `GET /admin/catalog`: modelo `skillKeys` (as skills dele, kit primeiro); skill `lineage`,
-`isAwakened`, `templateKey` e `reference`; squad de NPC `level`; despertar `baseVariantKey`. No `PUT` eles são
-ignorados.
+`isAwakened`, `templateKey` e `reference`; squad de NPC `level`; despertar `baseVariantKey`; equipamento `saleValue`.
+No `PUT` eles são ignorados.
 
 ### Criar, editar e apagar
 
-`:collection` = `variants`, `traits`, `templates`, `skills`, `fields`, `npc-squads` ou `awakenings` (outro valor dá
-400).
+`:collection` = `variants`, `traits`, `templates`, `skills`, `fields`, `npc-squads`, `awakenings` ou `gear` (outro
+valor dá 400).
 
 | Rota | Respostas |
 |---|---|
@@ -309,7 +353,16 @@ andamento segue com a foto do início. `version` muda a cada gravação. **Rodar
   "requirements": [{ "stat": "WILL", "level": "HIGH" }, { "stat": "HP", "level": "HIGH" }, { "stat": "ATTACK", "level": "LOW" }],
   "missions": [{ "kind": "SUPPORT_ACTIONS", "threshold": 100 }, { "kind": "SUPPORT_SHARE", "threshold": 15 },
                { "kind": "SOLE_SURVIVOR_WIN", "threshold": 1 }] }
+// gear (D153; o grau fixa quantos requisitos: 2/2/3/4/4, no máximo 2 HIGH e 2 LOW, ao menos 1 LOW do MASTER para
+//       cima; percentuais opcionais = o padrão do grau, ajuste de até ±15%; titles: 2 a 5, só os que existem)
+{ "name": "Couraça de Pedra", "description": null, "kind": "ARMOR", "grade": "SQUIRE", "lineage": "MATERIAL",
+  "primaryStat": "DEFENSE", "secondaryStat": "HP",
+  "requirements": [{ "stat": "DEFENSE", "level": "HIGH" }, { "stat": "HP", "level": "HIGH" }],
+  "titles": ["Resiliente", "Indestrutível"] }
 ```
+
+**Equipamento no catálogo:** apagar um modelo que alguma conta tem dá 409 ("jogadores"). Mudar o modelo vale na hora
+para quem já tem (o item guarda só a ligação); a batalha em andamento segue com a foto do início.
 
 **Despertar no catálogo:** as skills do despertar são skills comuns na variante despertada (`minLevel` ≥ 80), com a
 `key` do modelo que as recebe. Apagar um despertar que algum personagem já sorteou dá 409 ("jogadores"). Mudar o
@@ -325,4 +378,5 @@ Nenhuma rota muda o papel. O username da URL é normalizado como no cadastro.
 | `GET /admin/accounts/:username/characters` | 200 `{ characters }` (formato de `GET /me/characters`); 404 conta |
 | `GET /admin/accounts/:username/battles?status=` | 200 `{ battles }` (formato de `GET /me/battles`); 404 conta |
 | `POST /admin/accounts/:username/characters` `{ templateKey }` | 201 `{ character }`: dá o personagem como no cadastro (nível 0, kit na build, traço de família), por exemplo de um modelo criado depois da conta; 404 conta ou modelo; 409 a conta já tem esse modelo |
+| `POST /admin/accounts/:username/gear` `{ gearKey }` | 201 `{ gear }`: dá um equipamento vivo à conta, guardado no inventário (D153; serve também para o Divino de um evento único); 400 inventário cheio; 404 conta ou equipamento |
 | `PUT /admin/characters/:characterId/dom` `{ pillars: { MIND?, HEART?, BODY?, AURA? } }` | 200 `{ character }`: define o nível de cada pilar do DOM (`BASIC`, `INTERMEDIATE`, `ADVANCED`; nulo ou ausente = sem o pilar), para testar sem farmar feitos (D152). A janela de feitos não muda e a perda volta a contar do zero: sem feitos, o pilar cai um nível a cada 25 de peso. 400 nível ou pilar desconhecido; 404 personagem. O id vem de `GET /admin/accounts/:username/characters` |

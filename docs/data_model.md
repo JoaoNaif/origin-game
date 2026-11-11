@@ -55,9 +55,9 @@
 | 13 | `Wallet` + `WalletEntry` (enum `WalletReason`) e `Chest` (enum `ChestSource`) | Economia | Account, Battle | **feito** (D150, 3.13) |
 | 14 | `Awakening` (+ colunas do despertar em `Character` e enum `SkillOfferSource`) | Catálogo | Variant | **feito** (D151, 3.14) |
 | 15 | Coluna `dom` em `Character` (DOM: níveis e janela de feitos) | Jogador | Character | **feito** (D152, 3.15) |
+| 16 | `GearTemplate` (+ enums `GearKind`, `GearGrade`) e `Gear` (+ enum `GearSource`), `Wallet.inventorySlots` | Catálogo e jogador | Account, Character | **feito** (D153, 3.16) |
 
-**Fora do MVP** (cada um vira migração própria quando a camada chegar): inventário, equipamento vivo, bestas,
-mercado e organizações.
+**Fora do MVP** (cada um vira migração própria quando a camada chegar): bestas, mercado e organizações.
 
 ---
 
@@ -1060,11 +1060,12 @@ A economia da conta (D79, D100, D104, D150; valores em `progression_brief.md` Pa
 | `accountId` | FK → `Account` (chave) | apagar a conta apaga a carteira |
 | `coins` | inteiro | nunca negativa (gasto é tudo ou nada) |
 | `fragments` | JSON `{ [Lineage]: quantidade }` | os 7 tipos (`NONE` = Neutro), até **500** por tipo; o que passaria vira moeda (40 M cada) |
+| `inventorySlots` | inteiro, padrão 30 | espaços do inventário (D100, D153): +5 por compra, até 100 |
 | `version` | inteiro | sobe a cada gravação; gravar exige a mesma versão da leitura (gravação otimista) |
 
 **`WalletEntry`** (registro): uma linha por mudança, gravada na mesma transação da carteira. `reason`
 (`WalletReason`: `BATTLE_LOOT`, `CHEST_PURCHASE`, `CHEST_OPEN`, `FRAGMENT_PURCHASE`, `FRAGMENT_SALE`,
-`SKILL_ENHANCEMENT`), `coins` e `fragments` com sinal (a variação), `refId` (batalha, baú ou personagem que
+`SKILL_ENHANCEMENT`, `INVENTORY_EXPANSION`, `GEAR_SALE`), `coins` e `fragments` com sinal (a variação), `refId` (batalha, baú ou personagem que
 causou).
 
 **Concorrência:** duas operações em cima da mesma leitura, só uma grava. Gasto que perde a corrida volta 409 sem gastar
@@ -1081,11 +1082,14 @@ grava a carteira **antes** de entregar (baú comprado, tentativa de aprimorar), 
 | `source` | `ChestSource` | `PURCHASE` (comprado) ou `BATTLE` (caiu no fim da batalha) |
 | `battleId` | FK opcional → `Battle` | a batalha em que caiu (apagar a batalha deixa nulo) |
 | `createdAt`, `openedAt` | data | `openedAt` nulo = fechado; abre uma vez só (a gravação confere que ainda estava fechado) |
-| `contents` | JSON (`ChestContents`), nulo até abrir | `{ rarity, character: { templateKey, characterId } \| null, convertedTemplateKey, coins, fragments }` |
+| `contents` | JSON (`ChestContents`), nulo até abrir | `{ rarity, character: { templateKey, characterId } \| null, convertedTemplateKey, gear: { templateKey, gearId } \| null, convertedGearKey, coins, fragments }` (`gear` e `convertedGearKey` não existem nos baús abertos antes do D153) |
 
 **Abrir** (`drawChest`, sorte de uma seed nova por abertura): 1 item da raridade sorteada (peso `q^r`, 3.5) entre os
 personagens **não exclusivos** dela; novo entra no Elenco como no cadastro (nível 0, kit básico, traço de família);
-repetido ou raridade sem personagem vira moeda pelo valor de venda (3.3). Mais os fragmentos do nível (E 1, D 2, C 4).
+repetido ou raridade sem personagem vira moeda pelo valor de venda (3.3). Desde o D153 o item pode ser um
+**equipamento vivo** do grau equivalente (Escudeiro ≈ E, Cavaleiro ≈ C, Mestre ≈ A, Rei ≈ SS; Divino nunca): com
+personagem e equipamento na raridade, 50% para cada; sem espaço no inventário, vira moeda. Mais os fragmentos do
+nível (E 1, D 2, C 4).
 
 ### 3.14 Awakening (catálogo) e o despertar do personagem
 
@@ -1133,6 +1137,47 @@ sem `dom` no snapshot, joga como antes. O NPC não tem DOM no MVP.
 
 **No fim da batalha** (`battle-rewards.ts`): os feitos de cada personagem (`domBattleFeats`, pelos eventos) entram com
 o peso da dificuldade; a recompensa traz `domChanges` quando um pilar sobe ou cai.
+
+### 3.16 GearTemplate (catálogo) e Gear (jogador)
+
+O equipamento vivo (D62, D94, D153; regra em `living_gear_brief.md` 10). Domínio em `src/domain/gear/` (valores em
+`gear-values.ts`, elo em `services/gear-bond.ts`, efeito em `services/gear-effects.ts`).
+
+**`GearTemplate`** (catálogo do admin, `/admin/gear`):
+
+| Campo | Tipo | Regra |
+|---|---|---|
+| `id` | uuid | |
+| `key` | texto, **único** | |
+| `name`, `description` | texto | |
+| `kind` | `GearKind` | `WEAPON` ou `ARMOR` (o mesmo sistema; um slot só) |
+| `grade` | `GearGrade` | `SQUIRE`, `KNIGHT`, `MASTER`, `KING`, `DIVINE`; fixo no modelo |
+| `lineage` | `Lineage` | nunca `NONE`; decide a passiva |
+| `primaryStat`, `secondaryStat` | `Stat` | diferentes |
+| `primaryPercent`, `secondaryPercent` | decimal | o padrão do grau, ±15% |
+| `requirements` | JSON `[{ stat, level: HIGH \| LOW }]` | 2/2/3/4/4 pelo grau, sem repetir stat, no máximo 2 de cada nível, ao menos 1 `LOW` do Mestre para cima |
+| `titles` | JSON `[texto]` | 2 a 5, sem repetir, só títulos que existem (hoje os do DOM avançado) |
+
+**Não entra na `version` do catálogo:** a batalha guarda o equipamento como valor (foto). Apagar um modelo que alguma
+conta tem volta 409 (a chave estrangeira recusa).
+
+**`Gear`** (equipamento da conta):
+
+| Campo | Tipo | Regra |
+|---|---|---|
+| `id` | uuid | |
+| `accountId` | FK → `Account` | apagar a conta apaga o inventário |
+| `templateId` | FK → `GearTemplate` | `Restrict` |
+| `characterId` | FK opcional → `Character`, **único** | o personagem que está usando (um por personagem); nulo = guardado. Apagar o personagem deixa nulo |
+| `source` | `GearSource` | `CHEST` ou `ADMIN` |
+| `acquiredAt` | data | |
+
+O **elo não é guardado**: sai na hora dos stats do portador. O inventário conta as linhas de `Gear` da conta contra
+`Wallet.inventorySlots`. Trocar de slot grava numa transação, tirando antes de pôr (o slot é único).
+
+**Na batalha:** a unidade do jogador ganha `gear` no snapshot (`SnapshotGear`): o modelo como valor (`key`, `name`,
+`kind`, `grade`, `lineage`) e o efeito já com o elo (`bond`, `bonusPercents`, `penaltyPercents`,
+`initialDesgastePercent`, `passive`, `loseAction`). Batalha antiga, sem `gear`, joga como antes.
 
 ## 4. Seed do MVP (conteúdo)
 

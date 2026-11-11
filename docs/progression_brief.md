@@ -303,7 +303,9 @@ Nada. **Parte 2 fechada** (D79 a D86); restam só valores (placeholders) e o fun
 ### 3.2 Inventário
 
 **30 espaços** no início. Compra de **+5 espaços** por vez com preço crescente (300, 600, 1.000, 1.500, 2.000 M,
-e assim por diante), até **100**. Equipamento e besta ocupam 1 espaço cada.
+e assim por diante), até **100**. Equipamento e besta ocupam 1 espaço cada. **No D153:** depois de 2.000 M, +500 M a
+cada compra (2.500 a 6.500 M; os 70 espaços somam ≈ 43.900 M), valor proposto a confirmar; os espaços ficam na
+carteira.
 
 ### 3.3 Venda ao sistema e repetido que vira moeda
 
@@ -311,7 +313,8 @@ e assim por diante), até **100**. Equipamento e besta ocupam 1 espaço cada.
 |---|---|---|---|---|---|---|---|
 | Valor (M) | 40 | 100 | 250 | 600 | 1.500 | 3.500 | 9.000 |
 
-Equipamento e bestas seguem o mesmo valor pelo grau: Escudeiro ≈ E, Cavaleiro ≈ C, Mestre ≈ A, Rei ≈ SS.
+Equipamento e bestas seguem o mesmo valor pelo grau: Escudeiro ≈ E, Cavaleiro ≈ C, Mestre ≈ A, Rei ≈ SS. No baú, o
+equipamento entra pela mesma equivalência, com 50% de chance contra personagem quando a raridade tem os dois (D153).
 
 ### 3.4 Mercado
 

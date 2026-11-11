@@ -1,12 +1,13 @@
 # CLAUDE.md
 
-> O **design de jogo está fechado até o D152** (regras e valores iniciais do MVP). **Feito:** motor de combate, IA e
+> O **design de jogo está fechado até o D153** (regras e valores iniciais do MVP). **Feito:** motor de combate, IA e
 > simulação (D122 a D132), schema do Prisma, seed e o **servidor do MVP** (contas, catálogo, personagens, squads e
 > batalha contra a máquina, com XP no fim e as ações possíveis da vez), com login (username + senha), as **rotas de
 > admin** (editar o catálogo, ver contas, dar personagem) e a **economia** (carteira com moeda e fragmentos, baús,
 > aprimoramento de skill e a recompensa em moeda do fim da batalha, D150) e o **despertar** (catálogo `Awakening`, sorteio
-> no nível 80, missões ocultas, dica e blocos de recuperação, D151) e o **DOM** (4 pilares, feitos medidos na batalha,
-> janela de 150 de peso, skills únicas do avançado e rota de admin, D152). Contrato da API em [`docs/api.md`](./docs/api.md).
+> no nível 80, missões ocultas, dica e blocos de recuperação, D151), o **DOM** (4 pilares, feitos medidos na batalha,
+> janela de 150 de peso, skills únicas do avançado e rota de admin, D152) e o **equipamento vivo** (catálogo `GearTemplate`,
+> inventário com compra de espaços, elo por requisitos, passivas no motor, baú e venda ao sistema, D153). Contrato da API em [`docs/api.md`](./docs/api.md).
 > Contexto permanente do projeto para o Claude. Leia antes de mexer em qualquer coisa.
 
 ## O que é Origin
@@ -20,7 +21,7 @@ e **escrever a resposta no doc**. Não inventar regra de combate.
 
 ## Estado atual
 
-**As regras e os valores iniciais estão fechados** (registro das decisões D1 a D152 em
+**As regras e os valores iniciais estão fechados** (registro das decisões D1 a D153 em
 [`docs/game_design.md`](./docs/game_design.md)). Combate: fila em barra de ação (0 a 1000, Velocidade soma por tick),
 grade 3x3, 4 personagens com 4 skills cada, 7 stats, fórmula de dano `Poder × Ataque² / (Ataque + Defesa) × escala` (×1,2 até o nível 20, descendo até ×0,9 no 40; D131, D137, D148), Exaustão a partir da rodada 4 para a batalha fechar em ~12 rodadas (D138), Desgaste
 como risco x retorno (piso de 80%), vitória por eliminação ou por dano causado na rodada 30 (D122). Os valores são **placeholders
@@ -85,7 +86,8 @@ src/
     squads/                   formação (4 personagens na grade 3x3)
     accounts/                 conta do jogador, login (sessões, portas de criptografia)
     catalog/                  porta do catálogo (modelos, skills, traços, campos, squads de NPC, despertares) e a edição do admin
-    economy/                  carteira (moeda e fragmentos), baús, sorteios e valores da economia (`economy-values.ts`)
+    economy/                  carteira (moeda, fragmentos e espaços do inventário), baús, sorteios e valores (`economy-values.ts`)
+    gear/                     equipamento vivo: modelo do catálogo, item da conta, elo, efeito e valores (`gear-values.ts`)
   infra/
     auth/                     JWT (estratégia, guard global, @Public, @CurrentUser)
     cryptography/             bcrypt, JWT e refresh token (portas de accounts)
@@ -126,7 +128,7 @@ test/                         factories, in-memory repositories, fakes (incluind
 - Casos de uso entram no Nest por `useFactory` em `infra/http/use-cases/<contexto>.providers.ts` (o domínio não tem
   decorators); a classe do caso de uso é o token de DI.
 - Um controller por caso de uso em `infra/http/controllers/<contexto>/` (`accounts`, `catalog`, `characters`, `squads`,
-  `battles`, `economy`, `admin`; o `health` fica na raiz), com o `*.e2e-spec.ts` ao lado. Validação no
+  `battles`, `economy`, `gear`, `admin`; o `health` fica na raiz), com o `*.e2e-spec.ts` ao lado. Validação no
   `@Body(new ZodValidationPipe(schema))`; erro do `Either` vira exceção HTTP num `switch (error.constructor)`; saída
   sempre por presenter (`infra/http/presenters/`). Schemas reaproveitados em `infra/http/schemas/`.
 - e2e: `npm run test:e2e` (precisa do Postgres: `npm run services:up`); cada arquivo roda num schema próprio
@@ -155,9 +157,9 @@ test/                         factories, in-memory repositories, fakes (incluind
 - **Conflitos do `world_build.md`** (seção 13) que viram dado, só os que importam.
 - **Depois do MVP:** PvP (pontos do Elo, limites de pontos, temporada, reconexão, top 3, fila), perfil próprio para
   chefes, previsão de turnos da IA, memória entre batalhas, e os caminhos Enxerto, Rede e Selo. Das camadas de
-  aprimoramento, o despertar (D151) e o DOM (D152) estão feitos; faltam equipamento vivo e contratos.
-- **Economia, depois:** mercado entre jogadores e espaço de inventário entram com o equipamento vivo (D150).
-- **Servidor, a seguir:** o front do DOM (pilares na ficha, skills únicas na batalha, aviso no fim, feitos no guia e o DOM no admin); o do despertar já está feito. O relógio do turno (20 s, Defender automático) entra com o PvP; no PvE não há limite (D147).
+  aprimoramento, o despertar (D151), o DOM (D152) e o equipamento vivo (D153) estão feitos; faltam os contratos.
+- **Economia, depois:** mercado entre jogadores (o inventário e a venda ao sistema já entraram no D153).
+- **Servidor, a seguir:** o front do equipamento vivo (inventário, equipar com a prévia do elo, venda, compra de espaços, o item no baú e na batalha, e o catálogo no admin); os do despertar e do DOM já estão feitos. O relógio do turno (20 s, Defender automático) entra com o PvP; no PvE não há limite (D147).
 
 **Regra de trabalho:** valores numéricos novos, o Claude **propõe** e o usuário aprova; depois registra em uma nova
 linha D do `game_design.md` e no brief de origem.
