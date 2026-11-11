@@ -226,6 +226,23 @@ export class DesgasteState {
   }
 
   /**
+   * Desgaste fixo, fora das skills (custo do elo pleno do equipamento vivo, D94): `percent` do stat da linhagem, até o
+   * piso. Devolve o dano em si (Elemental), que o chamador tira do HP atual.
+   */
+  chargeFlat(lineage: Lineage, percent: number, currentHp: number): number {
+    const target = LINEAGE_COST_TARGET[lineage]
+    const stat =
+      target === 'MAX_HP' || target === 'CURRENT_HP' ? Stat.HP : target
+    const requested = (this.unit.baseStats[stat] * percent) / 100
+    const applied = Math.min(requested, this.slack(target, currentHp))
+
+    if (target === 'CURRENT_HP') return applied
+    this.lost[target] += applied
+
+    return 0
+  }
+
+  /**
    * Alivia parte do Desgaste acumulado (cura 20%, Defender 10%, skill de recuperação 50%). A cura comum não
    * recupera o HP máximo perdido pela Fundamental (D59); só a skill de recuperação.
    */

@@ -10,6 +10,8 @@ import { domSkills, snapshotDom } from '@/domain/combat/services/dom-skills'
 import { DomPillar } from '@/domain/characters/enums/dom-pillar'
 import { DOM_LEVEL_ORDER } from '@/domain/characters/services/dom-rules'
 import { DomPillars } from '@/domain/characters/value-objects/dom-state'
+import { GearBond } from '@/domain/gear/enums/gear-bond'
+import { gearEffects } from '@/domain/gear/services/gear-effects'
 import { BattleActionPayload } from '@/domain/combat/value-objects/battle-action'
 import { BattleSnapshot } from '@/domain/combat/value-objects/battle-snapshot'
 import { SkillArea } from '@/domain/skills/enums/skill-area'
@@ -85,6 +87,26 @@ function randomSnapshot(seed: number): BattleSnapshot {
     if (!dom) continue
     unit.dom = dom
     unit.skills.push(...domSkills(pillars))
+  }
+
+  // equipamento vivo sorteado (D153): metade das unidades, com qualquer grau e qualquer elo
+  const gear = [...content.gear.values()]
+  const bonds = Object.values(GearBond)
+  for (const unit of [...snapshot.player.units, ...snapshot.opponent.units]) {
+    if (draw.next() < 0.5) continue
+    const template = gear[draw.int(0, gear.length - 1)]
+    unit.gear = {
+      key: template.key,
+      name: template.name,
+      kind: template.kind,
+      grade: template.grade,
+      lineage: template.lineage,
+      ...gearEffects(
+        template,
+        bonds[draw.int(0, bonds.length - 1)],
+        unit.lineages.length > 0
+      ),
+    }
   }
 
   return snapshot

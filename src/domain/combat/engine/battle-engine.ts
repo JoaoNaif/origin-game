@@ -19,9 +19,11 @@ import {
   BattleSnapshot,
   SnapshotEffect,
   SnapshotField,
+  SnapshotGear,
   SnapshotSkill,
   SnapshotUnit,
 } from '../value-objects/battle-snapshot'
+import { GearPassive } from '@/domain/gear/value-objects/gear-passive'
 import { qualifies } from '../services/field-draw'
 import {
   BattleOutcome,
@@ -716,15 +718,17 @@ export class BattleEngine {
       if (start.spreads) this.spreadContagion(unit)
 
       unit.turnsStarted += 1
+      this.gearRegen(unit)
       this.firePassive(unit, 'TURN_START')
       this.firePassive(unit, 'PERIODIC')
 
-      if (start.skipAction) {
-        this.log.push({
-          type: 'SKIP',
-          ref: unit.ref,
-          reason: start.skipReason!,
-        })
+      const skipReason = start.skipAction
+        ? start.skipReason!
+        : this.gearTakesAction(unit)
+          ? 'GEAR'
+          : null
+      if (skipReason) {
+        this.log.push({ type: 'SKIP', ref: unit.ref, reason: skipReason })
         this.endTurn(unit)
         continue
       }
@@ -926,7 +930,7 @@ export class BattleEngine {
           ) *
             damageMultiplier(round) *
             attacker.conditions.damageTakenMultiplier *
-            (1 - this.passiveDamageReduction(attacker) / 100)
+            (1 - this.damageReduction(attacker, true) / 100)
         )
     const result = applyDamage(amount, attacker)
     this.setHp(attacker, result.hpLeft, result.shieldLeft)
@@ -1477,7 +1481,12 @@ export class BattleEngine {
           this.damageDealt[actor.side] += result.hpLost + result.shieldAbsorbed
           this.action.damaged.push(target)
           if (!target.alive) this.action.killed.push(target)
-          else this.firePassive(target, 'ON_HIT', { attacker: actor })
+          else {
+            this.firePassive(target, 'ON_HIT', { attacker: actor })
+            if (result.hpLost + result.shieldAbsorbed > 0) {
+              this.gearDotOnHit(actor, target)
+            }
+          }
         }
         if (partner) {
           this.shareLinkedDamage(
@@ -1832,11 +1841,13 @@ export class BattleEngine {
     round: number
   ): number {
     const power = effectivePower(effectPower, skill.isEnhanced) * potency
+    // Vetorial (equipamento vivo, D94): ignora parte da Defesa do alvo
+    const ignoredDefense = gearPassive(actor, 'IGNORE_DEFENSE')?.percent ?? 0
     const raw =
       baseDamage(
         power,
         this.stat(actor, Stat.ATTACK),
-        this.stat(target, Stat.DEFENSE),
+        this.stat(target, Stat.DEFENSE) * (1 - ignoredDefense / 100),
         this.damageScale
       ) *
       falloff *
@@ -1846,7 +1857,7 @@ export class BattleEngine {
       this.coverMultiplier(skill, target) *
       this.exploitMultiplier(skill, target) *
       this.artilleryMultiplier(actor) *
-      (1 - this.passiveDamageReduction(target) / 100)
+      (1 - this.damageReduction(target, skill.area === SkillArea.SINGLE) / 100)
 
     return finalDamage(raw)
   }
@@ -1932,10 +1943,14 @@ export class BattleEngine {
         ? CLASS_MARKS.controllerWillFactor
         : 1
 
+    // Psíquica (equipamento vivo, D94): mais Vontade contra status
+    const gearWill =
+      1 + (gearPassive(target, 'STATUS_WILL')?.percent ?? 0) / 100
+
     return statusChance(
       base,
       this.stat(actor, Stat.PRECISION),
-      this.stat(target, Stat.WILL) * factor
+      this.stat(target, Stat.WILL) * factor * gearWill
     )
   }
 
@@ -2481,6 +2496,84 @@ export class BattleEngine {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Equipamento vivo (D94, D153, `living_gear_brief.md` 9)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * % de dano recebido a menos: a passiva do personagem e, em golpe de alvo único, a da Material. Efeitos iguais não
+   * somam (vale o mais forte, `progression_brief.md` 2.11).
+   */
+  private damageReduction(unit: EngineUnit, singleTarget: boolean): number {
+    const passive = this.passiveDamageReduction(unit)
+    const gear = singleTarget
+      ? (gearPassive(unit, 'SINGLE_TARGET_REDUCTION')?.percent ?? 0)
+      : 0
+
+    return Math.max(passive, gear)
+  }
+
+  /** Biológica: regenera um % do HP máximo no início do turno (cura, então a Exaustão e a Ferida valem). */
+  private gearRegen(unit: EngineUnit) {
+    const regen = gearPassive(unit, 'REGEN')
+    if (!regen || !unit.alive) return
+
+    const round = this.current?.round ?? this.queue.currentRound
+    const amount = Math.round(
+      ((unit.desgaste.maxHp * regen.percentOfMaxHp) / 100) *
+        healMultiplier(round) *
+        this.woundMultiplier(unit)
+    )
+    const healed = Math.min(amount, unit.desgaste.maxHp - unit.hp)
+    if (healed <= 0) return
+
+    unit.hp += healed
+    this.log.push({
+      type: 'HEAL',
+      ref: unit.ref,
+      targetRef: unit.ref,
+      amount: healed,
+      source: 'GEAR',
+    })
+  }
+
+  /**
+   * Parcial e sem elo, do Mestre para cima: o equipamento age sozinho e o portador perde a ação. A chance começa no
+   * `start`, sobe `step` a cada turno e para no `max` (zera na batalha seguinte).
+   */
+  private gearTakesAction(unit: EngineUnit): boolean {
+    const lose = unit.snapshot.gear?.loseAction
+    if (!lose) return false
+
+    const chance = Math.min(
+      lose.max,
+      lose.start + lose.step * (unit.turnsStarted - 1)
+    )
+
+    return roll(this.rng, chance / 100)
+  }
+
+  /** Elemental: chance de aplicar Dano contínuo ao causar dano num inimigo (pela fórmula de status). */
+  private gearDotOnHit(actor: EngineUnit, target: EngineUnit) {
+    const dot = gearPassive(actor, 'DOT_ON_HIT')
+    if (!dot || !target.alive || actor.side === target.side) return
+
+    const landed = roll(
+      this.rng,
+      this.statusLandChance(actor, target, dot.chance)
+    )
+    this.log.push({
+      type: 'STATUS',
+      ref: actor.ref,
+      targetRef: target.ref,
+      status: StatusType.DOT,
+      result: landed
+        ? target.conditions.applyDefaultStatus(StatusType.DOT)
+        : 'RESISTED',
+      source: 'GEAR',
+    })
+  }
+
   private setHp(unit: EngineUnit, hp: number, shield: number) {
     unit.hp = Math.max(0, hp)
     unit.shield = Math.max(0, shield)
@@ -2536,13 +2629,32 @@ export class BattleEngine {
 }
 
 function createUnit(snapshot: SnapshotUnit, side: BattleSide): EngineUnit {
+  const gear = snapshot.gear
   const base = computeStats({
     profile: snapshot.profile,
     level: snapshot.level,
     freePoints: snapshot.freePoints,
     traitEffects: snapshot.traitEffects,
     domPercents: snapshot.dom?.statPercents,
+    gearPercents: gear ? gearBattlePercents(gear) : undefined,
   })
+  const desgaste = new DesgasteState({
+    baseStats: base,
+    lineages: snapshot.lineages,
+    hasAwakenedSkill: snapshot.skills.some((s) => s.isAwakened),
+    lineageCostPercent: snapshot.lineageCostPercent,
+  })
+
+  // equipamento vivo (D94): o custo do elo pleno já entra como Desgaste, e a Fundamental começa com escudo
+  let hp = base.HP
+  if (gear && gear.initialDesgastePercent > 0) {
+    hp -= desgaste.chargeFlat(gear.lineage, gear.initialDesgastePercent, hp)
+    hp = Math.min(Math.round(hp), desgaste.maxHp)
+  }
+  const shield =
+    gear?.passive.type === 'INITIAL_SHIELD'
+      ? Math.round((desgaste.maxHp * gear.passive.percentOfMaxHp) / 100)
+      : 0
 
   return {
     ref: snapshot.ref,
@@ -2550,15 +2662,10 @@ function createUnit(snapshot: SnapshotUnit, side: BattleSide): EngineUnit {
     snapshot,
     base,
     startingMaxHp: base.HP,
-    hp: base.HP,
-    shield: 0,
+    hp,
+    shield,
     alive: true,
-    desgaste: new DesgasteState({
-      baseStats: base,
-      lineages: snapshot.lineages,
-      hasAwakenedSkill: snapshot.skills.some((s) => s.isAwakened),
-      lineageCostPercent: snapshot.lineageCostPercent,
-    }),
+    desgaste,
     conditions: new UnitConditions(),
     cooldowns: new SkillCooldowns(snapshot.skills),
     delayImmune: false,
@@ -2569,6 +2676,30 @@ function createUnit(snapshot: SnapshotUnit, side: BattleSide): EngineUnit {
     linkedWith: null,
     invulnerable: false,
   }
+}
+
+/** % do equipamento na batalha: o bônus (já com o elo) e a queda do parcial e do sem elo. */
+function gearBattlePercents(gear: SnapshotGear): Partial<Record<Stat, number>> {
+  const percents: Partial<Record<Stat, number>> = { ...gear.bonusPercents }
+  for (const [stat, percent] of Object.entries(gear.penaltyPercents) as [
+    Stat,
+    number,
+  ][]) {
+    percents[stat] = (percents[stat] ?? 0) + percent
+  }
+
+  return percents
+}
+
+/** Valor da passiva do equipamento se ela for deste tipo (0 sem equipamento ou de outro tipo). */
+function gearPassive<T extends GearPassive['type']>(
+  unit: EngineUnit,
+  type: T
+): Extract<GearPassive, { type: T }> | null {
+  const passive = unit.snapshot.gear?.passive
+  return passive?.type === type
+    ? (passive as Extract<GearPassive, { type: T }>)
+    : null
 }
 
 /** Bônus de dano dos traços pelo tipo de alcance da skill (ex.: Berserker +10% corpo a corpo). */

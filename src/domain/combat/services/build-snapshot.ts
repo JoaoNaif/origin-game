@@ -8,6 +8,9 @@ import { Variant } from '@/domain/characters/entities/variant'
 import { Lineage } from '@/domain/characters/enums/lineage'
 import { BUILD_SIZE } from '@/domain/characters/services/basic-kit'
 import { defaultFreePoints } from '@/domain/characters/services/free-points'
+import { GearTemplate } from '@/domain/gear/entities/gear-template'
+import { characterGearBond } from '@/domain/gear/services/gear-bond'
+import { gearEffects } from '@/domain/gear/services/gear-effects'
 import { Skill } from '@/domain/skills/entities/skill'
 import { NpcSquad } from '@/domain/squads/entities/npc-squad'
 import { Squad, SQUAD_SIZE } from '@/domain/squads/entities/squad'
@@ -19,6 +22,7 @@ import {
   BattleSnapshot,
   SnapshotField,
   SnapshotFieldSetup,
+  SnapshotGear,
   SnapshotSide,
   SnapshotSkill,
   SnapshotUnit,
@@ -41,6 +45,8 @@ export interface PlayerSideInput {
   /** Os personagens do squad, já carregados com skills e traços. */
   characters: readonly Character[]
   catalog: SnapshotCatalog
+  /** Modelo do equipamento no slot de cada personagem (id do personagem → modelo); ausente = ninguém equipado. */
+  gear?: ReadonlyMap<string, GearTemplate>
 }
 
 export interface NpcSideInput {
@@ -100,6 +106,24 @@ function lineageCostPercent(
   }
 
   return result
+}
+
+/** Equipamento como valor, com o elo e o efeito calculados agora (D94: o elo fica fixo na batalha). */
+export function toSnapshotGear(
+  gear: GearTemplate,
+  character: Character,
+  template: CharacterTemplate
+): SnapshotGear {
+  const { bond } = characterGearBond(gear, character, template)
+
+  return {
+    key: gear.key,
+    name: gear.name,
+    kind: gear.kind,
+    grade: gear.grade,
+    lineage: gear.lineage,
+    ...gearEffects(gear, bond, template.variants.length > 0),
+  }
 }
 
 /** Campo de batalha como valor, com os traços pedidos pela `key` (D98). */
@@ -206,6 +230,7 @@ export function buildPlayerSide(
     }
 
     const dom = snapshotDom(character.domPillars)
+    const gear = input.gear?.get(character.id.toString())
 
     units.push({
       ref: unitRef(BattleSide.PLAYER, index),
@@ -231,6 +256,9 @@ export function buildPlayerSide(
         ...domSkills(character.domPillars),
       ],
       ...(dom ? { dom } : {}),
+      ...(gear
+        ? { gear: toSnapshotGear(gear, character, template.value) }
+        : {}),
       row: member.row,
       column: member.column,
     })

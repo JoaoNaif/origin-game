@@ -9,6 +9,8 @@ import { SquadsRepository } from '@/domain/squads/applications/repositories/squa
 import { ChestsRepository } from '@/domain/economy/applications/repositories/chests-repository'
 import { WalletsRepository } from '@/domain/economy/applications/repositories/wallets-repository'
 import { BattleLoot } from '@/domain/economy/value-objects/battle-loot'
+import { GearRepository } from '@/domain/gear/applications/repositories/gear-repository'
+import { GearTemplate } from '@/domain/gear/entities/gear-template'
 import { BattleEngine } from '../../engine/battle-engine'
 import { BattleEvent } from '../../engine/battle-events'
 import { Battle } from '../../entities/battle'
@@ -53,8 +55,8 @@ type StartPveBattleUseCaseResponse = Either<
 >
 
 /**
- * Começa a batalha da pré-batalha com o squad escolhido (D75): monta a foto dos dois lados, grava a batalha e joga
- * as vezes da máquina até a vez do jogador. A seed e o campo vêm da pré-batalha (D28, D112).
+ * Começa a batalha da pré-batalha com o squad escolhido (D75): monta a foto dos dois lados (com o equipamento vivo de
+ * cada um, D153), grava a batalha e joga as vezes da máquina até a vez do jogador. A seed e o campo vêm da pré-batalha (D28, D112).
  */
 export class StartPveBattleUseCase {
   constructor(
@@ -67,6 +69,7 @@ export class StartPveBattleUseCase {
     private skillOffersRepository: SkillOffersRepository,
     private walletsRepository: WalletsRepository,
     private chestsRepository: ChestsRepository,
+    private gearRepository: GearRepository,
     private clock: Clock
   ) {}
 
@@ -98,11 +101,22 @@ export class StartPveBattleUseCase {
     const fields = catalogFields(catalog)
     if (fields.isLeft()) return left(fields.value)
 
-    const characters = await this.charactersRepository.findManyByIds(
-      squad.members.map((m) => m.characterId.toString())
-    )
+    const characterIds = squad.members.map((m) => m.characterId.toString())
+    const [characters, equipped] = await Promise.all([
+      this.charactersRepository.findManyByIds(characterIds),
+      this.gearRepository.findEquippedByCharacterIds(characterIds),
+    ])
+    // o equipamento no slot de cada um (D94): o elo é calculado agora e fica fixo na batalha
+    const gear = new Map<string, GearTemplate>()
+    for (const item of equipped) {
+      const template = catalog.gearTemplates.get(item.templateId.toValue())
+      if (template && item.characterId) {
+        gear.set(item.characterId.toString(), template)
+      }
+    }
+
     const snapshot = buildPveSnapshot(
-      { account, squad, characters, catalog },
+      { account, squad, characters, catalog, gear },
       { npcSquad, catalog },
       {
         initial: fields.value.find((f) => f.key === draft.fieldKey) ?? null,

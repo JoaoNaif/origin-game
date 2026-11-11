@@ -19,7 +19,8 @@ export type BattleEvent =
       /** Status que seguem valendo neste turno (depois de baixar as durações); ausente = nenhum. */
       statuses?: StatusType[]
     }
-  | { type: 'SKIP'; ref: string; reason: 'STUN' | 'SLEEP' }
+  /** Perdeu a ação: Atordoado, Adormecido ou o equipamento vivo que age sozinho (parcial e sem elo, D94). */
+  | { type: 'SKIP'; ref: string; reason: 'STUN' | 'SLEEP' | 'GEAR' }
   /** Adormecido levou dano e acordou (D146). */
   | { type: 'WOKE'; ref: string }
   /** Purificar (D146): `status` é o que saiu; nulo se não havia nada para tirar. */
@@ -46,7 +47,14 @@ export type BattleEvent =
       /** Parte do dano que veio pelo Ligado (D146). */
       linked?: boolean
     }
-  | { type: 'HEAL'; ref: string; targetRef: string; amount: number }
+  | {
+      type: 'HEAL'
+      ref: string
+      targetRef: string
+      amount: number
+      /** Veio do equipamento vivo (regeneração da Biológica, D94). */
+      source?: 'GEAR'
+    }
   | { type: 'SHIELD'; ref: string; targetRef: string; amount: number }
   /** Proteger (D124): `ref` protege `targetRef` até o próximo turno dele. */
   | { type: 'PROTECT'; ref: string; targetRef: string }
@@ -81,6 +89,8 @@ export type BattleEvent =
       targetRef: string
       status: StatusType
       result: StatusApplication | 'RESISTED'
+      /** Veio do equipamento vivo (Dano contínuo da Elemental, D94). */
+      source?: 'GEAR'
     }
   | { type: 'LOCK'; ref?: string; targetRef: string; skillKey: string }
   | {

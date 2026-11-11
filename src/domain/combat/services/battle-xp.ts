@@ -150,6 +150,8 @@ export function battleMetrics(
         break
       }
       case 'HEAL':
+        // a regeneração do equipamento vivo é do item, não jogada (D153)
+        if (event.source === 'GEAR') break
         if (sideOf(event.ref) === side && sideOf(event.targetRef) === side) {
           of(event.ref).heal += event.amount
         }

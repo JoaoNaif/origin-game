@@ -7,6 +7,10 @@ import { Passive } from '@/domain/characters/value-objects/passive'
 import { Stat } from '@/domain/characters/enums/stat'
 import { StatBlock } from '@/domain/characters/value-objects/stat-block'
 import { TraitEffect } from '@/domain/characters/value-objects/trait-effect'
+import { GearLineage } from '@/domain/gear/entities/gear-template'
+import { GearGrade } from '@/domain/gear/enums/gear-grade'
+import { GearKind } from '@/domain/gear/enums/gear-kind'
+import { GearEffects } from '@/domain/gear/services/gear-effects'
 import { SkillArea } from '@/domain/skills/enums/skill-area'
 import { SkillRange } from '@/domain/skills/enums/skill-range'
 import { SkillTarget } from '@/domain/skills/enums/skill-target'
@@ -65,6 +69,15 @@ export interface SnapshotDom {
   statPercents: Partial<Record<Stat, number>>
 }
 
+/** Equipamento vivo da unidade no início (D94, D153): o modelo como valor e o efeito já com o elo. */
+export interface SnapshotGear extends GearEffects {
+  key: string
+  name: string
+  kind: GearKind
+  grade: GearGrade
+  lineage: GearLineage
+}
+
 /** Personagem como estava no início: tudo que o motor precisa para calcular stats e jogar. */
 export interface SnapshotUnit extends GridPosition {
   /** Identificador da unidade na batalha (ex.: `PLAYER:0`), usado pelas ações. */
@@ -94,6 +107,8 @@ export interface SnapshotUnit extends GridPosition {
   skills: SnapshotSkill[]
   /** DOM no início; ausente = sem DOM (NPC, ou batalha de antes do DOM). */
   dom?: SnapshotDom
+  /** Equipamento vivo no slot; ausente = sem equipamento (NPC, ou batalha de antes do equipamento). */
+  gear?: SnapshotGear
 }
 
 export interface SnapshotSide {

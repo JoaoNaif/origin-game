@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { makeAccount } from 'test/factories/make-account'
+import { gearTemplateOf, makeGear } from 'test/factories/make-gear'
 import { makePveWorld, PveWorld } from 'test/factories/make-pve-world'
 import { NotAllowedError } from '@/core/errors/err/not-allowed-error'
 import { ResourceNotFoundError } from '@/core/errors/err/resource-not-found-error'
@@ -37,6 +38,7 @@ describe('Start Pve Battle', () => {
       world.skillOffers,
       world.wallets,
       world.chests,
+      world.gear,
       world.clock
     )
   })
@@ -64,6 +66,32 @@ describe('Start Pve Battle', () => {
       )
       expect(engine.nextTurn()?.side).toBe(BattleSide.PLAYER)
     }
+  })
+
+  it('should be able to take the gear in the slot, with the bond fixed for the battle', async () => {
+    const template = gearTemplateOf(world.catalog, 'couraca-de-pedra')
+    const gear = makeGear(world.account, template)
+    const holder = world.squad.members[0].characterId
+    gear.equipOn(world.account.id, holder)
+    await world.gear.create(gear)
+
+    const result = await sut.execute({
+      accountId: world.account.id.toString(),
+      draftId,
+      squadId: world.squad.id.toString(),
+    })
+
+    expect(result.isRight()).toBe(true)
+    if (result.isLeft()) return
+    const [first, ...others] = result.value.battle.snapshot.player.units
+    expect(first.characterId).toBe(holder.toString())
+    expect(first.gear).toMatchObject({
+      key: 'couraca-de-pedra',
+      grade: 'SQUIRE',
+      lineage: 'MATERIAL',
+    })
+    expect(['FULL', 'PARTIAL', 'NONE']).toContain(first.gear?.bond)
+    expect(others.every((u) => u.gear === undefined)).toBe(true)
   })
 
   it('should be able to start only one battle from a draft (double submit)', async () => {

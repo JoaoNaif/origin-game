@@ -90,6 +90,8 @@ export function awakeningBattleStats(
       }
       case 'HEAL':
       case 'SHIELD': {
+        // a regeneração do equipamento vivo é do item, não jogada (D153)
+        if (event.type === 'HEAL' && event.source === 'GEAR') break
         const own = ours(event.ref)
         if (own && sideOf(event.targetRef) === side && event.amount > 0) {
           own.supportActions += 1
