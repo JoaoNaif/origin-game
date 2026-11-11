@@ -23,10 +23,19 @@ import {
   xpToNextLevel,
 } from '@/domain/characters/services/level-curve'
 import { computeStats } from '@/domain/characters/services/stat-calculator'
+import { Gear } from '@/domain/gear/entities/gear'
+import { GearPresenter } from './gear-presenter'
 
-/** Personagem da conta com o que a tela precisa: stats calculados (fora de batalha), pontos e skills. */
+/**
+ * Personagem da conta com o que a tela precisa: stats calculados (fora de batalha, sem o equipamento), pontos e skills.
+ * Com `gear` informado (a ficha e a lista), sai também o equipamento no slot: o elo, o efeito e os stats com ele.
+ */
 export class CharacterPresenter {
-  static toHTTP(character: Character, catalog: GameCatalog) {
+  static toHTTP(
+    character: Character,
+    catalog: GameCatalog,
+    gear?: Gear | null
+  ) {
     const template = catalog.templates.get(character.templateId.toValue())!
 
     return {
@@ -52,6 +61,9 @@ export class CharacterPresenter {
         domPercents: domStatPercents(character.domPillars),
       }),
       dom: CharacterPresenter.dom(character, template),
+      ...(gear === undefined
+        ? {}
+        : { gear: CharacterPresenter.gear(character, catalog, gear) }),
       freePoints: {
         allocated: character.freePoints,
         available: availableFreePoints(character.level),
@@ -68,6 +80,18 @@ export class CharacterPresenter {
         isEnhanced: s.isEnhanced,
         buildSlot: s.buildSlot,
       })),
+    }
+  }
+
+  /** O equipamento no slot (D153): o item com o elo e os stats fora da batalha já com o bônus dele. */
+  static gear(character: Character, catalog: GameCatalog, gear: Gear | null) {
+    if (!gear) return null
+    const template = catalog.gearTemplates.get(gear.templateId.toValue())
+    if (!template) return null
+
+    return {
+      ...GearPresenter.toHTTP(gear, catalog, character),
+      stats: GearPresenter.statsWith(template, character, catalog),
     }
   }
 

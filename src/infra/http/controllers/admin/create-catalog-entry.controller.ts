@@ -14,7 +14,7 @@ import {
 
 /**
  * POST /admin/:collection — cria um item do catálogo (`variants`, `traits`, `templates`, `skills`, `fields`,
- * `npc-squads`, `awakenings`). O corpo é o da edição mais a `key`.
+ * `npc-squads`, `awakenings`, `gear`). O corpo é o da edição mais a `key`.
  */
 @Controller('admin')
 @Admin()

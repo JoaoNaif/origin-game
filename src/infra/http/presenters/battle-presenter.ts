@@ -81,6 +81,26 @@ export class BattlePresenter {
         invulnerable: state.invulnerable,
         engaged: state.engaged,
         stats: own ? state.stats : null,
+        // equipamento vivo (D153): o item e a passiva se veem dos dois lados; o elo e o efeito inteiro, só o próprio
+        gear: unit.gear
+          ? {
+              key: unit.gear.key,
+              name: unit.gear.name,
+              kind: unit.gear.kind,
+              grade: unit.gear.grade,
+              lineage: unit.gear.lineage,
+              passive: unit.gear.passive,
+              ...(own
+                ? {
+                    bond: unit.gear.bond,
+                    bonusPercents: unit.gear.bonusPercents,
+                    penaltyPercents: unit.gear.penaltyPercents,
+                    initialDesgastePercent: unit.gear.initialDesgastePercent,
+                    loseAction: unit.gear.loseAction,
+                  }
+                : {}),
+            }
+          : null,
         skills: visibleSkills.map((s) => ({
           ...skillView(s),
           ready: readyKeys.has(s.key),

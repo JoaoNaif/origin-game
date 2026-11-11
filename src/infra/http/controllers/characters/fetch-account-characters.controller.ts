@@ -5,7 +5,7 @@ import { CurrentUser } from '@/infra/auth/current-user.decorator'
 import { AccountPayload } from '@/infra/auth/jwt-strategy'
 import { CharacterPresenter } from '../../presenters/character-presenter'
 
-/** GET /me/characters — os personagens da conta logada. */
+/** GET /me/characters — os personagens da conta logada, com o equipamento vivo no slot de cada um. */
 @Controller('me/characters')
 export class FetchAccountCharactersController {
   constructor(
@@ -20,9 +20,15 @@ export class FetchAccountCharactersController {
     })
     const catalog = await this.catalogRepository.load()
 
+    const { characters, gear } = result.value
+
     return {
-      characters: result.value.characters.map((c) =>
-        CharacterPresenter.toHTTP(c, catalog)
+      characters: characters.map((c) =>
+        CharacterPresenter.toHTTP(
+          c,
+          catalog,
+          gear.find((g) => g.characterId?.equals(c.id)) ?? null
+        )
       ),
     }
   }

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { seedCatalog } from 'test/repositories/in-memory-catalog-repository'
 import { InMemoryCharactersRepository } from 'test/repositories/in-memory-characters-repository'
+import { InMemoryGearRepository } from 'test/repositories/in-memory-gear-repository'
 import { makeAccount } from 'test/factories/make-account'
 import { makeRoster } from 'test/factories/make-roster'
 import { FetchAccountCharactersUseCase } from './fetch-account-characters'
@@ -11,7 +12,10 @@ let sut: FetchAccountCharactersUseCase
 describe('Fetch Account Characters', () => {
   beforeEach(() => {
     charactersRepository = new InMemoryCharactersRepository()
-    sut = new FetchAccountCharactersUseCase(charactersRepository)
+    sut = new FetchAccountCharactersUseCase(
+      charactersRepository,
+      new InMemoryGearRepository()
+    )
   })
 
   it('should be able to fetch only the characters of the account', async () => {

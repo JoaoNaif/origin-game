@@ -50,7 +50,11 @@ export class GetCharacterController {
     const catalog = await this.catalogRepository.load()
 
     return {
-      character: CharacterPresenter.toHTTP(result.value.character, catalog),
+      character: CharacterPresenter.toHTTP(
+        result.value.character,
+        catalog,
+        result.value.gear
+      ),
     }
   }
 }

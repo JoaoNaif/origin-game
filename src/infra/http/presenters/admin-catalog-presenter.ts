@@ -8,6 +8,8 @@ import { CharacterTemplate } from '@/domain/characters/entities/character-templa
 import { Trait } from '@/domain/characters/entities/trait'
 import { Variant } from '@/domain/characters/entities/variant'
 import { BattleField } from '@/domain/combat/entities/battle-field'
+import { GearTemplate } from '@/domain/gear/entities/gear-template'
+import { gearSaleValue } from '@/domain/gear/gear-values'
 import { Skill } from '@/domain/skills/entities/skill'
 import { skillReference } from '@/domain/skills/services/skill-reference'
 import { NpcSquad } from '@/domain/squads/entities/npc-squad'
@@ -50,6 +52,9 @@ export class AdminCatalogPresenter {
       awakenings: byKey(catalog.awakenings.values()).map((a) =>
         AdminCatalogPresenter.awakening(a, catalog)
       ),
+      gear: byKey(catalog.gearTemplates.values()).map((g) =>
+        AdminCatalogPresenter.gear(g)
+      ),
     }
   }
 
@@ -69,6 +74,8 @@ export class AdminCatalogPresenter {
         return AdminCatalogPresenter.npcSquad(entity, catalog)
       case 'AWAKENING':
         return AdminCatalogPresenter.awakening(entity, catalog)
+      case 'GEAR':
+        return AdminCatalogPresenter.gear(entity)
     }
   }
 
@@ -179,6 +186,25 @@ export class AdminCatalogPresenter {
       missions: awakening.missions,
       // só leitura: a variante base (quem pode sortear este despertar)
       baseVariantKey: keyOf(catalog.variants, awakening.baseVariantId)!,
+    }
+  }
+
+  static gear(gear: GearTemplate) {
+    return {
+      key: gear.key,
+      name: gear.name,
+      description: gear.description,
+      kind: gear.kind,
+      grade: gear.grade,
+      lineage: gear.lineage,
+      primaryStat: gear.primaryStat,
+      secondaryStat: gear.secondaryStat,
+      primaryPercent: gear.primaryPercent,
+      secondaryPercent: gear.secondaryPercent,
+      requirements: gear.requirements,
+      titles: gear.titles,
+      // só leitura: valor de venda ao sistema (nulo = Divino, não se vende)
+      saleValue: gearSaleValue(gear.grade),
     }
   }
 

@@ -18,6 +18,8 @@ import { SkillRange } from '@/domain/skills/enums/skill-range'
 import { SkillTarget } from '@/domain/skills/enums/skill-target'
 import { SkillTier } from '@/domain/skills/enums/skill-tier'
 import { StatusType } from '@/domain/skills/enums/status-type'
+import { GearGrade } from '@/domain/gear/enums/gear-grade'
+import { GearKind } from '@/domain/gear/enums/gear-kind'
 import { gridPositionSchema, statBlockSchema } from './common'
 
 // Corpo das rotas de admin do catálogo. Aqui só o formato (tipos, campos de cada efeito); as regras (limites, Poder,
@@ -236,6 +238,29 @@ const awakeningSchema = z.object({
   ),
 })
 
+const gearSchema = z.object({
+  name,
+  description,
+  kind: z.nativeEnum(GearKind),
+  grade: z.nativeEnum(GearGrade),
+  lineage: z.enum([
+    Lineage.FUNDAMENTAL,
+    Lineage.ELEMENTAL,
+    Lineage.MATERIAL,
+    Lineage.VECTORIAL,
+    Lineage.PSYCHIC,
+    Lineage.BIOLOGICAL,
+  ]),
+  primaryStat: stat,
+  secondaryStat: stat,
+  primaryPercent: z.number().optional(),
+  secondaryPercent: z.number().optional(),
+  requirements: z.array(
+    z.object({ stat, level: z.nativeEnum(AwakeningRequirementLevel) })
+  ),
+  titles: z.array(z.string().max(80)),
+})
+
 /** Tipo do item pelo pedaço da URL (`/admin/variants`, `/admin/npc-squads`...). */
 export const CATALOG_COLLECTIONS = {
   variants: 'VARIANT',
@@ -245,6 +270,7 @@ export const CATALOG_COLLECTIONS = {
   fields: 'FIELD',
   'npc-squads': 'NPC_SQUAD',
   awakenings: 'AWAKENING',
+  gear: 'GEAR',
 } as const satisfies Record<string, CatalogKind>
 
 export type CatalogCollection = keyof typeof CATALOG_COLLECTIONS
@@ -262,4 +288,5 @@ export const catalogBodySchemas = {
   FIELD: fieldSchema,
   NPC_SQUAD: npcSquadSchema,
   AWAKENING: awakeningSchema,
+  GEAR: gearSchema,
 } satisfies Record<CatalogKind, z.ZodTypeAny>

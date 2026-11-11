@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { seedCatalog } from 'test/repositories/in-memory-catalog-repository'
 import { InMemoryCharactersRepository } from 'test/repositories/in-memory-characters-repository'
+import { InMemoryGearRepository } from 'test/repositories/in-memory-gear-repository'
 import { makeAccount } from 'test/factories/make-account'
 import { makeRoster } from 'test/factories/make-roster'
 import { NotAllowedError } from '@/core/errors/err/not-allowed-error'
@@ -13,7 +14,10 @@ let sut: GetCharacterUseCase
 describe('Get Character', () => {
   beforeEach(() => {
     charactersRepository = new InMemoryCharactersRepository()
-    sut = new GetCharacterUseCase(charactersRepository)
+    sut = new GetCharacterUseCase(
+      charactersRepository,
+      new InMemoryGearRepository()
+    )
   })
 
   it('should be able to get a character of the account', async () => {

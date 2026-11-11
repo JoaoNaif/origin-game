@@ -51,7 +51,16 @@ import { FetchEconomyController } from './controllers/economy/fetch-economy.cont
 import { GetWalletController } from './controllers/economy/get-wallet.controller'
 import { OpenChestController } from './controllers/economy/open-chest.controller'
 import { SellFragmentsController } from './controllers/economy/sell-fragments.controller'
+import { BuyInventorySlotsController } from './controllers/economy/buy-inventory-slots.controller'
+import { GrantGearController } from './controllers/admin/grant-gear.controller'
+import { FetchGearRulesController } from './controllers/catalog/fetch-gear-rules.controller'
+import { EquipGearController } from './controllers/gear/equip-gear.controller'
+import { FetchAccountGearController } from './controllers/gear/fetch-account-gear.controller'
+import { FetchGearBondsController } from './controllers/gear/fetch-gear-bonds.controller'
+import { SellGearController } from './controllers/gear/sell-gear.controller'
+import { UnequipGearController } from './controllers/gear/unequip-gear.controller'
 import { adminUseCases } from './use-cases/admin.providers'
+import { gearUseCases } from './use-cases/gear.providers'
 import { battlesUseCases } from './use-cases/battles.providers'
 import { accountsUseCases } from './use-cases/accounts.providers'
 import { charactersUseCases } from './use-cases/characters.providers'
@@ -69,6 +78,7 @@ import { squadsUseCases } from './use-cases/squads.providers'
     FetchTraitsController,
     FetchFormationBonusesController,
     FetchDomRulesController,
+    FetchGearRulesController,
     // accounts
     CreateAccountController,
     AuthenticateController,
@@ -93,6 +103,13 @@ import { squadsUseCases } from './use-cases/squads.providers'
     FetchAccountChestsController,
     BuyChestController,
     OpenChestController,
+    BuyInventorySlotsController,
+    // equipamento vivo (D153)
+    FetchAccountGearController,
+    FetchGearBondsController,
+    EquipGearController,
+    UnequipGearController,
+    SellGearController,
     // squads
     CreateSquadController,
     FetchAccountSquadsController,
@@ -115,6 +132,7 @@ import { squadsUseCases } from './use-cases/squads.providers'
     FetchBattlesByUsernameController,
     GrantCharacterController,
     SetCharacterDomController,
+    GrantGearController,
     CreateCatalogEntryController,
     UpdateCatalogEntryController,
     DeleteCatalogEntryController,
@@ -126,6 +144,7 @@ import { squadsUseCases } from './use-cases/squads.providers'
     ...battlesUseCases,
     ...adminUseCases,
     ...economyUseCases,
+    ...gearUseCases,
   ],
 })
 export class HttpModule {}

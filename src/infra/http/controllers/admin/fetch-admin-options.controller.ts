@@ -47,6 +47,15 @@ import {
   AwakeningMissionCategory,
 } from '@/domain/characters/enums/awakening-mission-kind'
 import { AWAKENING_MISSION_RULES } from '@/domain/characters/services/awakening-missions'
+import { KNOWN_TITLES } from '@/domain/characters/services/dom-rules'
+import { GearGrade } from '@/domain/gear/enums/gear-grade'
+import { GearKind } from '@/domain/gear/enums/gear-kind'
+import {
+  GEAR_ADMIN_TUNING,
+  GEAR_REQUIREMENT_COUNT,
+  GEAR_STAT_PERCENTS,
+  GEAR_TITLES,
+} from '@/domain/gear/gear-values'
 import {
   passiveEffectSchema,
   passiveTriggerSchema,
@@ -91,6 +100,10 @@ export class FetchAdminOptionsController {
         awakeningMissionCategories: values(AwakeningMissionCategory),
         /** Os 11 tipos de missão (D151): categoria e limiar padrão. */
         awakeningMissionKinds: AWAKENING_MISSION_KINDS,
+        gearGrades: values(GearGrade),
+        gearKinds: values(GearKind),
+        /** Títulos que existem hoje (a lista do equipamento só aceita estes). */
+        titles: KNOWN_TITLES,
         effectTypes: {
           trait: types(traitEffectSchema),
           skill: types(skillEffectSchema),
@@ -118,6 +131,12 @@ export class FetchAdminOptionsController {
             maxPerLevel: MAX_REQUIREMENTS_PER_LEVEL,
           },
           awakeningMissionRules: AWAKENING_MISSION_RULES,
+          gear: {
+            statPercents: GEAR_STAT_PERCENTS,
+            adminTuning: GEAR_ADMIN_TUNING,
+            requirementCount: GEAR_REQUIREMENT_COUNT,
+            titles: GEAR_TITLES,
+          },
         },
       },
     }

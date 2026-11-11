@@ -7,12 +7,14 @@ import { economyHttpError } from '../../economy-errors'
 import { ZodValidationPipe } from '../../pipes/zod-validation-pipe'
 import { CharacterPresenter } from '../../presenters/character-presenter'
 import { ChestPresenter } from '../../presenters/chest-presenter'
+import { GearPresenter } from '../../presenters/gear-presenter'
 import { WalletPresenter } from '../../presenters/wallet-presenter'
 import { uuidParamSchema } from '../../schemas/common'
 
 /**
- * POST /chests/:id/open — abre um baú da conta (D150): 1 item da raridade sorteada (personagem novo, ou moeda se for
- * repetido) e os fragmentos do nível do baú. `character` vem preenchido quando entrou um personagem no Elenco.
+ * POST /chests/:id/open — abre um baú da conta (D150, D153): 1 item da raridade sorteada (personagem novo, equipamento
+ * vivo, ou moeda se for repetido ou não couber no inventário) e os fragmentos do nível do baú. `character` vem
+ * preenchido quando entrou um personagem no Elenco; `gear`, quando entrou um equipamento no inventário.
  */
 @Controller('chests')
 export class OpenChestController {
@@ -34,7 +36,7 @@ export class OpenChestController {
 
     if (result.isLeft()) throw economyHttpError(result.value)
 
-    const { chest, character, wallet } = result.value
+    const { chest, character, gear, wallet } = result.value
     const catalog = await this.catalogRepository.load()
 
     return {
@@ -42,6 +44,7 @@ export class OpenChestController {
       character: character
         ? CharacterPresenter.toHTTP(character, catalog)
         : null,
+      gear: gear ? GearPresenter.toHTTP(gear, catalog) : null,
       wallet: WalletPresenter.toHTTP(wallet),
     }
   }

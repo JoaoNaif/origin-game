@@ -6,14 +6,22 @@ import { CharactersRepository } from '@/domain/characters/applications/repositor
 import { SeedGenerator } from '@/domain/combat/applications/gateways/seed-generator'
 import { ChestsRepository } from '@/domain/economy/applications/repositories/chests-repository'
 import { WalletsRepository } from '@/domain/economy/applications/repositories/wallets-repository'
+import { BuyInventorySlotsUseCase } from '@/domain/economy/applications/use-cases/buy-inventory-slots'
 import { BuyChestUseCase } from '@/domain/economy/applications/use-cases/buy-chest'
 import { BuyFragmentsUseCase } from '@/domain/economy/applications/use-cases/buy-fragments'
 import { FetchAccountChestsUseCase } from '@/domain/economy/applications/use-cases/fetch-account-chests'
 import { GetWalletUseCase } from '@/domain/economy/applications/use-cases/get-wallet'
 import { OpenChestUseCase } from '@/domain/economy/applications/use-cases/open-chest'
 import { SellFragmentsUseCase } from '@/domain/economy/applications/use-cases/sell-fragments'
+import { GearRepository } from '@/domain/gear/applications/repositories/gear-repository'
 
 export const economyUseCases: Provider[] = [
+  {
+    provide: BuyInventorySlotsUseCase,
+    inject: [WalletsRepository],
+    useFactory: (wallets: WalletsRepository) =>
+      new BuyInventorySlotsUseCase(wallets),
+  },
   {
     provide: GetWalletUseCase,
     inject: [WalletsRepository],
@@ -54,6 +62,7 @@ export const economyUseCases: Provider[] = [
       CharactersRepository,
       AccountsRepository,
       CatalogRepository,
+      GearRepository,
       SeedGenerator,
       Clock,
     ],
@@ -63,6 +72,7 @@ export const economyUseCases: Provider[] = [
       characters: CharactersRepository,
       accounts: AccountsRepository,
       catalog: CatalogRepository,
+      gear: GearRepository,
       seeds: SeedGenerator,
       clock: Clock
     ) =>
@@ -72,6 +82,7 @@ export const economyUseCases: Provider[] = [
         characters,
         accounts,
         catalog,
+        gear,
         seeds,
         clock
       ),

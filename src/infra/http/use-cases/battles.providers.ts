@@ -1,4 +1,5 @@
 import { Provider } from '@nestjs/common'
+import { GearRepository } from '@/domain/gear/applications/repositories/gear-repository'
 import { AccountsRepository } from '@/domain/accounts/applications/repositories/accounts-repository'
 import { CatalogRepository } from '@/domain/catalog/applications/repositories/catalog-repository'
 import { CharactersRepository } from '@/domain/characters/applications/repositories/characters-repository'
@@ -48,6 +49,7 @@ export const battlesUseCases: Provider[] = [
       SkillOffersRepository,
       WalletsRepository,
       ChestsRepository,
+      GearRepository,
       Clock,
     ],
     useFactory: (
@@ -60,6 +62,7 @@ export const battlesUseCases: Provider[] = [
       offers: SkillOffersRepository,
       wallets: WalletsRepository,
       chests: ChestsRepository,
+      gear: GearRepository,
       clock: Clock
     ) =>
       new StartPveBattleUseCase(
@@ -72,6 +75,7 @@ export const battlesUseCases: Provider[] = [
         offers,
         wallets,
         chests,
+        gear,
         clock
       ),
   },
