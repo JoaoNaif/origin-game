@@ -10,6 +10,9 @@ import { CharactersRepository } from '@/domain/characters/applications/repositor
 import { Character } from '@/domain/characters/entities/character'
 import { InvalidCharacterError } from '@/domain/characters/errors/invalid-character-error'
 import { SeedGenerator } from '@/domain/combat/applications/gateways/seed-generator'
+import { GearRepository } from '@/domain/gear/applications/repositories/gear-repository'
+import { Gear } from '@/domain/gear/entities/gear'
+import { GearSource } from '@/domain/gear/enums/gear-source'
 import { Chest } from '../../entities/chest'
 import { Wallet } from '../../entities/wallet'
 import { WalletReason } from '../../enums/wallet-reason'
@@ -29,12 +32,18 @@ type OpenChestUseCaseResponse = Either<
   | NotAllowedError
   | InvalidEconomyActionError
   | InvalidCharacterError,
-  { chest: Chest; character: Character | null; wallet: Wallet }
+  {
+    chest: Chest
+    character: Character | null
+    gear: Gear | null
+    wallet: Wallet
+  }
 >
 
 /**
- * Abre um baú da conta (D150): sorteia 1 item e os fragmentos (`drawChest`). Personagem novo entra no Elenco como no
- * cadastro (nível 0, kit básico, traço de família); repetido ou raridade sem personagem vira moeda.
+ * Abre um baú da conta (D150, D153): sorteia 1 item e os fragmentos (`drawChest`). Personagem novo entra no Elenco como
+ * no cadastro (nível 0, kit básico, traço de família); equipamento entra no inventário; repetido, equipamento sem
+ * espaço ou raridade sem item vira moeda.
  */
 export class OpenChestUseCase {
   constructor(
@@ -43,6 +52,7 @@ export class OpenChestUseCase {
     private charactersRepository: CharactersRepository,
     private accountsRepository: AccountsRepository,
     private catalogRepository: CatalogRepository,
+    private gearRepository: GearRepository,
     private seedGenerator: SeedGenerator,
     private clock: Clock
   ) {}
@@ -60,10 +70,14 @@ export class OpenChestUseCase {
       return left(new InvalidEconomyActionError('o baú já foi aberto'))
     }
 
-    const [catalog, owned, account] = await Promise.all([
+    const [catalog, owned, account, gearCount, slots] = await Promise.all([
       this.catalogRepository.load(),
       this.charactersRepository.findManyByAccountId(accountId),
       this.accountsRepository.findById(accountId),
+      this.gearRepository.countByAccountId(accountId),
+      this.walletsRepository
+        .findByAccountId(accountId)
+        .then((w) => w.inventorySlots),
     ])
     if (!account) return left(new ResourceNotFoundError('conta'))
 
@@ -71,6 +85,8 @@ export class OpenChestUseCase {
       tier: chest.tier,
       templates: catalog.templates.values(),
       ownedTemplateIds: new Set(owned.map((c) => c.templateId.toValue())),
+      gearTemplates: catalog.gearTemplates.values(),
+      hasInventoryRoom: gearCount < slots,
       rng: new SeededRng(this.seedGenerator.next()),
     })
 
@@ -88,6 +104,15 @@ export class OpenChestUseCase {
       character = created.value
     }
 
+    const gear = draw.gear
+      ? Gear.create({
+          accountId: account.id,
+          templateId: draw.gear.id,
+          source: GearSource.CHEST,
+          acquiredAt: this.clock.now(),
+        })
+      : null
+
     const opened = chest.open(
       {
         rarity: draw.rarity,
@@ -99,6 +124,11 @@ export class OpenChestUseCase {
               }
             : null,
         convertedTemplateKey: draw.convertedTemplate?.key ?? null,
+        gear:
+          gear && draw.gear
+            ? { templateKey: draw.gear.key, gearId: gear.id.toString() }
+            : null,
+        convertedGearKey: draw.convertedGear?.key ?? null,
         coins: draw.coins,
         fragments: draw.fragments,
       },
@@ -112,6 +142,7 @@ export class OpenChestUseCase {
     }
 
     if (character) await this.charactersRepository.createMany([character])
+    if (gear) await this.gearRepository.create(gear)
     const wallet = await creditWallet(this.walletsRepository, accountId, {
       reason: WalletReason.CHEST_OPEN,
       refId: chest.id.toString(),
@@ -119,6 +150,6 @@ export class OpenChestUseCase {
       fragments: draw.fragments,
     })
 
-    return right({ chest, character, wallet })
+    return right({ chest, character, gear, wallet })
   }
 }

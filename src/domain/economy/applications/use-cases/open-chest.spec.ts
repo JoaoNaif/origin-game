@@ -12,6 +12,9 @@ import {
   seedCatalog,
 } from 'test/repositories/in-memory-catalog-repository'
 import { InMemoryCharactersRepository } from 'test/repositories/in-memory-characters-repository'
+import { Gear } from '@/domain/gear/entities/gear'
+import { gearSaleValue } from '@/domain/gear/gear-values'
+import { InMemoryGearRepository } from 'test/repositories/in-memory-gear-repository'
 import { InMemoryChestsRepository } from 'test/repositories/in-memory-chests-repository'
 import { InMemoryWalletsRepository } from 'test/repositories/in-memory-wallets-repository'
 import { InsufficientFundsError } from '../../errors/insufficient-funds-error'
@@ -27,6 +30,7 @@ let accountId: string
 let walletsRepository: InMemoryWalletsRepository
 let chestsRepository: InMemoryChestsRepository
 let charactersRepository: InMemoryCharactersRepository
+let gearRepository: InMemoryGearRepository
 let buyChest: BuyChestUseCase
 let sut: OpenChestUseCase
 
@@ -38,6 +42,7 @@ describe('Open Chest', () => {
     walletsRepository = new InMemoryWalletsRepository()
     chestsRepository = new InMemoryChestsRepository()
     charactersRepository = new InMemoryCharactersRepository()
+    gearRepository = new InMemoryGearRepository()
     const accountsRepository = new InMemoryAccountsRepository()
     await accountsRepository.create(account)
     await charactersRepository.createMany(makeRoster(account, catalog))
@@ -53,6 +58,7 @@ describe('Open Chest', () => {
       charactersRepository,
       accountsRepository,
       new InMemoryCatalogRepository(catalog),
+      gearRepository,
       new FakeSeedGenerator(),
       new FakeClock()
     )
@@ -107,6 +113,11 @@ describe('Open Chest', () => {
       expect(charactersRepository.items).toHaveLength(13)
       expect(result.value.character.level).toBe(0)
       expect(contents!.coins).toBe(0)
+    } else if (result.value.gear) {
+      // equipamento novo no inventário (D153)
+      expect(gearRepository.items).toHaveLength(1)
+      expect(contents!.gear?.gearId).toBe(result.value.gear.id.toString())
+      expect(contents!.coins).toBe(0)
     } else {
       expect(contents!.coins).toBeGreaterThan(0)
     }
@@ -132,6 +143,57 @@ describe('Open Chest', () => {
 
     expect(keys.size).toBeGreaterThan(0)
     expect(charactersRepository.items).toHaveLength(12 + keys.size)
+  })
+
+  it('should be able to get gear from chests, and coins when the inventory is full', async () => {
+    let gotGear = false
+    for (let i = 0; i < 40 && !gotGear; i++) {
+      const chest = await boughtChest('E')
+      const result = await sut.execute({
+        chestId: chest.id.toString(),
+        accountId,
+      })
+      if (result.isLeft()) throw result.value
+      gotGear = result.value.gear !== null
+    }
+    expect(gotGear).toBe(true)
+    expect(gearRepository.items[0].source).toBe('CHEST')
+
+    // inventário cheio: o equipamento que sair vira moeda pelo valor de venda
+    const slots = (await walletsRepository.findByAccountId(accountId))
+      .inventorySlots
+    while (gearRepository.items.length < slots) {
+      await gearRepository.create(
+        Gear.create({
+          accountId: account.id,
+          templateId: gearRepository.items[0].templateId,
+          source: 'ADMIN',
+          acquiredAt: new Date(),
+        })
+      )
+    }
+    let converted = false
+    for (let i = 0; i < 60 && !converted; i++) {
+      const chest = await boughtChest('E')
+      const result = await sut.execute({
+        chestId: chest.id.toString(),
+        accountId,
+      })
+      if (result.isLeft()) throw result.value
+      expect(result.value.gear).toBeNull()
+      converted = result.value.chest.contents!.convertedGearKey != null
+      if (converted) {
+        const key = result.value.chest.contents!.convertedGearKey
+        const template = [...catalog.gearTemplates.values()].find(
+          (g) => g.key === key
+        )!
+        expect(result.value.chest.contents!.coins).toBe(
+          gearSaleValue(template.grade)
+        )
+      }
+    }
+    expect(converted).toBe(true)
+    expect(gearRepository.items).toHaveLength(slots)
   })
 
   it('should not be able to open the same chest twice', async () => {

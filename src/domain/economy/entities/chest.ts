@@ -6,7 +6,7 @@ import { ChestSource } from '../enums/chest-source'
 import { InvalidEconomyActionError } from '../errors/invalid-economy-action-error'
 import { Fragments } from '../value-objects/fragments'
 
-/** O que saiu do baú (D150): 1 item da raridade sorteada e os fragmentos do nível do baú. */
+/** O que saiu do baú (D150, D153): 1 item da raridade sorteada (personagem ou equipamento) e os fragmentos. */
 export interface ChestContents {
   /** Raridade sorteada para o item (tabela de 3.5). */
   rarity: Rarity
@@ -14,6 +14,10 @@ export interface ChestContents {
   character: { templateKey: string; characterId: string } | null
   /** Personagem repetido, que virou moeda (D82). */
   convertedTemplateKey: string | null
+  /** Equipamento novo que entrou no inventário (D153; ausente nos baús abertos antes do equipamento vivo). */
+  gear?: { templateKey: string; gearId: string } | null
+  /** Equipamento que não coube no inventário e virou moeda. */
+  convertedGearKey?: string | null
   /** Moeda: o valor do repetido ou da raridade sem personagem no catálogo (3.3). */
   coins: number
   fragments: Fragments
