@@ -1,3 +1,4 @@
+import { UniqueEntityId } from '@/core/entities/unique-entity-id'
 import { CreateAccountUseCase } from '@/domain/accounts/applications/use-cases/create-account'
 import { GameCatalog } from '@/domain/catalog/applications/repositories/catalog-repository'
 import { templateKit } from '@/domain/catalog/services/template-skills'
@@ -25,6 +26,8 @@ import { PrismaCatalogRepository } from '@/infra/database/prisma/repositories/pr
 import { PrismaCharactersRepository } from '@/infra/database/prisma/repositories/prisma-characters-repository'
 import { PrismaSquadsRepository } from '@/infra/database/prisma/repositories/prisma-squads-repository'
 import { PrismaGearRepository } from '@/infra/database/prisma/repositories/prisma-gear-repository'
+import { PrismaBeastsRepository } from '@/infra/database/prisma/repositories/prisma-beasts-repository'
+import { Beast } from '@/domain/beasts/entities/beast'
 
 /** Conta de vitrine do despertar e do DOM (D151, D152): entra com `veterano` / `origin123`. */
 export const SHOWCASE_ACCOUNT = {
@@ -172,6 +175,14 @@ export function prepareShowcaseCharacter(
   trainDom(character, spec.dom, template.variants.length > 0)
 }
 
+/** Bestas da vitrine: `owner` = índice do personagem em `SHOWCASE_CHARACTERS` (contrato no slot 4), nulo = guardada. */
+export const SHOWCASE_BEASTS: { key: string; owner: number | null }[] = [
+  { key: 'lobo-de-cinzas', owner: 0 },
+  { key: 'serpente-espelho', owner: 2 },
+  { key: 'falcao-de-tempestade', owner: null },
+  { key: 'fenix', owner: null },
+]
+
 /** Equipamentos guardados no inventário da vitrine (um Rei, o Divino e um Cavaleiro), para testar o elo de cada um. */
 export const SHOWCASE_STORED_GEAR = [
   'espada-flamejante',
@@ -209,6 +220,52 @@ export function bestShowcaseGear(
 }
 
 /**
+ * Bestas da vitrine (D154): o lobo (Dominância) com o Kael e a serpente (Igualdade) com a Gaia, no slot 4; o falcão
+ * (Mestre) e a Fênix (sagrada) guardados, para testar os requisitos. Só entra se a conta ainda não tem besta (também
+ * numa conta da vitrine criada antes do D154). Devolve se adicionou.
+ */
+export async function seedShowcaseBeasts(
+  prisma: PrismaService,
+  catalog: GameCatalog,
+  accountId: string
+): Promise<boolean> {
+  const beastsRepository = new PrismaBeastsRepository(prisma)
+  if ((await beastsRepository.countByAccountId(accountId)) > 0) return false
+
+  const account = new UniqueEntityId(accountId)
+  const now = new Date()
+  for (const { key, owner } of SHOWCASE_BEASTS) {
+    const template = [...catalog.beastTemplates.values()].find(
+      (b) => b.key === key
+    )!
+    const beast = Beast.create({
+      accountId: account,
+      templateId: template.id,
+      source: 'ADMIN',
+      acquiredAt: now,
+    })
+    if (owner !== null) {
+      const characterTemplate = [...catalog.templates.values()].find(
+        (t) => t.key === SHOWCASE_CHARACTERS[owner].key
+      )!
+      const character = await prisma.character.findFirst({
+        where: { accountId, templateId: characterTemplate.id.toString() },
+      })
+      if (character) {
+        const contracted = beast.contractWith(
+          account,
+          new UniqueEntityId(character.id),
+          4
+        )
+        if (contracted.isLeft()) throw contracted.value
+      }
+    }
+    await beastsRepository.create(beast)
+  }
+  return true
+}
+
+/**
  * Conta de vitrine (D151, D152): Kael, Nox, Gaia e Oren de nível 85 a 95, os três últimos despertados (com as skills
  * despertadas na build) e todos com DOM treinado, no squad "Vitrine". Cada um usa o equipamento vivo do seed com o
  * melhor elo, e 3 outros ficam guardados (D153). Os outros personagens ficam no nível 0. Se a conta já existe, fica
@@ -220,7 +277,13 @@ export async function seedShowcaseAccount(
   const existing = await prisma.account.findUnique({
     where: { username: SHOWCASE_ACCOUNT.username },
   })
-  if (existing) return `conta ${SHOWCASE_ACCOUNT.username} mantida`
+  if (existing) {
+    const catalog = await new PrismaCatalogRepository(prisma).load()
+    const added = await seedShowcaseBeasts(prisma, catalog, existing.id)
+    return added
+      ? `conta ${SHOWCASE_ACCOUNT.username} mantida, com as bestas da vitrine adicionadas`
+      : `conta ${SHOWCASE_ACCOUNT.username} mantida`
+  }
 
   const catalogRepository = new PrismaCatalogRepository(prisma)
   const accounts = new PrismaAccountsRepository(prisma)
@@ -294,6 +357,8 @@ export async function seedShowcaseAccount(
     )
   }
 
+  await seedShowcaseBeasts(prisma, catalog, account.id.toString())
+
   const squad = await new CreateSquadUseCase(
     accounts,
     characters,
@@ -301,5 +366,5 @@ export async function seedShowcaseAccount(
   ).execute({ accountId: account.id.toString(), name: 'Vitrine', members })
   if (squad.isLeft()) throw squad.value
 
-  return `conta ${SHOWCASE_ACCOUNT.username}: Kael, Nox, Gaia e Oren com despertar, DOM e equipamento vivo no squad Vitrine (senha ${SHOWCASE_ACCOUNT.password})`
+  return `conta ${SHOWCASE_ACCOUNT.username}: Kael, Nox, Gaia e Oren com despertar, DOM, equipamento vivo e bestas no squad Vitrine (senha ${SHOWCASE_ACCOUNT.password})`
 }

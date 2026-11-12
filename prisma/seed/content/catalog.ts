@@ -282,6 +282,14 @@ const TRAITS: TraitSpec[] = [
     category: TraitCategory.POSTURE,
     effects: [{ type: 'STAT_MODIFIER', stat: Stat.SPEED, percent: 5 }],
   },
+  {
+    // D64, D154: mais uma besta no personagem (o teto da squad em campo continua 2)
+    key: 'domador',
+    name: 'Domador',
+    description: 'Pode firmar contrato com 2 bestas.',
+    category: TraitCategory.COMBAT,
+    effects: [{ type: 'EXTRA_BEAST_SLOT', count: 1 }],
+  },
 ]
 
 export function buildTraits(

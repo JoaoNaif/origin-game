@@ -68,6 +68,24 @@ export async function seedDatabase(prisma: PrismaClient): Promise<string> {
         })
       }
 
+      for (const b of content.beasts.values()) {
+        const data = {
+          name: b.name,
+          description: b.description,
+          contract: b.contract,
+          grade: b.grade,
+          lineage: b.lineage,
+          skills: json(b.skills),
+          requirements: json(b.requirements),
+          titles: json(b.titles),
+        }
+        await tx.beastTemplate.upsert({
+          where: { key: b.key },
+          create: { id: b.id.toValue(), key: b.key, ...data },
+          update: data,
+        })
+      }
+
       for (const t of content.traits.values()) {
         const data = {
           name: t.name,
@@ -218,6 +236,6 @@ export async function seedDatabase(prisma: PrismaClient): Promise<string> {
     `seed: ${content.variants.size} variantes, ${content.traits.size} traços, ` +
     `${content.characters.length} personagens, ${content.catalog.skills.size} skills, ` +
     `${content.fields.length} campos, ${content.npcSquads.length} squads de NPC, ` +
-    `${content.awakenings.size} despertares, ${content.gear.size} equipamentos`
+    `${content.awakenings.size} despertares, ${content.gear.size} equipamentos, ${content.beasts.size} bestas`
   )
 }

@@ -5,11 +5,13 @@ import { Variant } from '@/domain/characters/entities/variant'
 import { validateBasicKit } from '@/domain/characters/services/basic-kit'
 import { BattleField } from '@/domain/combat/entities/battle-field'
 import { SnapshotCatalog } from '@/domain/combat/services/build-snapshot'
+import { BeastTemplate } from '@/domain/beasts/entities/beast-template'
 import { GearTemplate } from '@/domain/gear/entities/gear-template'
 import { Skill } from '@/domain/skills/entities/skill'
 import { NpcSquad } from '@/domain/squads/entities/npc-squad'
 import { buildAwakenings } from './awakenings'
 import { buildFields, buildTraits, buildVariants } from './catalog'
+import { buildBeasts } from './beasts'
 import { buildGear } from './gear'
 import { BuiltCharacter, buildCharacters, ContentOverrides } from './characters'
 import { buildNpcSquads } from './npc-squads'
@@ -25,6 +27,8 @@ export interface SeedContent {
   awakenings: Map<string, Awakening>
   /** Modelos de equipamento vivo pela `key` (D94). */
   gear: Map<string, GearTemplate>
+  /** Bestas pela `key` (D154). */
+  beasts: Map<string, BeastTemplate>
   /** Catálogo indexado pelo id, no formato de `buildNpcSide`/`buildPveSnapshot`. */
   catalog: SnapshotCatalog
 }
@@ -37,6 +41,7 @@ export function loadSeedContent(overrides: ContentOverrides = {}): SeedContent {
   const npcSquads = buildNpcSquads(characters, traits)
   const awakenings = buildAwakenings(variants)
   const gear = buildGear()
+  const beasts = buildBeasts()
 
   for (const { template, skills } of characters) {
     const error = validateBasicKit(
@@ -57,6 +62,7 @@ export function loadSeedContent(overrides: ContentOverrides = {}): SeedContent {
     npcSquads,
     awakenings,
     gear,
+    beasts,
     catalog: {
       templates: byId<CharacterTemplate>(characters.map((c) => c.template)),
       variants: byId(variants.values()),
