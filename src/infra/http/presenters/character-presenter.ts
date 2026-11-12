@@ -24,6 +24,7 @@ import {
 } from '@/domain/characters/services/level-curve'
 import { computeStats } from '@/domain/characters/services/stat-calculator'
 import { Gear } from '@/domain/gear/entities/gear'
+import { Beast } from '@/domain/beasts/entities/beast'
 import { GearPresenter } from './gear-presenter'
 
 /**
@@ -34,7 +35,8 @@ export class CharacterPresenter {
   static toHTTP(
     character: Character,
     catalog: GameCatalog,
-    gear?: Gear | null
+    gear?: Gear | null,
+    beasts?: readonly Beast[]
   ) {
     const template = catalog.templates.get(character.templateId.toValue())!
 
@@ -64,6 +66,22 @@ export class CharacterPresenter {
       ...(gear === undefined
         ? {}
         : { gear: CharacterPresenter.gear(character, catalog, gear) }),
+      // bestas com contrato (D154): a invocação toma o slot dela na build
+      ...(beasts === undefined
+        ? {}
+        : {
+            beasts: beasts.map((b) => {
+              const beast = catalog.beastTemplates.get(b.templateId.toValue())!
+              return {
+                id: b.id.toString(),
+                key: beast.key,
+                name: beast.name,
+                contract: beast.contract,
+                grade: beast.grade,
+                slot: b.slot,
+              }
+            }),
+          }),
       freePoints: {
         allocated: character.freePoints,
         available: availableFreePoints(character.level),

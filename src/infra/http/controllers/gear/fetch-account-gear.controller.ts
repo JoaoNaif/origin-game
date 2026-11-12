@@ -19,11 +19,11 @@ export class FetchAccountGearController {
   @Get()
   async handle(@CurrentUser() user: AccountPayload) {
     const result = await this.fetchAccountGear.execute({ accountId: user.sub })
-    const { gear, holders, slots, nextExpansionPrice } = result.value
+    const { gear, used, holders, slots, nextExpansionPrice } = result.value
     const catalog = await this.catalogRepository.load()
 
     return {
-      inventory: { used: gear.length, slots, nextExpansionPrice },
+      inventory: { used, slots, nextExpansionPrice },
       gear: gear.map((g) =>
         GearPresenter.toHTTP(
           g,

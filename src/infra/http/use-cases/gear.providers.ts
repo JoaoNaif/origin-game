@@ -2,6 +2,7 @@ import { Provider } from '@nestjs/common'
 import { Clock } from '@/core/gateways/clock'
 import { AccountsRepository } from '@/domain/accounts/applications/repositories/accounts-repository'
 import { CatalogRepository } from '@/domain/catalog/applications/repositories/catalog-repository'
+import { BeastsRepository } from '@/domain/beasts/applications/repositories/beasts-repository'
 import { CharactersRepository } from '@/domain/characters/applications/repositories/characters-repository'
 import { WalletsRepository } from '@/domain/economy/applications/repositories/wallets-repository'
 import { GearRepository } from '@/domain/gear/applications/repositories/gear-repository'
@@ -16,12 +17,18 @@ import { UnequipGearUseCase } from '@/domain/gear/applications/use-cases/unequip
 export const gearUseCases: Provider[] = [
   {
     provide: FetchAccountGearUseCase,
-    inject: [GearRepository, CharactersRepository, WalletsRepository],
+    inject: [
+      GearRepository,
+      CharactersRepository,
+      WalletsRepository,
+      BeastsRepository,
+    ],
     useFactory: (
       gear: GearRepository,
       characters: CharactersRepository,
-      wallets: WalletsRepository
-    ) => new FetchAccountGearUseCase(gear, characters, wallets),
+      wallets: WalletsRepository,
+      beasts: BeastsRepository
+    ) => new FetchAccountGearUseCase(gear, characters, wallets, beasts),
   },
   {
     provide: FetchGearBondsUseCase,
@@ -57,6 +64,7 @@ export const gearUseCases: Provider[] = [
     inject: [
       AccountsRepository,
       GearRepository,
+      BeastsRepository,
       WalletsRepository,
       CatalogRepository,
       Clock,
@@ -64,9 +72,10 @@ export const gearUseCases: Provider[] = [
     useFactory: (
       accounts: AccountsRepository,
       gear: GearRepository,
+      beasts: BeastsRepository,
       wallets: WalletsRepository,
       catalog: CatalogRepository,
       clock: Clock
-    ) => new GrantGearUseCase(accounts, gear, wallets, catalog, clock),
+    ) => new GrantGearUseCase(accounts, gear, beasts, wallets, catalog, clock),
   },
 ]

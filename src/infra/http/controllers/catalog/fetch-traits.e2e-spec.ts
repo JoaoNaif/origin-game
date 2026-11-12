@@ -27,7 +27,7 @@ describe('Fetch Traits (e2e)', () => {
     const response = await request(app.getHttpServer()).get('/traits')
 
     expect(response.statusCode).toBe(200)
-    expect(response.body.traits).toHaveLength(9)
+    expect(response.body.traits).toHaveLength(10)
     for (const trait of response.body.traits) {
       expect(trait).toMatchObject({
         key: expect.any(String),

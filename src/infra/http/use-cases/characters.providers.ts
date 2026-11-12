@@ -13,19 +13,26 @@ import { EnhanceSkillUseCase } from '@/domain/characters/applications/use-cases/
 import { SeedGenerator } from '@/domain/combat/applications/gateways/seed-generator'
 import { WalletsRepository } from '@/domain/economy/applications/repositories/wallets-repository'
 import { GearRepository } from '@/domain/gear/applications/repositories/gear-repository'
+import { BeastsRepository } from '@/domain/beasts/applications/repositories/beasts-repository'
 
 export const charactersUseCases: Provider[] = [
   {
     provide: FetchAccountCharactersUseCase,
-    inject: [CharactersRepository, GearRepository],
-    useFactory: (characters: CharactersRepository, gear: GearRepository) =>
-      new FetchAccountCharactersUseCase(characters, gear),
+    inject: [CharactersRepository, GearRepository, BeastsRepository],
+    useFactory: (
+      characters: CharactersRepository,
+      gear: GearRepository,
+      beasts: BeastsRepository
+    ) => new FetchAccountCharactersUseCase(characters, gear, beasts),
   },
   {
     provide: GetCharacterUseCase,
-    inject: [CharactersRepository, GearRepository],
-    useFactory: (characters: CharactersRepository, gear: GearRepository) =>
-      new GetCharacterUseCase(characters, gear),
+    inject: [CharactersRepository, GearRepository, BeastsRepository],
+    useFactory: (
+      characters: CharactersRepository,
+      gear: GearRepository,
+      beasts: BeastsRepository
+    ) => new GetCharacterUseCase(characters, gear, beasts),
   },
   {
     provide: EquipSkillsUseCase,

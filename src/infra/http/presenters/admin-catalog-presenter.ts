@@ -9,6 +9,8 @@ import { Trait } from '@/domain/characters/entities/trait'
 import { Variant } from '@/domain/characters/entities/variant'
 import { BattleField } from '@/domain/combat/entities/battle-field'
 import { GearTemplate } from '@/domain/gear/entities/gear-template'
+import { BeastTemplate } from '@/domain/beasts/entities/beast-template'
+import { beastSaleValue } from '@/domain/beasts/beast-values'
 import { gearSaleValue } from '@/domain/gear/gear-values'
 import { Skill } from '@/domain/skills/entities/skill'
 import { skillReference } from '@/domain/skills/services/skill-reference'
@@ -55,6 +57,9 @@ export class AdminCatalogPresenter {
       gear: byKey(catalog.gearTemplates.values()).map((g) =>
         AdminCatalogPresenter.gear(g)
       ),
+      beasts: byKey(catalog.beastTemplates.values()).map((b) =>
+        AdminCatalogPresenter.beast(b)
+      ),
     }
   }
 
@@ -76,6 +81,8 @@ export class AdminCatalogPresenter {
         return AdminCatalogPresenter.awakening(entity, catalog)
       case 'GEAR':
         return AdminCatalogPresenter.gear(entity)
+      case 'BEAST':
+        return AdminCatalogPresenter.beast(entity)
     }
   }
 
@@ -205,6 +212,22 @@ export class AdminCatalogPresenter {
       titles: gear.titles,
       // só leitura: valor de venda ao sistema (nulo = Divino, não se vende)
       saleValue: gearSaleValue(gear.grade),
+    }
+  }
+
+  static beast(beast: BeastTemplate) {
+    return {
+      key: beast.key,
+      name: beast.name,
+      description: beast.description,
+      contract: beast.contract,
+      grade: beast.grade,
+      lineage: beast.lineage,
+      skills: beast.skills,
+      requirements: beast.requirements,
+      titles: beast.titles,
+      // só leitura: valor de venda ao sistema (nulo = sagrada, não se vende)
+      saleValue: beastSaleValue(beast.grade),
     }
   }
 

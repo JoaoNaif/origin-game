@@ -37,7 +37,7 @@ describe('Fetch Admin Catalog (e2e)', () => {
     const catalog = response.body.catalog
     expect(catalog.version).toEqual(expect.any(String))
     expect(catalog.templates).toHaveLength(18)
-    expect(catalog.traits).toHaveLength(9)
+    expect(catalog.traits).toHaveLength(10)
     expect(catalog.fields).toHaveLength(8)
     expect(catalog.npcSquads).toHaveLength(20)
     // o admin vê a formação e as skills dos NPCs (o jogador não)

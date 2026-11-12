@@ -29,6 +29,7 @@ export interface AdminCatalogBody {
   })[]
   awakenings: AdminItem[]
   gear: AdminItem[]
+  beasts: AdminItem[]
 }
 
 export async function adminCatalog(agent: Agent): Promise<AdminCatalogBody> {

@@ -22,6 +22,8 @@ const skillView = (skill: SnapshotSkill) => ({
   // skill única do DOM (D93): uso único, fora das 4 da build
   singleUse: skill.singleUse ?? false,
   domPillar: skill.domPillar ?? null,
+  // invocação de besta (D154): a `key` da besta do catálogo
+  beastKey: skill.beastKey ?? null,
 })
 
 /** Skills que o inimigo já usou: o jogador só conhece as skills do outro lado vendo (`pvp_brief.md` 3). */
@@ -79,6 +81,20 @@ export class BattlePresenter {
         linkedWith: state.linkedWith,
         protectedBy: state.protectedBy,
         invulnerable: state.invulnerable,
+        // besta (D154): de quem é, o contrato e os turnos em campo; fora de campo, alive false e sem posição
+        beast: unit.beast
+          ? {
+              key: unit.beast.key,
+              ownerRef: unit.beast.ownerRef,
+              contract: unit.beast.contract,
+              grade: unit.beast.grade,
+              auto: unit.beast.auto,
+              duration: unit.beast.duration,
+              turnsLeft: state.beast?.turnsLeft ?? 0,
+            }
+          : null,
+        // Igualdade no dono: o buffer que resta e os turnos dele
+        equality: state.equality,
         engaged: state.engaged,
         stats: own ? state.stats : null,
         // equipamento vivo (D153): o item e a passiva se veem dos dois lados; o elo e o efeito inteiro, só o próprio
@@ -140,6 +156,12 @@ export class BattlePresenter {
           unitView(u, BattleSide.PLAYER)
         ),
         ...battle.snapshot.opponent.units.map((u) =>
+          unitView(u, BattleSide.OPPONENT)
+        ),
+        ...(battle.snapshot.player.beasts ?? []).map((u) =>
+          unitView(u, BattleSide.PLAYER)
+        ),
+        ...(battle.snapshot.opponent.beasts ?? []).map((u) =>
           unitView(u, BattleSide.OPPONENT)
         ),
       ],

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { seedCatalog } from 'test/repositories/in-memory-catalog-repository'
 import { InMemoryCharactersRepository } from 'test/repositories/in-memory-characters-repository'
+import { InMemoryBeastsRepository } from 'test/repositories/in-memory-beasts-repository'
 import { InMemoryGearRepository } from 'test/repositories/in-memory-gear-repository'
 import { makeAccount } from 'test/factories/make-account'
 import { makeRoster } from 'test/factories/make-roster'
@@ -14,7 +15,8 @@ describe('Fetch Account Characters', () => {
     charactersRepository = new InMemoryCharactersRepository()
     sut = new FetchAccountCharactersUseCase(
       charactersRepository,
-      new InMemoryGearRepository()
+      new InMemoryGearRepository(),
+      new InMemoryBeastsRepository()
     )
   })
 

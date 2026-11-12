@@ -53,7 +53,8 @@ export class GetCharacterController {
       character: CharacterPresenter.toHTTP(
         result.value.character,
         catalog,
-        result.value.gear
+        result.value.gear,
+        result.value.beasts
       ),
     }
   }

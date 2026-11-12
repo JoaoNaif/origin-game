@@ -14,6 +14,7 @@ import { GetWalletUseCase } from '@/domain/economy/applications/use-cases/get-wa
 import { OpenChestUseCase } from '@/domain/economy/applications/use-cases/open-chest'
 import { SellFragmentsUseCase } from '@/domain/economy/applications/use-cases/sell-fragments'
 import { GearRepository } from '@/domain/gear/applications/repositories/gear-repository'
+import { BeastsRepository } from '@/domain/beasts/applications/repositories/beasts-repository'
 
 export const economyUseCases: Provider[] = [
   {
@@ -63,6 +64,7 @@ export const economyUseCases: Provider[] = [
       AccountsRepository,
       CatalogRepository,
       GearRepository,
+      BeastsRepository,
       SeedGenerator,
       Clock,
     ],
@@ -73,6 +75,7 @@ export const economyUseCases: Provider[] = [
       accounts: AccountsRepository,
       catalog: CatalogRepository,
       gear: GearRepository,
+      beasts: BeastsRepository,
       seeds: SeedGenerator,
       clock: Clock
     ) =>
@@ -83,6 +86,7 @@ export const economyUseCases: Provider[] = [
         accounts,
         catalog,
         gear,
+        beasts,
         seeds,
         clock
       ),

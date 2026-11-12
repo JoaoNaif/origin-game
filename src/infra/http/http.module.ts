@@ -61,6 +61,15 @@ import { SellGearController } from './controllers/gear/sell-gear.controller'
 import { UnequipGearController } from './controllers/gear/unequip-gear.controller'
 import { adminUseCases } from './use-cases/admin.providers'
 import { gearUseCases } from './use-cases/gear.providers'
+import { beastsUseCases } from './use-cases/beasts.providers'
+import { FetchBeastRulesController } from './controllers/catalog/fetch-beast-rules.controller'
+import { GrantBeastController } from './controllers/admin/grant-beast.controller'
+import { ContractBeastController } from './controllers/beasts/contract-beast.controller'
+import { FetchAccountBeastsController } from './controllers/beasts/fetch-account-beasts.controller'
+import { FetchBeastRequirementsController } from './controllers/beasts/fetch-beast-requirements.controller'
+import { MoveBeastSlotController } from './controllers/beasts/move-beast-slot.controller'
+import { ReleaseBeastController } from './controllers/beasts/release-beast.controller'
+import { SellBeastController } from './controllers/beasts/sell-beast.controller'
 import { battlesUseCases } from './use-cases/battles.providers'
 import { accountsUseCases } from './use-cases/accounts.providers'
 import { charactersUseCases } from './use-cases/characters.providers'
@@ -79,6 +88,7 @@ import { squadsUseCases } from './use-cases/squads.providers'
     FetchFormationBonusesController,
     FetchDomRulesController,
     FetchGearRulesController,
+    FetchBeastRulesController,
     // accounts
     CreateAccountController,
     AuthenticateController,
@@ -110,6 +120,13 @@ import { squadsUseCases } from './use-cases/squads.providers'
     EquipGearController,
     UnequipGearController,
     SellGearController,
+    // contratos com bestas (D154)
+    FetchAccountBeastsController,
+    FetchBeastRequirementsController,
+    ContractBeastController,
+    MoveBeastSlotController,
+    SellBeastController,
+    ReleaseBeastController,
     // squads
     CreateSquadController,
     FetchAccountSquadsController,
@@ -133,6 +150,7 @@ import { squadsUseCases } from './use-cases/squads.providers'
     GrantCharacterController,
     SetCharacterDomController,
     GrantGearController,
+    GrantBeastController,
     CreateCatalogEntryController,
     UpdateCatalogEntryController,
     DeleteCatalogEntryController,
@@ -145,6 +163,7 @@ import { squadsUseCases } from './use-cases/squads.providers'
     ...adminUseCases,
     ...economyUseCases,
     ...gearUseCases,
+    ...beastsUseCases,
   ],
 })
 export class HttpModule {}

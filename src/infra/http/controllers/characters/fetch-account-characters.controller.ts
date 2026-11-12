@@ -20,14 +20,15 @@ export class FetchAccountCharactersController {
     })
     const catalog = await this.catalogRepository.load()
 
-    const { characters, gear } = result.value
+    const { characters, gear, beasts } = result.value
 
     return {
       characters: characters.map((c) =>
         CharacterPresenter.toHTTP(
           c,
           catalog,
-          gear.find((g) => g.characterId?.equals(c.id)) ?? null
+          gear.find((g) => g.characterId?.equals(c.id)) ?? null,
+          beasts.filter((b) => b.characterId?.equals(c.id))
         )
       ),
     }

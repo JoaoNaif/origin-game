@@ -19,6 +19,8 @@ import { SkillTarget } from '@/domain/skills/enums/skill-target'
 import { SkillTier } from '@/domain/skills/enums/skill-tier'
 import { StatusType } from '@/domain/skills/enums/status-type'
 import { GearGrade } from '@/domain/gear/enums/gear-grade'
+import { BeastContract } from '@/domain/beasts/enums/beast-contract'
+import { BeastGrade } from '@/domain/beasts/enums/beast-grade'
 import { GearKind } from '@/domain/gear/enums/gear-kind'
 import { gridPositionSchema, statBlockSchema } from './common'
 
@@ -261,6 +263,40 @@ const gearSchema = z.object({
   titles: z.array(z.string().max(80)),
 })
 
+const variantLineage = z.enum([
+  Lineage.FUNDAMENTAL,
+  Lineage.ELEMENTAL,
+  Lineage.MATERIAL,
+  Lineage.VECTORIAL,
+  Lineage.PSYCHIC,
+  Lineage.BIOLOGICAL,
+])
+
+const beastSchema = z.object({
+  name,
+  description,
+  contract: z.nativeEnum(BeastContract),
+  grade: z.nativeEnum(BeastGrade),
+  lineage: variantLineage,
+  skills: z.array(
+    z.object({
+      name,
+      description,
+      tier: z.nativeEnum(SkillTier),
+      target: z.nativeEnum(SkillTarget),
+      range: z.nativeEnum(SkillRange).nullish(),
+      area: z.nativeEnum(SkillArea),
+      cooldown: z.number().int(),
+      baseHitChance: z.number().nullish(),
+      effects: z.array(skillEffectSchema),
+    })
+  ),
+  requirements: z
+    .array(z.object({ stat, level: z.nativeEnum(AwakeningRequirementLevel) }))
+    .optional(),
+  titles: z.array(z.string().max(80)).optional(),
+})
+
 /** Tipo do item pelo pedaço da URL (`/admin/variants`, `/admin/npc-squads`...). */
 export const CATALOG_COLLECTIONS = {
   variants: 'VARIANT',
@@ -271,6 +307,7 @@ export const CATALOG_COLLECTIONS = {
   'npc-squads': 'NPC_SQUAD',
   awakenings: 'AWAKENING',
   gear: 'GEAR',
+  beasts: 'BEAST',
 } as const satisfies Record<string, CatalogKind>
 
 export type CatalogCollection = keyof typeof CATALOG_COLLECTIONS
@@ -289,4 +326,5 @@ export const catalogBodySchemas = {
   NPC_SQUAD: npcSquadSchema,
   AWAKENING: awakeningSchema,
   GEAR: gearSchema,
+  BEAST: beastSchema,
 } satisfies Record<CatalogKind, z.ZodTypeAny>

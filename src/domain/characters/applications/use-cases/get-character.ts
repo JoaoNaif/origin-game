@@ -1,6 +1,8 @@
 import { Either, left, right } from '@/core/either'
 import { NotAllowedError } from '@/core/errors/err/not-allowed-error'
 import { ResourceNotFoundError } from '@/core/errors/err/resource-not-found-error'
+import { BeastsRepository } from '@/domain/beasts/applications/repositories/beasts-repository'
+import { Beast } from '@/domain/beasts/entities/beast'
 import { GearRepository } from '@/domain/gear/applications/repositories/gear-repository'
 import { Gear } from '@/domain/gear/entities/gear'
 import { Character } from '../../entities/character'
@@ -14,14 +16,15 @@ interface GetCharacterUseCaseRequest {
 
 type GetCharacterUseCaseResponse = Either<
   ResourceNotFoundError | NotAllowedError,
-  { character: Character; gear: Gear | null }
+  { character: Character; gear: Gear | null; beasts: Beast[] }
 >
 
-/** O personagem da conta e o equipamento vivo no slot dele (D153). */
+/** O personagem da conta, o equipamento vivo no slot dele (D153) e as bestas com contrato (D154). */
 export class GetCharacterUseCase {
   constructor(
     private charactersRepository: CharactersRepository,
-    private gearRepository: GearRepository
+    private gearRepository: GearRepository,
+    private beastsRepository: BeastsRepository
   ) {}
 
   async execute({
@@ -35,10 +38,11 @@ export class GetCharacterUseCase {
     )
     if (found.isLeft()) return left(found.value)
 
-    const [gear] = await this.gearRepository.findEquippedByCharacterIds([
-      characterId,
+    const [[gear], beasts] = await Promise.all([
+      this.gearRepository.findEquippedByCharacterIds([characterId]),
+      this.beastsRepository.findManyByCharacterIds([characterId]),
     ])
 
-    return right({ character: found.value, gear: gear ?? null })
+    return right({ character: found.value, gear: gear ?? null, beasts })
   }
 }

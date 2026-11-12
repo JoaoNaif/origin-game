@@ -49,6 +49,12 @@ import {
 import { AWAKENING_MISSION_RULES } from '@/domain/characters/services/awakening-missions'
 import { KNOWN_TITLES } from '@/domain/characters/services/dom-rules'
 import { GearGrade } from '@/domain/gear/enums/gear-grade'
+import { BeastContract } from '@/domain/beasts/enums/beast-contract'
+import { BeastGrade } from '@/domain/beasts/enums/beast-grade'
+import {
+  BEAST_SKILL_COUNT,
+  MASTER_REQUIREMENT_COUNT,
+} from '@/domain/beasts/beast-values'
 import { GearKind } from '@/domain/gear/enums/gear-kind'
 import {
   GEAR_ADMIN_TUNING,
@@ -102,6 +108,8 @@ export class FetchAdminOptionsController {
         awakeningMissionKinds: AWAKENING_MISSION_KINDS,
         gearGrades: values(GearGrade),
         gearKinds: values(GearKind),
+        beastContracts: values(BeastContract),
+        beastGrades: values(BeastGrade),
         /** Títulos que existem hoje (a lista do equipamento só aceita estes). */
         titles: KNOWN_TITLES,
         effectTypes: {
@@ -136,6 +144,10 @@ export class FetchAdminOptionsController {
             adminTuning: GEAR_ADMIN_TUNING,
             requirementCount: GEAR_REQUIREMENT_COUNT,
             titles: GEAR_TITLES,
+          },
+          beast: {
+            skillCount: BEAST_SKILL_COUNT,
+            masterRequirementCount: MASTER_REQUIREMENT_COUNT,
           },
         },
       },
