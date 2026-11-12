@@ -64,6 +64,7 @@ export function generateCandidates(
     const seen = new Set<string>()
     // trocar campo exige um campo para validar; a prévia usa o primeiro e `withExtras` abre um por campo
     const changesField = skill.effects.some((e) => e.type === 'CHANGE_FIELD')
+    const summons = skill.effects.some((e) => e.type === 'SUMMON')
     if (changesField && engine.fields.length === 0) continue
 
     for (const cell of cells) {
@@ -75,13 +76,20 @@ export function generateCandidates(
         ...(changesField ? { fieldKey: engine.fields[0].key } : {}),
       }
       const preview = engine.previewSkill(actorRef, base)
-      if (preview.isLeft() || preview.value.hits.length === 0) continue
+      // a invocação não tem alvo: vale em cada célula livre (D154)
+      if (preview.isLeft() || (preview.value.hits.length === 0 && !summons))
+        continue
 
-      const signature = preview.value.hits
-        .map((h) => `${h.ref}:${h.falloff}`)
-        .join('|')
+      const signature = summons
+        ? `${cell.row},${cell.column}`
+        : preview.value.hits.map((h) => `${h.ref}:${h.falloff}`).join('|')
       if (seen.has(signature)) continue
       seen.add(signature)
+
+      if (summons) {
+        candidates.push({ payload: base, preview: preview.value })
+        continue
+      }
 
       for (const payload of withExtras(engine, actorRef, base, preview.value)) {
         candidates.push({ payload, preview: preview.value })

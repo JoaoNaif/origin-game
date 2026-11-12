@@ -307,6 +307,11 @@ export class UnitConditions {
     return 'REPLACED'
   }
 
+  /** Tira os modificadores de uma fonte (o custo ou o bônus de uma besta que saiu, D154). */
+  removeModifiers(source: string) {
+    this.modifiers = this.modifiers.filter((m) => m.source !== source)
+  }
+
   modifiersOf(stat: Stat): readonly StatModifier[] {
     return this.modifiers.filter((m) => m.stat === stat)
   }

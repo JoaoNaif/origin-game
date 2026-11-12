@@ -19,6 +19,7 @@ import {
   MOVE_VALUE,
   STATUS_VALUE,
   STRONG_SKILL_RISK,
+  SUMMON_VALUE,
   TURN_SHIFT_VALUE,
 } from '../ai-values'
 import { Candidate } from './action-generator'
@@ -76,6 +77,10 @@ export function scoreFactors(
       }
     }
     support += selfValue(preview)
+    // invocação (D154): sem alvo, vale pelas ações que a besta vai fazer
+    if (preview.skill.effects.some((e) => e.type === 'SUMMON')) {
+      support += SUMMON_VALUE
+    }
     support += fieldValue(engine, preview, payload, context.side)
   } else if (payload.type === 'DEFEND') {
     support = DEFEND_VALUE
@@ -271,6 +276,10 @@ function allyValue(
         if (!target.statuses.includes(effect.status)) {
           value += effect.chance * STATUS_VALUE[effect.status]
         }
+        break
+      case 'EQUALITY':
+        // Igualdade (D154): o buffer segura metade dos golpes, como um escudo do dobro do tamanho até esvaziar
+        value += (effect.buffer / target.maxHp) * 100 * (1 + missing)
         break
       case 'CLEANSE':
         // vale mais que aplicar: devolve o que o inimigo já gastou um turno para pôr (D146)

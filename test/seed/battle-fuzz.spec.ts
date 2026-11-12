@@ -6,7 +6,13 @@ import { generateCandidates } from '@/domain/ai/services/action-generator'
 import { BattleEngine } from '@/domain/combat/engine/battle-engine'
 import { BattleSide, MAX_ROUNDS } from '@/domain/combat/enums/battle-enums'
 import { toSnapshotField } from '@/domain/combat/services/build-snapshot'
+import {
+  beastRef,
+  beastUnit,
+  summonSkill,
+} from '@/domain/combat/services/beast-snapshot'
 import { domSkills, snapshotDom } from '@/domain/combat/services/dom-skills'
+import { computeStats } from '@/domain/characters/services/stat-calculator'
 import { DomPillar } from '@/domain/characters/enums/dom-pillar'
 import { DOM_LEVEL_ORDER } from '@/domain/characters/services/dom-rules'
 import { DomPillars } from '@/domain/characters/value-objects/dom-state'
@@ -109,11 +115,38 @@ function randomSnapshot(seed: number): BattleSnapshot {
     }
   }
 
+  // bestas sorteadas (D154): 40% das unidades, qualquer contrato, a invocação num slot qualquer da build
+  const beasts = [...content.beasts.values()]
+  for (const side of [snapshot.player, snapshot.opponent]) {
+    side.beasts = []
+    for (const unit of side.units) {
+      if (draw.next() < 0.6) continue
+      const template = beasts[draw.int(0, beasts.length - 1)]
+      const ref = template.takesCell ? beastRef(unit.ref, 1) : null
+      unit.skills[draw.int(0, 3)] = summonSkill(template, unit.ref, ref)
+      if (ref) {
+        const ownerStats = computeStats({
+          profile: unit.profile,
+          level: unit.level,
+          freePoints: unit.freePoints,
+          traitEffects: unit.traitEffects,
+          domPercents: unit.dom?.statPercents,
+        })
+        side.beasts.push(beastUnit(template, ref, unit, ownerStats))
+      }
+    }
+  }
+
   return snapshot
 }
 
 const refsOf = (snapshot: BattleSnapshot) =>
-  [...snapshot.player.units, ...snapshot.opponent.units].map((u) => u.ref)
+  [
+    ...snapshot.player.units,
+    ...snapshot.opponent.units,
+    ...(snapshot.player.beasts ?? []),
+    ...(snapshot.opponent.beasts ?? []),
+  ].map((u) => u.ref)
 
 /** Tudo o que define o estado da batalha, para comparar cópias. */
 function stateOf(engine: BattleEngine, refs: string[]) {
@@ -150,7 +183,10 @@ function checkInvariants(engine: BattleEngine, refs: string[], seed: number) {
     expect(Number.isFinite(unit.hp), `${where}: HP de ${ref}`).toBe(true)
 
     if (!unit.alive) {
-      expect(unit.hp, `${where}: ${ref} morto com vida`).toBe(0)
+      // a besta fora de campo (antes de entrar ou depois de sair) guarda a vida
+      if (!unit.beast) {
+        expect(unit.hp, `${where}: ${ref} morto com vida`).toBe(0)
+      }
       expect(unit.position, `${where}: ${ref} morto na grade`).toBeNull()
       expect(unit.linkedWith, `${where}: ${ref} morto ligado`).toBeNull()
       continue
@@ -297,6 +333,11 @@ describe('Battle Fuzz', () => {
         StatusType.CONTAGION,
         'WOKE',
         'CLEANSE',
+        // bestas (D154): entrar, sair pela duração, cair, e a Igualdade segurando golpe
+        'SUMMON',
+        'BEAST_LEAVE',
+        'EQUALITY',
+        'EQUALITY_ABSORB',
       ]) {
         expect(seen, `nunca aconteceu: ${expected}`).toContain(expected)
       }

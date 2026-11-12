@@ -163,6 +163,12 @@ export const MODIFIER_VALUE_PER_PERCENT = 0.3
 /** Adiantar/atrasar a vez: X% × 11 (uma ação inteira vale 11). */
 export const TURN_SHIFT_VALUE = 22
 
+/**
+ * Invocar uma besta (D154): ~4 ações dela a uns 50% da força do dono, ou seja, umas 2 ações inteiras. Placeholder,
+ * a calibrar na simulação.
+ */
+export const SUMMON_VALUE = 2 * TURN_SHIFT_VALUE
+
 export const DEFEND_VALUE = 4
 export const MOVE_VALUE = 2
 

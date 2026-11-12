@@ -8,6 +8,7 @@ import { Stat } from '@/domain/characters/enums/stat'
 import { StatBlock } from '@/domain/characters/value-objects/stat-block'
 import { TraitEffect } from '@/domain/characters/value-objects/trait-effect'
 import { GearLineage } from '@/domain/gear/entities/gear-template'
+import { BeastGrade } from '@/domain/beasts/enums/beast-grade'
 import { GearGrade } from '@/domain/gear/enums/gear-grade'
 import { GearKind } from '@/domain/gear/enums/gear-kind'
 import { GearEffects } from '@/domain/gear/services/gear-effects'
@@ -39,8 +40,27 @@ export type DomSkillEffect = { appliesTo?: EffectRecipient } &
     | { type: 'INVULNERABLE' }
   )
 
-/** Efeito de uma skill na batalha: os do catálogo e os das skills únicas do DOM. */
-export type SnapshotEffect = SkillEffect | DomSkillEffect
+/** Efeitos das invocações de besta (D154): fora do catálogo, a skill nasce do contrato. */
+export type BeastSkillEffect = { appliesTo?: EffectRecipient } &
+  /** Dominância e Mestre: põe a besta `beastRef` numa célula livre do próprio lado. */
+  (
+    | { type: 'SUMMON'; beastRef: string }
+    /**
+     * Igualdade: o dono guarda um buffer que absorve `absorbShare` de cada golpe e ganha Precisão e Esquiva, por
+     * `duration` turnos dele; o buffer esvaziou, perde `breakPercent` do HP máximo e os bônus.
+     */
+    | {
+        type: 'EQUALITY'
+        bufferPercent: number
+        bonusPercent: number
+        duration: number
+        absorbShare: number
+        breakPercent: number
+      }
+  )
+
+/** Efeito de uma skill na batalha: os do catálogo, os das skills únicas do DOM e os das invocações. */
+export type SnapshotEffect = SkillEffect | DomSkillEffect | BeastSkillEffect
 
 /** Skill como estava no início da batalha (valores, não referência: o catálogo pode mudar depois). */
 export interface SnapshotSkill {
@@ -61,6 +81,8 @@ export interface SnapshotSkill {
   singleUse?: boolean
   /** Pilar da skill única do DOM (D93). */
   domPillar?: DomPillar
+  /** Invocação de besta (D154): a `key` da besta do catálogo. */
+  beastKey?: string
 }
 
 /** DOM da unidade no início (D93): os níveis (a Vidente lê a Mente do alvo) e os % de stat que eles dão. */
@@ -76,6 +98,22 @@ export interface SnapshotGear extends GearEffects {
   kind: GearKind
   grade: GearGrade
   lineage: GearLineage
+}
+
+/** Besta fora de campo até a invocação (D154): quem é, de quem é e por quanto tempo fica. */
+export interface SnapshotBeast {
+  key: string
+  name: string
+  contract: 'DOMINANCE' | 'MASTER'
+  grade: BeastGrade
+  /** O personagem que firmou o contrato (e invoca). */
+  ownerRef: string
+  /** Turnos da besta em campo (4; sagrada 5). */
+  duration: number
+  /** Dominância: % de Vontade que o dono perde enquanto ela está em campo (dentro do piso de 80%). */
+  ownerWillCost: number
+  /** A IA joga por ela (Dominância); no Mestre, o jogador escolhe. */
+  auto: boolean
 }
 
 /** Personagem como estava no início: tudo que o motor precisa para calcular stats e jogar. */
@@ -109,6 +147,10 @@ export interface SnapshotUnit extends GridPosition {
   dom?: SnapshotDom
   /** Equipamento vivo no slot; ausente = sem equipamento (NPC, ou batalha de antes do equipamento). */
   gear?: SnapshotGear
+  /** Stats fixos (a besta: % dos do dono, já calculados); ausente = o motor calcula pelo perfil. */
+  stats?: StatBlock
+  /** É uma besta (D154): não conta na eliminação, não tem classe nem passiva. */
+  beast?: SnapshotBeast
 }
 
 export interface SnapshotSide {
@@ -116,6 +158,8 @@ export interface SnapshotSide {
   /** Nome exibido (conta ou squad da máquina). */
   name: string
   units: SnapshotUnit[]
+  /** Bestas que o lado pode invocar (Dominância e Mestre), fora de campo no início; ausente = nenhuma. */
+  beasts?: SnapshotUnit[]
 }
 
 /** Campo de batalha como valor (D98). */

@@ -73,6 +73,12 @@ export class BattleGrid {
     return isInsideGrid(cell) && this.unitAt(cell) === undefined
   }
 
+  /** Põe uma unidade nova numa célula vazia (besta invocada, D154); quem chama confere que está vazia. */
+  place(ref: string, cell: GridPosition) {
+    this.positions.set(ref, { ...cell })
+    this.changes += 1
+  }
+
   /** Tira da grade (derrotado deixa de bloquear, D21). */
   remove(ref: string) {
     this.positions.delete(ref)

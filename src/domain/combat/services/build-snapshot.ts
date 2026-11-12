@@ -8,6 +8,14 @@ import { Variant } from '@/domain/characters/entities/variant'
 import { Lineage } from '@/domain/characters/enums/lineage'
 import { BUILD_SIZE } from '@/domain/characters/services/basic-kit'
 import { defaultFreePoints } from '@/domain/characters/services/free-points'
+import { BeastTemplate } from '@/domain/beasts/entities/beast-template'
+import { BeastContract } from '@/domain/beasts/enums/beast-contract'
+import {
+  beastsAllowed,
+  meetsContract,
+} from '@/domain/beasts/services/beast-rules'
+import { domStatPercents } from '@/domain/characters/services/dom-rules'
+import { computeStats } from '@/domain/characters/services/stat-calculator'
 import { GearTemplate } from '@/domain/gear/entities/gear-template'
 import { characterGearBond } from '@/domain/gear/services/gear-bond'
 import { gearEffects } from '@/domain/gear/services/gear-effects'
@@ -17,6 +25,7 @@ import { Squad, SQUAD_SIZE } from '@/domain/squads/entities/squad'
 import { BattleSide } from '../enums/battle-enums'
 import { BuildSnapshotError } from '../errors/build-snapshot-error'
 import { BattleField } from '../entities/battle-field'
+import { beastRef, beastUnit, summonSkill } from './beast-snapshot'
 import { domSkills, snapshotDom } from './dom-skills'
 import {
   BattleSnapshot,
@@ -47,6 +56,11 @@ export interface PlayerSideInput {
   catalog: SnapshotCatalog
   /** Modelo do equipamento no slot de cada personagem (id do personagem → modelo); ausente = ninguém equipado. */
   gear?: ReadonlyMap<string, GearTemplate>
+  /** Bestas com contrato de cada personagem (id do personagem → modelo e slot da invocação, D154). */
+  beasts?: ReadonlyMap<
+    string,
+    readonly { template: BeastTemplate; slot: number }[]
+  >
 }
 
 export interface NpcSideInput {
@@ -205,6 +219,7 @@ export function buildPlayerSide(
   }
 
   const units: SnapshotUnit[] = []
+  const beasts: SnapshotUnit[] = []
 
   for (const [index, member] of squad.members.entries()) {
     const character = characters.find((c) => c.id.equals(member.characterId))
@@ -231,9 +246,37 @@ export function buildPlayerSide(
 
     const dom = snapshotDom(character.domPillars)
     const gear = input.gear?.get(character.id.toString())
+    const ref = unitRef(BattleSide.PLAYER, index)
+    const skills = build.map((s) => toSnapshotSkill(s.skill, s.isEnhanced))
 
-    units.push({
-      ref: unitRef(BattleSide.PLAYER, index),
+    // contratos com bestas (D154): a invocação toma o slot dela na build
+    const contracts = [
+      ...(input.beasts?.get(character.id.toString()) ?? []),
+    ].sort((a, b) => a.slot - b.slot)
+    if (contracts.length > beastsAllowed(character)) {
+      return left(
+        new BuildSnapshotError(
+          `${template.value.name} tem mais bestas do que pode (${beastsAllowed(character)})`
+        )
+      )
+    }
+    const summoned: { template: BeastTemplate; ref: string }[] = []
+    for (const contract of contracts) {
+      if (!meetsContract(contract.template, character, template.value)) {
+        return left(
+          new BuildSnapshotError(
+            `${template.value.name} não cumpre os requisitos do contrato Mestre com ${contract.template.name}: a build fica bloqueada até cumprir`
+          )
+        )
+      }
+      const takesCell = contract.template.contract !== BeastContract.EQUALITY
+      const beast = takesCell ? beastRef(ref, summoned.length + 1) : null
+      if (beast) summoned.push({ template: contract.template, ref: beast })
+      skills[contract.slot - 1] = summonSkill(contract.template, ref, beast)
+    }
+
+    const unit: SnapshotUnit = {
+      ref,
       characterId: character.id.toString(),
       name: template.value.name,
       templateKey: template.value.key,
@@ -250,21 +293,39 @@ export function buildPlayerSide(
         catalog
       ),
       passive: template.value.passive,
-      // as 4 da build e as skills únicas do DOM (uma por pilar avançado, D93)
-      skills: [
-        ...build.map((s) => toSnapshotSkill(s.skill, s.isEnhanced)),
-        ...domSkills(character.domPillars),
-      ],
+      // as 4 da build (com as invocações nos slots delas) e as skills únicas do DOM (uma por pilar avançado, D93)
+      skills: [...skills, ...domSkills(character.domPillars)],
       ...(dom ? { dom } : {}),
       ...(gear
         ? { gear: toSnapshotGear(gear, character, template.value) }
         : {}),
       row: member.row,
       column: member.column,
-    })
+    }
+    units.push(unit)
+
+    if (summoned.length > 0) {
+      // a besta tira os stats do dono fora da batalha, com o bônus do equipamento (sem a queda do parcial)
+      const ownerStats = computeStats({
+        profile: unit.profile,
+        level: unit.level,
+        freePoints: unit.freePoints,
+        traitEffects: unit.traitEffects,
+        domPercents: domStatPercents(character.domPillars),
+        gearPercents: unit.gear?.bonusPercents,
+      })
+      for (const { template: beast, ref: refOfBeast } of summoned) {
+        beasts.push(beastUnit(beast, refOfBeast, unit, ownerStats))
+      }
+    }
   }
 
-  return right({ side: BattleSide.PLAYER, name: account.displayName, units })
+  return right({
+    side: BattleSide.PLAYER,
+    name: account.displayName,
+    units,
+    ...(beasts.length > 0 ? { beasts } : {}),
+  })
 }
 
 /** Lado da máquina: o squad do catálogo, com a distribuição padrão de pontos livres (D103). */

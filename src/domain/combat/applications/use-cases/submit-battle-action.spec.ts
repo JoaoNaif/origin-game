@@ -60,6 +60,7 @@ describe('Submit Battle Action', () => {
       world.wallets,
       world.chests,
       world.gear,
+      world.beasts,
       world.clock
     ).execute({
       accountId: world.account.id.toString(),

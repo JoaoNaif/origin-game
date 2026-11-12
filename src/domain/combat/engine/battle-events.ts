@@ -31,6 +31,16 @@ export type BattleEvent =
       status: StatusType | null
     }
   | { type: 'DOT'; ref: string; amount: number }
+  /** Invocação (D154): `ref` pôs a besta `beastRef` em campo, na célula `to`. */
+  | { type: 'SUMMON'; ref: string; beastRef: string; to: GridPosition }
+  /** A besta saiu de campo pela duração; com `equality`, acabou a Igualdade do dono `ref`. */
+  | { type: 'BEAST_LEAVE'; ref: string; equality?: boolean }
+  /** Igualdade começou no dono, com o buffer. */
+  | { type: 'EQUALITY'; ref: string; buffer: number }
+  /** A besta da Igualdade segurou parte do golpe no dono. */
+  | { type: 'EQUALITY_ABSORB'; ref: string; amount: number }
+  /** O buffer esvaziou: o dono levou `amount` e perdeu os bônus. */
+  | { type: 'EQUALITY_BREAK'; ref: string; amount: number }
   | { type: 'SKILL'; ref: string; skillKey: string; potency: number }
   | { type: 'INTERCEPT'; guardianRef: string; protectedRef: string }
   | { type: 'MISS'; ref: string; targetRef: string }

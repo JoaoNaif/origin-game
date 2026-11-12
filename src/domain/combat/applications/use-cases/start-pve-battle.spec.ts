@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { makeAccount } from 'test/factories/make-account'
 import { gearTemplateOf, makeGear } from 'test/factories/make-gear'
+import { beastTemplateOf, makeBeast } from 'test/factories/make-beast'
+import { playPveBattle } from 'test/factories/play-pve-battle'
 import { makePveWorld, PveWorld } from 'test/factories/make-pve-world'
 import { NotAllowedError } from '@/core/errors/err/not-allowed-error'
 import { ResourceNotFoundError } from '@/core/errors/err/resource-not-found-error'
@@ -39,6 +41,7 @@ describe('Start Pve Battle', () => {
       world.wallets,
       world.chests,
       world.gear,
+      world.beasts,
       world.clock
     )
   })
@@ -92,6 +95,66 @@ describe('Start Pve Battle', () => {
     })
     expect(['FULL', 'PARTIAL', 'NONE']).toContain(first.gear?.bond)
     expect(others.every((u) => u.gear === undefined)).toBe(true)
+  })
+
+  it('should be able to take the contracted beasts: the summon in its slot and the beast out of the field', async () => {
+    const holder = world.squad.members[0].characterId
+    for (const key of ['lobo-de-cinzas', 'serpente-espelho']) {
+      const beast = makeBeast(
+        world.account,
+        beastTemplateOf(world.catalog, key)
+      )
+      const owner =
+        key === 'lobo-de-cinzas' ? holder : world.squad.members[1].characterId
+      beast.contractWith(world.account.id, owner, 4)
+      await world.beasts.create(beast)
+    }
+
+    const result = await sut.execute({
+      accountId: world.account.id.toString(),
+      draftId,
+      squadId: world.squad.id.toString(),
+    })
+
+    expect(result.isRight()).toBe(true)
+    if (result.isLeft()) return
+    const { player } = result.value.battle.snapshot
+    expect(player.units[0].skills[3]).toMatchObject({
+      beastKey: 'lobo-de-cinzas',
+      singleUse: true,
+    })
+    expect(player.units[1].skills[3].beastKey).toBe('serpente-espelho')
+    // a Igualdade não entra na grade: só o lobo vira unidade
+    expect(player.beasts?.map((b) => b.ref)).toEqual(['PLAYER:B0'])
+    expect(player.beasts?.[0].beast).toMatchObject({
+      ownerRef: 'PLAYER:0',
+      contract: 'DOMINANCE',
+      auto: true,
+    })
+  })
+
+  it('should be able to play a whole battle with beasts, the Dominância one played by the machine', async () => {
+    const holder = world.squad.members[0].characterId
+    const wolf = makeBeast(
+      world.account,
+      beastTemplateOf(world.catalog, 'lobo-de-cinzas')
+    )
+    wolf.contractWith(world.account.id, holder, 1)
+    await world.beasts.create(wolf)
+
+    const { battle } = await playPveBattle(world, 'balanced-beginner')
+
+    expect(battle.isFinished).toBe(true)
+    // a vez automática da besta fica gravada como ação do lado do jogador
+    const beastActions = battle.actions.filter(
+      (a) => a.actorRef === 'PLAYER:B0'
+    )
+    const summoned = battle.actions.some(
+      (a) =>
+        a.payload.type === 'SKILL' && a.payload.skillKey.startsWith('summon:')
+    )
+    expect(summoned).toBe(true)
+    expect(beastActions.length).toBeGreaterThan(0)
   })
 
   it('should be able to start only one battle from a draft (double submit)', async () => {

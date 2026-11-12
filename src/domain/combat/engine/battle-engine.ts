@@ -24,6 +24,7 @@ import {
   SnapshotUnit,
 } from '../value-objects/battle-snapshot'
 import { GearPassive } from '@/domain/gear/value-objects/gear-passive'
+import { BEAST_FIELD_CAP } from '@/domain/beasts/beast-values'
 import { qualifies } from '../services/field-draw'
 import {
   BattleOutcome,
@@ -56,7 +57,7 @@ import {
   healShare,
 } from '../services/damage'
 import { defend } from '../services/defend'
-import { DesgasteState, RELIEF } from '../services/desgaste'
+import { DESGASTE_FLOOR, DesgasteState, RELIEF } from '../services/desgaste'
 import { hitChance, roll, statusChance } from '../services/hit'
 import { InterceptState } from '../services/intercept'
 import {
@@ -102,6 +103,24 @@ interface EngineUnit {
   linkedWith: string | null
   /** Indestrutível (DOM, D93): não leva dano até o próximo turno dele (o dano contínuo desse turno incluso). */
   invulnerable: boolean
+  /** Classe para as marcas e auras (D128); nulo na besta, que não tem classe (D154). */
+  unitClass: CharacterClass | null
+  /** Besta em campo: turnos dela que ainda faltam (D95). */
+  beastTurnsLeft: number
+  /** Igualdade no dono (D95, D154): o buffer e os turnos dele que faltam; nulo = sem Igualdade. */
+  equality: EqualityState | null
+}
+
+/** Igualdade ativa no dono. */
+interface EqualityState {
+  source: string
+  buffer: number
+  turnsLeft: number
+  bonusPercent: number
+  absorbShare: number
+  breakPercent: number
+  /** Começou neste turno do dono: o turno da invocação não conta. */
+  fresh: boolean
 }
 
 /** Contexto de um gatilho de passiva. */
@@ -129,6 +148,8 @@ type PassiveEvent =
 export interface ActorTurn {
   ref: string
   side: BattleSide
+  /** A IA joga esta vez (besta da Dominância, D154), mesmo do lado do jogador. */
+  auto?: boolean
   round: number
   tick: number
 }
@@ -157,6 +178,10 @@ export type PreviewEffect =
   | { type: 'WEAKEN'; percent: number; chance: number }
   /** Indestrutível (DOM, D93): anula o dano até o próximo turno. */
   | { type: 'INVULNERABLE' }
+  /** Invocação (D154): a besta entra em campo. */
+  | { type: 'SUMMON'; beastRef: string }
+  /** Igualdade (D154): o buffer que o dono guardaria. */
+  | { type: 'EQUALITY'; buffer: number }
 
 export interface PreviewHit {
   ref: string
@@ -301,6 +326,7 @@ export class BattleEngine {
           desgaste: u.desgaste.clone(),
           conditions: u.conditions.clone(),
           cooldowns: u.cooldowns.clone(),
+          equality: u.equality ? { ...u.equality } : null,
         })
       }
       this.grids = {
@@ -332,6 +358,13 @@ export class BattleEngine {
       for (const unit of side.units) {
         this.units.set(unit.ref, createUnit(unit, side.side))
       }
+      // bestas (D154): fora de campo até a invocação (fora da grade e da fila)
+      for (const beast of side.beasts ?? []) {
+        this.units.set(beast.ref, {
+          ...createUnit(beast, side.side),
+          alive: false,
+        })
+      }
     }
 
     this.intercepts = {
@@ -348,11 +381,13 @@ export class BattleEngine {
     }
 
     this.queue = new TurnQueue(
-      [...this.units.values()].map((u) => ({
-        ref: u.ref,
-        speed: this.stat(u, Stat.SPEED),
-        statAverage: statAverage(u.base),
-      })),
+      [...this.units.values()]
+        .filter((u) => u.alive)
+        .map((u) => ({
+          ref: u.ref,
+          speed: this.stat(u, Stat.SPEED),
+          statAverage: statAverage(u.base),
+        })),
       rng
     )
 
@@ -424,6 +459,18 @@ export class BattleEngine {
       tauntedBy: unit.conditions.has(StatusType.TAUNT) ? unit.tauntedBy : null,
       protectedBy: unit.protectedBy,
       invulnerable: unit.invulnerable,
+      /** Besta (D154): de quem é, o contrato e os turnos que faltam em campo. */
+      beast: unit.snapshot.beast
+        ? {
+            ownerRef: unit.snapshot.beast.ownerRef,
+            contract: unit.snapshot.beast.contract,
+            turnsLeft: unit.alive ? unit.beastTurnsLeft : 0,
+          }
+        : null,
+      /** Igualdade no dono: o buffer que resta e os turnos dele. */
+      equality: unit.equality
+        ? { buffer: unit.equality.buffer, turnsLeft: unit.equality.turnsLeft }
+        : null,
       get statuses(): StatusType[] {
         return unit.conditions.active()
       },
@@ -589,6 +636,15 @@ export class BattleEngine {
             }
           case 'INVULNERABLE':
             return { type: 'INVULNERABLE' }
+          case 'EQUALITY':
+            return {
+              type: 'EQUALITY',
+              buffer: Math.round(
+                (target.desgaste.maxHp * effect.bufferPercent) / 100
+              ),
+            }
+          case 'SUMMON':
+            return { type: 'SUMMON', beastRef: effect.beastRef }
         }
       })
 
@@ -655,6 +711,7 @@ export class BattleEngine {
           side: unit.side,
           round: this.current.round,
           tick: this.current.tick,
+          ...(unit.snapshot.beast?.auto ? { auto: true } : {}),
         }
       }
 
@@ -932,8 +989,12 @@ export class BattleEngine {
             attacker.conditions.damageTakenMultiplier *
             (1 - this.damageReduction(attacker, true) / 100)
         )
-    const result = applyDamage(amount, attacker)
+    const result = applyDamage(
+      this.absorbByEquality(attacker, amount),
+      attacker
+    )
     this.setHp(attacker, result.hpLeft, result.shieldLeft)
+    this.checkEqualityBreak(attacker)
     this.damageDealt[protector.side] += result.hpLost + result.shieldAbsorbed
     this.log.push({
       type: 'DAMAGE',
@@ -1112,7 +1173,7 @@ export class BattleEngine {
   /** Marca do Tático (D126): skill dele em aliado dá Coordenação (+10% de Ataque até o aliado agir). */
   private coordinates(actor: EngineUnit, skill: SnapshotSkill): boolean {
     return (
-      actor.snapshot.characterClass === CharacterClass.TACTICIAN &&
+      actor.unitClass === CharacterClass.TACTICIAN &&
       skill.target === SkillTarget.ALLY
     )
   }
@@ -1170,7 +1231,8 @@ export class BattleEngine {
           })
           return (
             resolved.isRight() &&
-            resolved.value.hits.some((h) => this.get(h.ref).alive)
+            (isSummon(resolved.value.skill) ||
+              resolved.value.hits.some((h) => this.get(h.ref).alive))
           )
         })
       })
@@ -1210,6 +1272,12 @@ export class BattleEngine {
       payload.targetSide !== targetSide
     ) {
       return left(new InvalidActionError('lado alvo errado para essa skill'))
+    }
+
+    const summon = summonEffect(skill)
+    if (summon) {
+      const error = this.summonError(actor, summon.beastRef, payload.target)
+      return error ? left(error) : right({ skill, hits: [] })
     }
 
     const grid = this.grids[targetSide]
@@ -1266,6 +1334,19 @@ export class BattleEngine {
     const resolved = this.resolveSkill(actor, payload)
     if (resolved.isLeft()) return left(resolved.value)
     const { skill } = resolved.value
+
+    const summon = summonEffect(skill)
+    if (summon) {
+      this.log.push({
+        type: 'SKILL',
+        ref: actor.ref,
+        skillKey: skill.key,
+        potency: 1,
+      })
+      this.summon(actor, this.get(summon.beastRef), payload.target)
+      actor.cooldowns.use(skill.key)
+      return right(undefined)
+    }
 
     const potency = actor.desgaste.potencyFor(skill, actor.hp)
     this.log.push({
@@ -1397,10 +1478,10 @@ export class BattleEngine {
     const grid = this.grids[target.side]
     const guardians = this.guardianOrder[target.side]
       .map((ref) => this.get(ref))
-      .filter((g) => g.alive)
+      .filter((g) => g.alive && g.unitClass !== null)
       .map((g) => ({
         ref: g.ref,
-        characterClass: g.snapshot.characterClass,
+        characterClass: g.unitClass!,
         ...grid.positionOf(g.ref),
         // Furtivo não se revela para interceptar (D146)
         canAct:
@@ -1460,7 +1541,7 @@ export class BattleEngine {
               round
             )
         const result = applyDamage(
-          amount,
+          this.absorbByEquality(target, amount),
           target,
           this.passiveIgnoresShield(actor)
         )
@@ -1495,6 +1576,7 @@ export class BattleEngine {
             result.hpLost + result.shieldAbsorbed
           )
         }
+        this.checkEqualityBreak(target)
         return
       }
 
@@ -1801,6 +1883,14 @@ export class BattleEngine {
         })
         return
 
+      case 'EQUALITY':
+        this.startEquality(target, skill.key, effect)
+        return
+
+      case 'SUMMON':
+        // resolvido antes, em useSkill (a besta entra numa célula vazia, sem alvo)
+        return
+
       case 'RECOVER': {
         // alivia 50% de todo o Desgaste, inclusive o HP máximo perdido pela Fundamental (9.4b, D59, D120)
         const before = target.desgaste.totalFraction()
@@ -1939,7 +2029,7 @@ export class BattleEngine {
     base: number
   ) {
     const factor =
-      actor.snapshot.characterClass === CharacterClass.CONTROLLER
+      actor.unitClass === CharacterClass.CONTROLLER
         ? CLASS_MARKS.controllerWillFactor
         : 1
 
@@ -2052,6 +2142,7 @@ export class BattleEngine {
 
   private endTurn(unit: EngineUnit, options: { tickCooldowns?: boolean } = {}) {
     if (options.tickCooldowns ?? true) unit.cooldowns.endTurn()
+    this.tickBeastClock(unit)
     unit.conditions.afterAction()
     if (!unit.conditions.has(StatusType.TAUNT)) unit.tauntedBy = null
     unit.delayImmune = false
@@ -2094,7 +2185,10 @@ export class BattleEngine {
   }
 
   private summary(side: BattleSide): SideSummary {
-    const units = [...this.units.values()].filter((u) => u.side === side)
+    // a besta não é um dos 4 (D11, D64): não conta na eliminação nem no fim forçado
+    const units = [...this.units.values()].filter(
+      (u) => u.side === side && !u.snapshot.beast
+    )
 
     return {
       side,
@@ -2154,15 +2248,13 @@ export class BattleEngine {
     const neighbours = this.adjacentAllies(unit)
     let total = 1
 
-    for (const characterClass of new Set(
-      neighbours.map((n) => n.snapshot.characterClass)
-    )) {
-      const aura = FORMATION_STAT_AURA[characterClass]
+    for (const characterClass of new Set(neighbours.map((n) => n.unitClass))) {
+      const aura = characterClass ? FORMATION_STAT_AURA[characterClass] : null
       if (aura && aura.stat === stat) total *= 1 + aura.percent / 100
     }
     if (
       stat === Stat.ATTACK &&
-      unit.snapshot.characterClass === CharacterClass.EXECUTOR &&
+      unit.unitClass === CharacterClass.EXECUTOR &&
       neighbours.length === 0
     ) {
       total *= 1 + EXECUTOR_LONE_ATTACK_PERCENT / 100
@@ -2174,7 +2266,7 @@ export class BattleEngine {
   /** Cura recebida com um Suporte ao lado (D128). */
   private supportHealMultiplier(unit: EngineUnit): number {
     return this.adjacentAllies(unit).some(
-      (n) => n.snapshot.characterClass === CharacterClass.SUPPORT
+      (n) => n.unitClass === CharacterClass.SUPPORT
     )
       ? 1 + SUPPORT_HEAL_AURA_PERCENT / 100
       : 1
@@ -2183,13 +2275,13 @@ export class BattleEngine {
   /** Vanguarda ao lado: não pode ser empurrado, puxado nem trocado à força (D128). */
   private anchoredByVanguard(unit: EngineUnit): boolean {
     return this.adjacentAllies(unit).some(
-      (n) => n.snapshot.characterClass === CharacterClass.VANGUARD
+      (n) => n.unitClass === CharacterClass.VANGUARD
     )
   }
 
   /** Artilharia no fundo da linha (com alguém na frente dela): +10% de dano (D128). */
   private artilleryMultiplier(actor: EngineUnit): number {
-    if (actor.snapshot.characterClass !== CharacterClass.ARTILLERY) return 1
+    if (actor.unitClass !== CharacterClass.ARTILLERY) return 1
     const grid = this.grids[actor.side]
     const at = grid.positionOf(actor.ref)
     const row = grid.units().filter((u) => u.row === at.row)
@@ -2213,7 +2305,9 @@ export class BattleEngine {
     const facing = exposedOfRow(this.grids[other(unit.side)].units(), row)
     return (
       !!facing &&
-      ENGAGING_CLASSES.includes(this.get(facing.ref).snapshot.characterClass)
+      ENGAGING_CLASSES.includes(
+        this.get(facing.ref).unitClass as CharacterClass
+      )
     )
   }
 
@@ -2574,6 +2668,202 @@ export class BattleEngine {
     })
   }
 
+  // ---------------------------------------------------------------------------
+  // Bestas (D64, D95, D154, `beast_contracts_brief.md`)
+  // ---------------------------------------------------------------------------
+
+  /** Bestas em campo agora no lado (o teto é 2; a Igualdade não conta). */
+  private beastsOnField(side: BattleSide): number {
+    return [...this.units.values()].filter(
+      (u) => u.side === side && u.alive && u.snapshot.beast
+    ).length
+  }
+
+  /** Por que a besta não pode entrar nesta célula agora; nulo = pode. */
+  private summonError(
+    actor: EngineUnit,
+    beastRef: string,
+    cell: GridPosition
+  ): InvalidActionError | null {
+    const beast = this.units.get(beastRef)
+    if (!beast?.snapshot.beast || beast.snapshot.beast.ownerRef !== actor.ref) {
+      return new InvalidActionError('besta fora do contrato desta unidade')
+    }
+    if (beast.alive) return new InvalidActionError('a besta já está em campo')
+    if (this.beastsOnField(actor.side) >= BEAST_FIELD_CAP) {
+      return new InvalidActionError(
+        `no máximo ${BEAST_FIELD_CAP} bestas em campo por squad (D95)`
+      )
+    }
+    if (!this.grids[actor.side].isEmpty(cell)) {
+      return new InvalidActionError(
+        'a besta entra numa célula livre do próprio lado'
+      )
+    }
+
+    return null
+  }
+
+  /** A besta entra em campo: na célula, na fila (barra zerada) e com a duração dela. */
+  private summon(owner: EngineUnit, beast: EngineUnit, cell: GridPosition) {
+    const info = beast.snapshot.beast!
+    beast.alive = true
+    beast.hp = beast.desgaste.maxHp
+    beast.shield = 0
+    beast.beastTurnsLeft = info.duration
+    this.grids[owner.side].place(beast.ref, cell)
+    this.queue.add({
+      ref: beast.ref,
+      speed: Math.max(1, this.stat(beast, Stat.SPEED)),
+      statAverage: statAverage(beast.base),
+    })
+    this.log.push({
+      type: 'SUMMON',
+      ref: owner.ref,
+      beastRef: beast.ref,
+      to: { ...cell },
+    })
+
+    // Dominância (9.3): o dono perde Vontade enquanto ela está em campo, sem passar do piso de 80% do Desgaste
+    if (info.ownerWillCost > 0 && owner.alive) {
+      const base = owner.base[Stat.WILL]
+      const room =
+        base > 0
+          ? ((owner.desgaste.stat(Stat.WILL) - base * DESGASTE_FLOOR) / base) *
+            100
+          : 0
+      const percent = -Math.min(info.ownerWillCost, Math.max(0, room))
+      if (percent < 0) {
+        const result = owner.conditions.addModifier({
+          source: beastSource(beast.ref),
+          stat: Stat.WILL,
+          percent,
+          turnsLeft: BEAST_MODIFIER_TURNS,
+          unlimited: true,
+        })
+        this.log.push({
+          type: 'MODIFIER',
+          ref: beast.ref,
+          targetRef: owner.ref,
+          stat: Stat.WILL,
+          percent,
+          result,
+        })
+      }
+    }
+    this.refreshSpeeds()
+  }
+
+  /** A besta sai: acabou a duração. */
+  private dismissBeast(beast: EngineUnit) {
+    beast.alive = false
+    this.queue.remove(beast.ref)
+    this.grids[beast.side].remove(beast.ref)
+    this.clearLink(beast)
+    this.log.push({ type: 'BEAST_LEAVE', ref: beast.ref })
+    this.releaseOwner(beast)
+  }
+
+  /** O dono deixa de pagar o custo da besta que saiu ou caiu. */
+  private releaseOwner(beast: EngineUnit) {
+    const owner = this.units.get(beast.snapshot.beast!.ownerRef)
+    owner?.conditions.removeModifiers(beastSource(beast.ref))
+    this.refreshSpeeds()
+  }
+
+  /** Fim do turno: a besta conta os turnos dela; o dono conta os da Igualdade. */
+  private tickBeastClock(unit: EngineUnit) {
+    if (unit.snapshot.beast && unit.alive) {
+      unit.beastTurnsLeft -= 1
+      if (unit.beastTurnsLeft <= 0) this.dismissBeast(unit)
+    }
+
+    const equality = unit.equality
+    if (!equality) return
+    if (equality.fresh) {
+      equality.fresh = false
+      return
+    }
+    equality.turnsLeft -= 1
+    if (equality.turnsLeft <= 0) {
+      unit.conditions.removeModifiers(equality.source)
+      unit.equality = null
+      this.log.push({ type: 'BEAST_LEAVE', ref: unit.ref, equality: true })
+    }
+  }
+
+  /** Igualdade (9.4): o buffer no dono e o bônus de Precisão e Esquiva, por N turnos dele. */
+  private startEquality(
+    owner: EngineUnit,
+    source: string,
+    effect: Extract<SnapshotEffect, { type: 'EQUALITY' }>
+  ) {
+    const buffer = Math.round(
+      (owner.desgaste.maxHp * effect.bufferPercent) / 100
+    )
+    owner.equality = {
+      source,
+      buffer,
+      turnsLeft: effect.duration,
+      bonusPercent: effect.bonusPercent,
+      absorbShare: effect.absorbShare,
+      breakPercent: effect.breakPercent,
+      fresh: true,
+    }
+    for (const stat of [Stat.PRECISION, Stat.EVASION]) {
+      owner.conditions.addModifier({
+        source,
+        stat,
+        percent: effect.bonusPercent,
+        turnsLeft: BEAST_MODIFIER_TURNS,
+        unlimited: true,
+      })
+    }
+    this.log.push({ type: 'EQUALITY', ref: owner.ref, buffer })
+  }
+
+  /** A besta da Igualdade segura parte do golpe (até esvaziar o buffer); devolve o que sobra para o dono. */
+  private absorbByEquality(target: EngineUnit, amount: number): number {
+    const equality = target.equality
+    if (!equality || amount <= 0) return amount
+
+    const absorbed = Math.min(
+      equality.buffer,
+      Math.round(amount * equality.absorbShare)
+    )
+    equality.buffer -= absorbed
+    if (absorbed > 0) {
+      this.log.push({
+        type: 'EQUALITY_ABSORB',
+        ref: target.ref,
+        amount: absorbed,
+      })
+    }
+
+    return amount - absorbed
+  }
+
+  /** O buffer esvaziou: a dor da besta vira do dono (10% do HP máximo, sem Defesa) e os bônus acabam. */
+  private checkEqualityBreak(owner: EngineUnit) {
+    const equality = owner.equality
+    if (!equality || equality.buffer > 0) return
+
+    owner.equality = null
+    owner.conditions.removeModifiers(equality.source)
+    if (!owner.alive) return
+
+    const amount = Math.round(
+      (owner.desgaste.maxHp * equality.breakPercent) / 100
+    )
+    const result = applyDamage(owner.invulnerable ? 0 : amount, owner)
+    this.setHp(owner, result.hpLeft, result.shieldLeft)
+    this.log.push({
+      type: 'EQUALITY_BREAK',
+      ref: owner.ref,
+      amount: result.hpLost + result.shieldAbsorbed,
+    })
+  }
+
   private setHp(unit: EngineUnit, hp: number, shield: number) {
     unit.hp = Math.max(0, hp)
     unit.shield = Math.max(0, shield)
@@ -2584,6 +2874,11 @@ export class BattleEngine {
       this.grids[unit.side].remove(unit.ref)
       this.log.push({ type: 'DEFEATED', ref: unit.ref })
       this.clearLink(unit)
+      // besta caída (D64): o dono perde só o que ela dava; ninguém morre por isso
+      if (unit.snapshot.beast) {
+        this.releaseOwner(unit)
+        return
+      }
       this.firePassive(unit, 'ON_DEFEATED')
       for (const ally of this.units.values()) {
         if (ally.side === unit.side && ally.alive) {
@@ -2607,9 +2902,7 @@ export class BattleEngine {
 
   private shuffledGuardians(side: BattleSide): string[] {
     const refs = [...this.units.values()]
-      .filter(
-        (u) => u.side === side && u.snapshot.characterClass === 'GUARDIAN'
-      )
+      .filter((u) => u.side === side && u.unitClass === 'GUARDIAN')
       .map((u) => u.ref)
 
     for (let i = refs.length - 1; i > 0; i--) {
@@ -2630,14 +2923,17 @@ export class BattleEngine {
 
 function createUnit(snapshot: SnapshotUnit, side: BattleSide): EngineUnit {
   const gear = snapshot.gear
-  const base = computeStats({
-    profile: snapshot.profile,
-    level: snapshot.level,
-    freePoints: snapshot.freePoints,
-    traitEffects: snapshot.traitEffects,
-    domPercents: snapshot.dom?.statPercents,
-    gearPercents: gear ? gearBattlePercents(gear) : undefined,
-  })
+  // a besta vem com os stats prontos (% dos do dono, D95)
+  const base = snapshot.stats
+    ? { ...snapshot.stats }
+    : computeStats({
+        profile: snapshot.profile,
+        level: snapshot.level,
+        freePoints: snapshot.freePoints,
+        traitEffects: snapshot.traitEffects,
+        domPercents: snapshot.dom?.statPercents,
+        gearPercents: gear ? gearBattlePercents(gear) : undefined,
+      })
   const desgaste = new DesgasteState({
     baseStats: base,
     lineages: snapshot.lineages,
@@ -2675,7 +2971,26 @@ function createUnit(snapshot: SnapshotUnit, side: BattleSide): EngineUnit {
     protectedBy: null,
     linkedWith: null,
     invulnerable: false,
+    unitClass: snapshot.beast ? null : snapshot.characterClass,
+    beastTurnsLeft: 0,
+    equality: null,
   }
+}
+
+/** Buffs e debuffs ligados a uma besta duram enquanto ela está lá (tira quem a besta sair ou cair). */
+const BEAST_MODIFIER_TURNS = 999
+
+const beastSource = (beastRef: string) => `BEAST:${beastRef}`
+
+function summonEffect(
+  skill: SnapshotSkill
+): Extract<SnapshotEffect, { type: 'SUMMON' }> | null {
+  const effect = skill.effects.find((e) => e.type === 'SUMMON')
+  return (effect as Extract<SnapshotEffect, { type: 'SUMMON' }>) ?? null
+}
+
+function isSummon(skill: SnapshotSkill): boolean {
+  return skill.effects.some((e) => e.type === 'SUMMON')
 }
 
 /** % do equipamento na batalha: o bônus (já com o elo) e a queda do parcial e do sem elo. */

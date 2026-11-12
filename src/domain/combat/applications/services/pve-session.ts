@@ -2,6 +2,7 @@ import { Either, left, right } from '@/core/either'
 import { Rng } from '@/core/rng/rng'
 import { SeededRng } from '@/core/rng/seeded-rng'
 import { aiDecisionRng, MachineAi } from '@/domain/ai/machine-ai'
+import { DOMINANCE_AI } from '@/domain/beasts/beast-values'
 import { GameCatalog } from '@/domain/catalog/applications/repositories/catalog-repository'
 import { BattleEngine } from '../../engine/battle-engine'
 import { BattleEvent } from '../../engine/battle-events'
@@ -104,7 +105,8 @@ function record(
 }
 
 /**
- * Joga as vezes da máquina (D90, D103) até chegar a vez do jogador ou a batalha acabar. Cada decisão monta a IA de
+ * Joga as vezes da máquina (D90, D103) e as automáticas do lado do jogador (besta da Dominância, D154) até chegar a vez
+ * do jogador ou a batalha acabar. Cada decisão monta a IA de
  * novo, com a sorte da posição no log (`aiDecisionRng`); o log do jogador ela relê dos eventos do motor.
  */
 export function playMachineTurns(
@@ -117,16 +119,18 @@ export function playMachineTurns(
 
   for (
     let turn = engine.nextTurn();
-    turn && turn.side === BattleSide.OPPONENT;
+    turn && (turn.side === BattleSide.OPPONENT || turn.auto);
     turn = engine.nextTurn()
   ) {
+    // a besta da Dominância obedece: a IA joga por ela, sem o estilo do NPC
+    const machine = turn.side === BattleSide.OPPONENT
     const ai = new MachineAi(
       {
-        side: BattleSide.OPPONENT,
-        profile: battle.aiProfile,
-        difficulty: battle.aiDifficulty,
+        side: turn.side,
+        profile: machine ? battle.aiProfile : DOMINANCE_AI.profile,
+        difficulty: machine ? battle.aiDifficulty : DOMINANCE_AI.difficulty,
       },
-      aiDecisionRng(battle.seed, BattleSide.OPPONENT, battle.actions.length)
+      aiDecisionRng(battle.seed, turn.side, battle.actions.length)
     )
     const { payload } = ai.decide(engine, turn.ref)
 
@@ -152,7 +156,7 @@ export function playPlayerTurn(
 ): Either<InvalidBattleError | InvalidActionError, void> {
   const turn = engine.nextTurn()
   if (!turn) return left(new InvalidBattleError('a batalha já terminou'))
-  if (turn.side !== BattleSide.PLAYER) {
+  if (turn.side !== BattleSide.PLAYER || turn.auto) {
     return left(new InvalidBattleError('não é a vez do jogador'))
   }
 

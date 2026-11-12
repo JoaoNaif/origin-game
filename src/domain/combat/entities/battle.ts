@@ -236,7 +236,12 @@ export class Battle extends Entity<BattleProps> {
     }
 
     const side = this.sideOf(action.side)
-    if (!side.units.some((u) => u.ref === action.actorRef)) {
+    // as bestas do lado também agem (D154)
+    if (
+      ![...side.units, ...(side.beasts ?? [])].some(
+        (u) => u.ref === action.actorRef
+      )
+    ) {
       return left(
         new InvalidBattleError(`unidade ${action.actorRef} não está nesse lado`)
       )
@@ -400,6 +405,17 @@ function validateSnapshot(snapshot: BattleSnapshot): string | null {
       }
       if (unit.skills.slice(BUILD_SIZE).some((s) => !s.domPillar)) {
         return `${unit.ref}: as skills únicas do DOM vêm depois da build`
+      }
+    }
+
+    for (const beast of side.beasts ?? []) {
+      if (refs.has(beast.ref)) return `ref repetida: ${beast.ref}`
+      refs.add(beast.ref)
+      if (
+        !beast.beast ||
+        !side.units.some((u) => u.ref === beast.beast!.ownerRef)
+      ) {
+        return `${beast.ref}: besta sem dono no lado`
       }
     }
   }

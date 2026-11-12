@@ -9,6 +9,8 @@ import { SquadsRepository } from '@/domain/squads/applications/repositories/squa
 import { ChestsRepository } from '@/domain/economy/applications/repositories/chests-repository'
 import { WalletsRepository } from '@/domain/economy/applications/repositories/wallets-repository'
 import { BattleLoot } from '@/domain/economy/value-objects/battle-loot'
+import { BeastsRepository } from '@/domain/beasts/applications/repositories/beasts-repository'
+import { BeastTemplate } from '@/domain/beasts/entities/beast-template'
 import { GearRepository } from '@/domain/gear/applications/repositories/gear-repository'
 import { GearTemplate } from '@/domain/gear/entities/gear-template'
 import { BattleEngine } from '../../engine/battle-engine'
@@ -70,6 +72,7 @@ export class StartPveBattleUseCase {
     private walletsRepository: WalletsRepository,
     private chestsRepository: ChestsRepository,
     private gearRepository: GearRepository,
+    private beastsRepository: BeastsRepository,
     private clock: Clock
   ) {}
 
@@ -102,9 +105,10 @@ export class StartPveBattleUseCase {
     if (fields.isLeft()) return left(fields.value)
 
     const characterIds = squad.members.map((m) => m.characterId.toString())
-    const [characters, equipped] = await Promise.all([
+    const [characters, equipped, contracted] = await Promise.all([
       this.charactersRepository.findManyByIds(characterIds),
       this.gearRepository.findEquippedByCharacterIds(characterIds),
+      this.beastsRepository.findManyByCharacterIds(characterIds),
     ])
     // o equipamento no slot de cada um (D94): o elo é calculado agora e fica fixo na batalha
     const gear = new Map<string, GearTemplate>()
@@ -115,8 +119,23 @@ export class StartPveBattleUseCase {
       }
     }
 
+    // as bestas com contrato (D154): a invocação toma o slot dela na build
+    const beasts = new Map<
+      string,
+      { template: BeastTemplate; slot: number }[]
+    >()
+    for (const beast of contracted) {
+      const template = catalog.beastTemplates.get(beast.templateId.toValue())
+      if (!template || !beast.characterId || beast.slot === null) continue
+      const key = beast.characterId.toString()
+      beasts.set(key, [
+        ...(beasts.get(key) ?? []),
+        { template, slot: beast.slot },
+      ])
+    }
+
     const snapshot = buildPveSnapshot(
-      { account, squad, characters, catalog, gear },
+      { account, squad, characters, catalog, gear, beasts },
       { npcSquad, catalog },
       {
         initial: fields.value.find((f) => f.key === draft.fieldKey) ?? null,
