@@ -14,6 +14,7 @@ import {
 import { InMemoryCharactersRepository } from 'test/repositories/in-memory-characters-repository'
 import { Gear } from '@/domain/gear/entities/gear'
 import { gearSaleValue } from '@/domain/gear/gear-values'
+import { InMemoryBeastsRepository } from 'test/repositories/in-memory-beasts-repository'
 import { InMemoryGearRepository } from 'test/repositories/in-memory-gear-repository'
 import { InMemoryChestsRepository } from 'test/repositories/in-memory-chests-repository'
 import { InMemoryWalletsRepository } from 'test/repositories/in-memory-wallets-repository'
@@ -59,6 +60,7 @@ describe('Open Chest', () => {
       accountsRepository,
       new InMemoryCatalogRepository(catalog),
       gearRepository,
+      new InMemoryBeastsRepository(),
       new FakeSeedGenerator(),
       new FakeClock()
     )

@@ -10,6 +10,7 @@ import {
   InMemoryCatalogRepository,
   seedCatalog,
 } from 'test/repositories/in-memory-catalog-repository'
+import { InMemoryBeastsRepository } from 'test/repositories/in-memory-beasts-repository'
 import { InMemoryGearRepository } from 'test/repositories/in-memory-gear-repository'
 import { InMemoryWalletsRepository } from 'test/repositories/in-memory-wallets-repository'
 import { InvalidGearError } from '../../errors/invalid-gear-error'
@@ -30,6 +31,7 @@ describe('Grant Gear', () => {
     sut = new GrantGearUseCase(
       accountsRepository,
       gearRepository,
+      new InMemoryBeastsRepository(),
       new InMemoryWalletsRepository(),
       new InMemoryCatalogRepository(catalog),
       new FakeClock()

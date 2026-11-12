@@ -11,6 +11,7 @@ import { Character } from '@/domain/characters/entities/character'
 import { InvalidCharacterError } from '@/domain/characters/errors/invalid-character-error'
 import { SeedGenerator } from '@/domain/combat/applications/gateways/seed-generator'
 import { GearRepository } from '@/domain/gear/applications/repositories/gear-repository'
+import { BeastsRepository } from '@/domain/beasts/applications/repositories/beasts-repository'
 import { Gear } from '@/domain/gear/entities/gear'
 import { GearSource } from '@/domain/gear/enums/gear-source'
 import { Chest } from '../../entities/chest'
@@ -21,6 +22,7 @@ import { drawChest } from '../../services/chest-draw'
 import { ChestsRepository } from '../repositories/chests-repository'
 import { WalletsRepository } from '../repositories/wallets-repository'
 import { creditWallet } from '../services/credit-wallet'
+import { inventoryUsage } from '../services/inventory-usage'
 
 interface OpenChestUseCaseRequest {
   chestId: string
@@ -53,6 +55,7 @@ export class OpenChestUseCase {
     private accountsRepository: AccountsRepository,
     private catalogRepository: CatalogRepository,
     private gearRepository: GearRepository,
+    private beastsRepository: BeastsRepository,
     private seedGenerator: SeedGenerator,
     private clock: Clock
   ) {}
@@ -74,7 +77,7 @@ export class OpenChestUseCase {
       this.catalogRepository.load(),
       this.charactersRepository.findManyByAccountId(accountId),
       this.accountsRepository.findById(accountId),
-      this.gearRepository.countByAccountId(accountId),
+      inventoryUsage(this.gearRepository, this.beastsRepository, accountId),
       this.walletsRepository
         .findByAccountId(accountId)
         .then((w) => w.inventorySlots),

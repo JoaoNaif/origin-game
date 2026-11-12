@@ -1,4 +1,5 @@
 import { Either, right } from '@/core/either'
+import { BeastsRepository } from '@/domain/beasts/applications/repositories/beasts-repository'
 import { CharactersRepository } from '@/domain/characters/applications/repositories/characters-repository'
 import { Character } from '@/domain/characters/entities/character'
 import { WalletsRepository } from '@/domain/economy/applications/repositories/wallets-repository'
@@ -13,6 +14,8 @@ type FetchAccountGearUseCaseResponse = Either<
   never,
   {
     gear: Gear[]
+    /** Espaços ocupados: equipamentos e bestas (D100). */
+    used: number
     /** Quem está usando cada equipamento equipado (para o elo). */
     holders: Character[]
     slots: number
@@ -25,15 +28,17 @@ export class FetchAccountGearUseCase {
   constructor(
     private gearRepository: GearRepository,
     private charactersRepository: CharactersRepository,
-    private walletsRepository: WalletsRepository
+    private walletsRepository: WalletsRepository,
+    private beastsRepository: BeastsRepository
   ) {}
 
   async execute({
     accountId,
   }: FetchAccountGearUseCaseRequest): Promise<FetchAccountGearUseCaseResponse> {
-    const [gear, wallet] = await Promise.all([
+    const [gear, wallet, beasts] = await Promise.all([
       this.gearRepository.findManyByAccountId(accountId),
       this.walletsRepository.findByAccountId(accountId),
+      this.beastsRepository.countByAccountId(accountId),
     ])
     const holderIds = gear
       .filter((g) => g.characterId)
@@ -45,6 +50,7 @@ export class FetchAccountGearUseCase {
 
     return right({
       gear,
+      used: gear.length + beasts,
       holders,
       slots: wallet.inventorySlots,
       nextExpansionPrice: wallet.nextInventoryExpansionPrice,
