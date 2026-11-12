@@ -27,6 +27,10 @@ import {
   GearRequirement,
   GearTemplate,
 } from '@/domain/gear/entities/gear-template'
+import {
+  BeastSkill,
+  BeastTemplate,
+} from '@/domain/beasts/entities/beast-template'
 import { Skill } from '@/domain/skills/entities/skill'
 import { SkillEffect } from '@/domain/skills/value-objects/skill-effect'
 import { NpcSquad } from '@/domain/squads/entities/npc-squad'
@@ -143,6 +147,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
       npcRows,
       awakeningRows,
       gearRows,
+      beastRows,
     ] = await Promise.all([
       db.variant.findMany({ orderBy: { key: 'asc' } }),
       db.trait.findMany({ orderBy: { key: 'asc' } }),
@@ -169,6 +174,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
       }),
       db.awakening.findMany({ orderBy: { key: 'asc' } }),
       db.gearTemplate.findMany({ orderBy: { key: 'asc' } }),
+      db.beastTemplate.findMany({ orderBy: { key: 'asc' } }),
     ])
 
     // despertadas dependem da base: as bases entram primeiro
@@ -246,6 +252,30 @@ export class PrismaCatalogRepository implements CatalogRepository {
             id(row.id)
           ),
           `equipamento ${row.key}`
+        )
+      )
+    }
+
+    const beastTemplates = new Map<string, BeastTemplate>()
+    for (const row of beastRows) {
+      beastTemplates.set(
+        row.id,
+        unwrap(
+          BeastTemplate.create(
+            {
+              key: row.key,
+              name: row.name,
+              description: row.description,
+              contract: row.contract,
+              grade: row.grade,
+              lineage: row.lineage as BeastTemplate['lineage'],
+              skills: row.skills as unknown as BeastSkill[],
+              requirements: row.requirements as unknown as GearRequirement[],
+              titles: row.titles as unknown as string[],
+            },
+            id(row.id)
+          ),
+          `besta ${row.key}`
         )
       )
     }
@@ -412,6 +442,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
       npcSquads,
       awakenings,
       gearTemplates,
+      beastTemplates,
       version,
     }
   }

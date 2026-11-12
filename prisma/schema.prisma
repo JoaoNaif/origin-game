@@ -116,6 +116,43 @@ model GearTemplate {
   @@map("gear_templates")
 }
 
+// Contrato com a besta (D64, D154): fixo na besta do catálogo.
+enum BeastContract {
+  DOMINANCE
+  MASTER
+  EQUALITY
+}
+
+// Grau da besta (D95): os 4 do equipamento e a sagrada.
+enum BeastGrade {
+  SQUIRE
+  KNIGHT
+  MASTER
+  KING
+  SACRED
+}
+
+// Besta do catálogo (admin, D64, D95, D154). JSON validado no domínio: skills = as 2 em campo (vazio na Igualdade),
+// no formato da skill do catálogo sem Desgaste; requirements = [{ stat, level }] e titles = [nome], só no Mestre.
+model BeastTemplate {
+  id           String        @id @default(uuid())
+  key          String        @unique
+  name         String
+  description  String?
+  contract     BeastContract
+  grade        BeastGrade
+  lineage      Lineage
+  skills       Json
+  requirements Json          @default("[]")
+  titles       Json          @default("[]")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  beasts Beast[]
+
+  @@map("beast_templates")
+}
+
 // Categoria do traço (D47).
 enum TraitCategory {
   COMBAT
@@ -350,6 +387,7 @@ model Account {
   walletEntries WalletEntry[]
   chests        Chest[]
   gear          Gear[]
+  beasts        Beast[]
 
   @@map("accounts")
 }
@@ -385,6 +423,7 @@ enum WalletReason {
   SKILL_ENHANCEMENT
   INVENTORY_EXPANSION
   GEAR_SALE
+  BEAST_SALE
 }
 
 // Registro de cada entrada e saída da carteira (auditoria). `coins` e `fragments` são a variação;
@@ -455,6 +494,33 @@ model Gear {
   @@map("gear")
 }
 
+// De onde veio a besta da conta (no MVP, o admin faz o papel do evento).
+enum BeastSource {
+  ADMIN
+  EVENT
+}
+
+// Besta da conta (D64, D100): ocupa 1 espaço do inventário. characterId = o contrato (até 2 por personagem, com o
+// Domador); slot = o slot da build (1 a 4) que a invocação ocupa. Contrato desfeito = a linha some (besta perdida).
+model Beast {
+  id          String      @id @default(uuid())
+  accountId   String      @map("account_id")
+  templateId  String      @map("template_id")
+  characterId String?     @map("character_id")
+  slot        Int?
+  source      BeastSource
+  acquiredAt  DateTime    @default(now()) @map("acquired_at")
+
+  account   Account       @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  template  BeastTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  character Character?    @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@unique([characterId, slot])
+  @@index([accountId])
+  @@index([templateId])
+  @@map("beasts")
+}
+
 // Sessão de login (refresh token com rotação). Só o hash do token fica no banco.
 model Session {
   id        String    @id @default(uuid())
@@ -510,6 +576,7 @@ model Character {
   squadMembers    SquadMember[]
   skillOffers     SkillOffer[]
   gear            Gear?
+  beasts          Beast[]
 
   @@index([accountId])
   @@index([templateId])

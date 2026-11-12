@@ -37,6 +37,14 @@ import {
   GearLineage,
 } from '@/domain/gear/entities/gear-template'
 import { GearGrade } from '@/domain/gear/enums/gear-grade'
+import {
+  BeastLineage,
+  BeastSkill,
+  BeastTemplate,
+} from '@/domain/beasts/entities/beast-template'
+import { BeastContract } from '@/domain/beasts/enums/beast-contract'
+import { BeastGrade } from '@/domain/beasts/enums/beast-grade'
+import { InvalidBeastError } from '@/domain/beasts/errors/invalid-beast-error'
 import { GearKind } from '@/domain/gear/enums/gear-kind'
 import { InvalidGearError } from '@/domain/gear/errors/invalid-gear-error'
 import { Skill } from '@/domain/skills/entities/skill'
@@ -159,6 +167,17 @@ export interface GearInput {
   titles: string[]
 }
 
+export interface BeastInput {
+  name: string
+  description?: string | null
+  contract: BeastContract
+  grade: BeastGrade
+  lineage: BeastLineage
+  skills: BeastSkill[]
+  requirements?: GearRequirement[]
+  titles?: string[]
+}
+
 /** O pedido do admin, pelo tipo do item. */
 export type CatalogInput =
   | { kind: 'VARIANT'; data: VariantInput }
@@ -169,6 +188,7 @@ export type CatalogInput =
   | { kind: 'NPC_SQUAD'; data: NpcSquadInput }
   | { kind: 'AWAKENING'; data: AwakeningInput }
   | { kind: 'GEAR'; data: GearInput }
+  | { kind: 'BEAST'; data: BeastInput }
 
 /** Ligação (`key`) que não existe, ou regra do `create` do item. */
 export type CatalogEntryError =
@@ -182,6 +202,7 @@ export type CatalogEntryError =
   | InvalidNpcSquadError
   | InvalidAwakeningError
   | InvalidGearError
+  | InvalidBeastError
 
 type Built = Either<CatalogEntryError, CatalogEntry>
 
@@ -373,6 +394,21 @@ function build(
 
     case 'GEAR': {
       const result = GearTemplate.create({ key, ...input.data }, id)
+      return result.isLeft()
+        ? left(result.value)
+        : right({ kind: input.kind, entity: result.value })
+    }
+
+    case 'BEAST': {
+      const result = BeastTemplate.create(
+        {
+          key,
+          ...input.data,
+          requirements: input.data.requirements ?? [],
+          titles: input.data.titles ?? [],
+        },
+        id
+      )
       return result.isLeft()
         ? left(result.value)
         : right({ kind: input.kind, entity: result.value })

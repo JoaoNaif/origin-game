@@ -46,6 +46,10 @@ export function findCatalogEntry(
       const entity = byKey(catalog.gearTemplates.values())
       return entity ? { kind, entity } : null
     }
+    case 'BEAST': {
+      const entity = byKey(catalog.beastTemplates.values())
+      return entity ? { kind, entity } : null
+    }
   }
 }
 
@@ -111,6 +115,7 @@ export function catalogUsages(
       break
     // só o equipamento das contas aponta para o modelo (dado de jogador: quem confere é o repositório)
     case 'GEAR':
+    case 'BEAST':
       break
   }
 

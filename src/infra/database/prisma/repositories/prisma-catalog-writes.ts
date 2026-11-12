@@ -225,6 +225,26 @@ export async function writeCatalogRow(
       })
       return
     }
+
+    case 'BEAST': {
+      const data = {
+        key: entity.key,
+        name: entity.name,
+        description: entity.description,
+        contract: entity.contract,
+        grade: entity.grade,
+        lineage: entity.lineage,
+        skills: json(entity.skills),
+        requirements: json(entity.requirements),
+        titles: json(entity.titles),
+      }
+      await tx.beastTemplate.upsert({
+        where: { id },
+        create: { id, ...data },
+        update: data,
+      })
+      return
+    }
   }
 }
 
@@ -260,6 +280,9 @@ export async function deleteCatalogRow(
       return
     case 'GEAR':
       await tx.gearTemplate.delete(where)
+      return
+    case 'BEAST':
+      await tx.beastTemplate.delete(where)
       return
   }
 }

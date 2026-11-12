@@ -12,6 +12,12 @@ import { GearRequirement, GearTemplate } from '../entities/gear-template'
 import { GearBond } from '../enums/gear-bond'
 import { GEAR_MAX_WAIVERS } from '../gear-values'
 
+/** O que o elo lê do modelo: os requisitos e os títulos que ajudam (equipamento e contrato Mestre, D95). */
+export interface RequirementProfile {
+  requirements: readonly GearRequirement[]
+  titles: readonly string[]
+}
+
 export interface GearBondInput {
   /** Stats fora da batalha do portador, sem o equipamento (a régua do despertar, D151). */
   stats: StatBlock
@@ -38,7 +44,7 @@ export interface GearBondResult {
  * = pleno; metade ou mais = parcial; menos = sem elo.
  */
 export function gearBond(
-  template: GearTemplate,
+  template: RequirementProfile,
   input: GearBondInput
 ): GearBondResult {
   const ranking = relativeStatRanking(input.stats)
