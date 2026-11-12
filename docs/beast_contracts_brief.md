@@ -1,6 +1,7 @@
 # ORIGIN — Contratos com bestas (brief)
 
-> Regras dos contratos com animais no jogo, decididas na conversa própria. Decisões resumidas em `game_design.md` (D64).
+> Regras dos contratos com animais no jogo, decididas na conversa própria. Decisões resumidas em `game_design.md` (D64,
+> D95; aplicação no servidor no D154, seção 10).
 > Lore em [`world_build.md`](./world_build.md) 3.7. Personagem em [`character_brief.md`](./character_brief.md).
 > **[ENRAIZADO]** = decidido · **[PLACEHOLDER]** = número provisório.
 
@@ -61,7 +62,7 @@ Receio do usuário: muitas invocações na grade. Salvaguardas confirmadas:
 ## 8. Pendências
 
 Fechadas em D95 (seção 9). Resta só o **ajuste fino por simulação**, a **lista de bestas** (admin) e a captura em PvE
-e o mercado (A6).
+e o mercado (A6). **Implementado no D154** (seção 10).
 
 ## 9. Valores (D95)
 
@@ -118,3 +119,54 @@ Igualdade não têm requisitos.
   invocações (2 slots), mas o teto da squad continua 2.
 - **Títulos (D81):** teto de **1 substituição**, só para o contrato **Mestre**. Não ajudam Dominância nem Igualdade.
 - **Lista de bestas:** conteúdo do admin; no `seed.ts` do MVP, uma besta por contrato.
+
+## 10. Na prática (D154)
+
+Como o servidor aplica os contratos. Código em `src/domain/beasts/` (catálogo, besta da conta, regras do contrato e
+valores em `beast-values.ts`), no motor em `src/domain/combat/engine/battle-engine.ts` e a foto da besta em
+`src/domain/combat/services/beast-snapshot.ts`.
+
+### 10.1 Catálogo e besta da conta
+
+- **Besta do catálogo (`BeastTemplate`, admin):** o contrato (**fixo na besta**), o grau, a linhagem, as 2 skills em
+  campo e, no Mestre, os requisitos e os títulos.
+- **Skills em campo:** passam pelas regras da skill do catálogo (alvo, alcance, Poder, efeitos), sem Desgaste. Não
+  usam recuperar nem trocar o campo. A besta da Igualdade não tem skills, porque não age.
+- **Besta da conta (`Beast`):** ocupa 1 espaço do inventário, com ou sem contrato.
+- **O contrato:** liga a besta a um personagem, **uma vez só**, e põe a invocação num slot da build (1 a 4) escolhido
+  pelo jogador. O slot pode ser trocado depois. **Desfazer o contrato perde a besta.**
+- **Limites:** 1 besta por personagem (2 com o traço **Domador**) e 1 sagrada.
+- **Mestre:** pede todos os requisitos, na régua do equipamento (`living_gear_brief.md` 10.2). Um título da lista
+  vale 1 requisito (teto 1); o Prodígio não conta. A regra é conferida ao firmar o contrato e de novo quando a batalha
+  começa: sem todos os requisitos, a batalha não começa.
+- **Obtenção:** só por evento. No MVP, o admin dá a besta; ela não sai de baú.
+- **Venda:** a besta sem contrato pode ser vendida ao sistema pelo valor do grau. A sagrada não se vende.
+
+### 10.2 Na batalha
+
+- **A invocação** toma o slot dela na build. É uma skill tipo Forte (Silenciado bloqueia, Travado pode pegar), de uso
+  único, sem Desgaste e sem teste de acerto. Gasta a ação inteira do dono. A besta entra numa **célula livre do
+  próprio lado**; a Igualdade é em si mesmo.
+- **Teto:** 2 bestas em campo por squad. A Igualdade não conta.
+- **A besta em campo:**
+  - **Stats:** fixos, tirados dos stats do dono fora da batalha (com DOM e o bônus do equipamento) pela tabela 9.1:
+    % do grau, Velocidade 90% e Vontade 50%.
+  - **Fila:** entra com a barra zerada.
+  - **Sem classe e sem passiva:** não dá nem recebe aura e não tem marca de classe.
+  - **Saída:** depois de 4 turnos dela (5 na sagrada; turno perdido conta), ou ao cair.
+- **Não é um dos 4:** não conta na eliminação nem no fim forçado, mas o dano que ela causa conta para o lado. Quando
+  cai, as passivas "ao aliado cair" não disparam.
+- **Quem joga:** a besta da **Dominância** é jogada pela IA (perfil equilibrado, Avançado), e a vez dela fica gravada
+  como ação do lado do jogador. A do **Mestre** é jogada pelo jogador.
+- **Dominância:** o dono perde a Vontade da 9.3 enquanto a besta está em campo, sem passar do piso de 80% do Desgaste.
+  A Vontade volta quando ela sai ou cai.
+- **Igualdade:**
+  - **Buffer:** absorve 50% de cada golpe recebido pelo dono (skill e contra-ataque; o dano contínuo e a parte do
+    Ligado não).
+  - **Bônus:** Precisão e Esquiva da 9.4.
+  - **Duração:** 4 turnos do dono (5 na sagrada); o turno da invocação não conta.
+  - **Buffer esvaziou:** o dono leva 10% do HP máximo, sem Defesa (o Indestrutível anula), e perde os bônus.
+- **Sagrada:** a 9.1 já dá os stats (×1,25 do Rei). Onde a 9 não tem linha própria, ficou assim (**valores propostos, a
+  confirmar**): Igualdade com buffer de 31,25% e bônus de 15% (×1,25 do Rei); Dominância com custo de 15% (o do Rei).
+- O NPC não usa bestas no MVP.
+- **IA:** a invocação vale cerca de 2 ações inteiras (placeholder, a calibrar), e a Igualdade vale como um escudo.

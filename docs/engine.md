@@ -1167,3 +1167,33 @@ Regra em `living_gear_brief.md` 10. A unidade traz `snapshot.gear` (`SnapshotGea
 - **XP e missões:** a regeneração não conta como cura (`battle-xp.ts` e `awakening-stats.ts` pulam `source: 'GEAR'`).
   O Dano contínuo da Elemental conta como status aplicado por quem bateu.
 - **IA:** nada de novo; a prévia (`previewSkill`) já sai com a redução, a Defesa ignorada e a Vontade a mais.
+
+## Bestas no motor (D154)
+
+Regra em `beast_contracts_brief.md` 10. As bestas de Dominância e Mestre vêm em `snapshot.<lado>.beasts` e viram
+`EngineUnit` com `alive: false`, fora da grade e da fila, até a invocação.
+
+- **Unidade da besta:** `createUnit` usa `snapshot.stats` (fixos) no lugar do `computeStats`. A `unitClass` dela é
+  nula, e todas as leituras de classe (auras, Guardião, Tático, Controlador, Artilharia, Executor, Engajado) usam
+  `unitClass`.
+- **Invocar** (efeito `SUMMON`): `resolveSkill` confere se a besta é do dono, se ainda não está em campo, o teto de
+  2 por lado e se a célula do próprio lado está livre, sem resolver alvos. `useSkill` loga `SKILL` e `SUMMON`, põe a
+  besta na grade (`BattleGrid.place`) e na fila (`TurnQueue.add`, barra zerada) e marca a skill como gasta. Sem
+  Desgaste, sem acerto, sem contra-ataque. A prévia sai sem alvos (`hits: []`); o gerador de jogadas abre uma por
+  célula livre.
+- **Dominância:** ao entrar, o dono ganha o modificador de Vontade `BEAST:<ref>` (ilimitado, limitado pelo piso de 80%
+  do Desgaste); sai junto com a besta (`UnitConditions.removeModifiers`).
+- **Vez da besta:** `ActorTurn.auto` é verdadeiro na Dominância. `playMachineTurns` joga as vezes automáticas do lado do
+  jogador com a IA (`DOMINANCE_AI`), e `playPlayerTurn` recusa a vez automática.
+- **Duração:** no fim de cada turno da besta (`tickBeastClock`, chamado em `endTurn`), `beastTurnsLeft` cai 1; em 0,
+  `BEAST_LEAVE` e ela sai da grade e da fila.
+- **Queda:** `DEFEATED` como qualquer unidade, sem as passivas "ao aliado cair"; o dono deixa de pagar o custo.
+- **Eliminação e fim forçado:** `summary` ignora as bestas.
+- **Igualdade** (efeito `EQUALITY`, em si mesmo): `EQUALITY` com o buffer; modificadores ilimitados de Precisão e
+  Esquiva. Em cada `DAMAGE` de skill e no contra-ataque, `absorbByEquality` tira até 50% do golpe do buffer
+  (`EQUALITY_ABSORB`); com o buffer em 0, `checkEqualityBreak` aplica 10% do HP máximo no dono (`EQUALITY_BREAK`) e
+  tira os bônus. A duração conta no fim dos turnos do dono, sem contar o da invocação; no fim, `BEAST_LEAVE` com
+  `equality: true`.
+- **Visão:** `unit(ref)` traz `beast: { ownerRef, contract, turnsLeft }` e `equality: { buffer, turnsLeft }`.
+- **IA:** a invocação vale `SUMMON_VALUE` (2 ações inteiras) em apoio, e a Igualdade vale como um escudo do tamanho
+  do buffer.

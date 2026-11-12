@@ -56,8 +56,9 @@
 | 14 | `Awakening` (+ colunas do despertar em `Character` e enum `SkillOfferSource`) | Catálogo | Variant | **feito** (D151, 3.14) |
 | 15 | Coluna `dom` em `Character` (DOM: níveis e janela de feitos) | Jogador | Character | **feito** (D152, 3.15) |
 | 16 | `GearTemplate` (+ enums `GearKind`, `GearGrade`) e `Gear` (+ enum `GearSource`), `Wallet.inventorySlots` | Catálogo e jogador | Account, Character | **feito** (D153, 3.16) |
+| 17 | `BeastTemplate` (+ enums `BeastContract`, `BeastGrade`) e `Beast` (+ enum `BeastSource`) | Catálogo e jogador | Account, Character | **feito** (D154, 3.17) |
 
-**Fora do MVP** (cada um vira migração própria quando a camada chegar): bestas, mercado e organizações.
+**Fora do MVP** (cada um vira migração própria quando a camada chegar): mercado e organizações.
 
 ---
 
@@ -1065,7 +1066,7 @@ A economia da conta (D79, D100, D104, D150; valores em `progression_brief.md` Pa
 
 **`WalletEntry`** (registro): uma linha por mudança, gravada na mesma transação da carteira. `reason`
 (`WalletReason`: `BATTLE_LOOT`, `CHEST_PURCHASE`, `CHEST_OPEN`, `FRAGMENT_PURCHASE`, `FRAGMENT_SALE`,
-`SKILL_ENHANCEMENT`, `INVENTORY_EXPANSION`, `GEAR_SALE`), `coins` e `fragments` com sinal (a variação), `refId` (batalha, baú ou personagem que
+`SKILL_ENHANCEMENT`, `INVENTORY_EXPANSION`, `GEAR_SALE`, `BEAST_SALE`), `coins` e `fragments` com sinal (a variação), `refId` (batalha, baú ou personagem que
 causou).
 
 **Concorrência:** duas operações em cima da mesma leitura, só uma grava. Gasto que perde a corrida volta 409 sem gastar
@@ -1178,6 +1179,41 @@ O **elo não é guardado**: sai na hora dos stats do portador. O inventário con
 **Na batalha:** a unidade do jogador ganha `gear` no snapshot (`SnapshotGear`): o modelo como valor (`key`, `name`,
 `kind`, `grade`, `lineage`) e o efeito já com o elo (`bond`, `bonusPercents`, `penaltyPercents`,
 `initialDesgastePercent`, `passive`, `loseAction`). Batalha antiga, sem `gear`, joga como antes.
+
+### 3.17 BeastTemplate (catálogo) e Beast (jogador)
+
+Os contratos com bestas (D64, D95, D154; regra em `beast_contracts_brief.md` 10). Domínio em `src/domain/beasts/`.
+
+**`BeastTemplate`** (catálogo do admin, `/admin/beasts`):
+
+| Campo | Tipo | Regra |
+|---|---|---|
+| `id`, `key` (único), `name`, `description` | | |
+| `contract` | `BeastContract` | `DOMINANCE`, `MASTER` ou `EQUALITY`; fixo na besta |
+| `grade` | `BeastGrade` | `SQUIRE`, `KNIGHT`, `MASTER`, `KING`, `SACRED` |
+| `lineage` | `Lineage` | nunca `NONE` |
+| `skills` | JSON `[{ name, tier, target, range, area, cooldown, baseHitChance, effects }]` | 2 (Dominância e Mestre), 0 (Igualdade); as regras da skill do catálogo, sem Desgaste |
+| `requirements`, `titles` | JSON | só no Mestre: 2/2/3/4/4 requisitos pelo grau, como no equipamento; títulos que existem |
+
+**Fora da `version` do catálogo:** a batalha guarda a besta como valor. Apagar uma besta que alguma conta tem dá 409.
+
+**`Beast`** (besta da conta):
+
+| Campo | Tipo | Regra |
+|---|---|---|
+| `id`, `accountId` (FK, cascata), `templateId` (FK, `Restrict`) | | |
+| `characterId` | FK opcional → `Character` (cascata) | o contrato; nulo = guardada. Até 2 por personagem (Domador) |
+| `slot` | inteiro opcional | slot da build (1 a 4) que a invocação toma; único por personagem (`@@unique([characterId, slot])`) |
+| `source` | `BeastSource` | `ADMIN` ou `EVENT` |
+| `acquiredAt` | data | |
+
+Ocupa 1 espaço do inventário (`Wallet.inventorySlots`), com contrato ou não: o inventário soma `Gear` e `Beast`.
+Desfazer o contrato apaga a linha (a besta se perde).
+
+**Na batalha:** o dono traz a invocação no slot dela (`SnapshotSkill` com `beastKey`, `singleUse` e o efeito `SUMMON
+{ beastRef }` ou `EQUALITY { ... }`). Cada besta de Dominância ou Mestre vira uma unidade em `SnapshotSide.beasts`
+(ref `PLAYER:B0`, `PLAYER:B0-2`), com `stats` fixos e `beast: { key, name, contract, grade, ownerRef, duration,
+ownerWillCost, auto }`, fora de campo até a invocação. Batalha antiga, sem `beasts`, joga como antes.
 
 ## 4. Seed do MVP (conteúdo)
 
