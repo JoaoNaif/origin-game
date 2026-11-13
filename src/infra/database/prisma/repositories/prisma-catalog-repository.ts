@@ -31,6 +31,14 @@ import {
   BeastSkill,
   BeastTemplate,
 } from '@/domain/beasts/entities/beast-template'
+import {
+  EventAttemptLimit,
+  EventStage,
+  EventTemplate,
+} from '@/domain/events/entities/event-template'
+import { EventModifier } from '@/domain/events/value-objects/event-modifier'
+import { EventRequirement } from '@/domain/events/value-objects/event-requirement'
+import { EventReward } from '@/domain/events/value-objects/event-reward'
 import { Skill } from '@/domain/skills/entities/skill'
 import { SkillEffect } from '@/domain/skills/value-objects/skill-effect'
 import { NpcSquad } from '@/domain/squads/entities/npc-squad'
@@ -148,6 +156,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
       awakeningRows,
       gearRows,
       beastRows,
+      eventRows,
     ] = await Promise.all([
       db.variant.findMany({ orderBy: { key: 'asc' } }),
       db.trait.findMany({ orderBy: { key: 'asc' } }),
@@ -175,6 +184,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
       db.awakening.findMany({ orderBy: { key: 'asc' } }),
       db.gearTemplate.findMany({ orderBy: { key: 'asc' } }),
       db.beastTemplate.findMany({ orderBy: { key: 'asc' } }),
+      db.eventTemplate.findMany({ orderBy: { key: 'asc' } }),
     ])
 
     // despertadas dependem da base: as bases entram primeiro
@@ -276,6 +286,40 @@ export class PrismaCatalogRepository implements CatalogRepository {
             id(row.id)
           ),
           `besta ${row.key}`
+        )
+      )
+    }
+
+    const events = new Map<string, EventTemplate>()
+    for (const row of eventRows) {
+      events.set(
+        row.id,
+        unwrap(
+          EventTemplate.create(
+            {
+              key: row.key,
+              name: row.name,
+              description: row.description,
+              kind: row.kind,
+              announceAt: row.announceAt,
+              startsAt: row.startsAt,
+              endsAt: row.endsAt,
+              requirements: row.requirements as unknown as EventRequirement[],
+              attemptLimit:
+                (row.attemptLimit as unknown as EventAttemptLimit | null) ??
+                null,
+              squadMode: row.squadMode,
+              fieldKey: row.fieldKey,
+              modifiers: row.modifiers as unknown as EventModifier[],
+              stages: row.stages as unknown as EventStage[],
+              completionRewards:
+                row.completionRewards as unknown as EventReward[],
+              participationRewards:
+                row.participationRewards as unknown as EventReward[],
+            },
+            id(row.id)
+          ),
+          `evento ${row.key}`
         )
       )
     }
@@ -443,6 +487,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
       awakenings,
       gearTemplates,
       beastTemplates,
+      events,
       version,
     }
   }

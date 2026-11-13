@@ -245,6 +245,34 @@ export async function writeCatalogRow(
       })
       return
     }
+
+    case 'EVENT': {
+      const data = {
+        key: entity.key,
+        name: entity.name,
+        description: entity.description,
+        kind: entity.kind,
+        announceAt: entity.announceAt,
+        startsAt: entity.startsAt,
+        endsAt: entity.endsAt,
+        requirements: json(entity.requirements),
+        attemptLimit: entity.attemptLimit
+          ? json(entity.attemptLimit)
+          : Prisma.DbNull,
+        squadMode: entity.squadMode,
+        fieldKey: entity.fieldKey,
+        modifiers: json(entity.modifiers),
+        stages: json(entity.stages),
+        completionRewards: json(entity.completionRewards),
+        participationRewards: json(entity.participationRewards),
+      }
+      await tx.eventTemplate.upsert({
+        where: { id },
+        create: { id, ...data },
+        update: data,
+      })
+      return
+    }
   }
 }
 
@@ -283,6 +311,9 @@ export async function deleteCatalogRow(
       return
     case 'BEAST':
       await tx.beastTemplate.delete(where)
+      return
+    case 'EVENT':
+      await tx.eventTemplate.delete(where)
       return
   }
 }

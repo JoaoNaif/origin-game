@@ -5,6 +5,7 @@ import { BattleActionPayload } from '@/domain/combat/value-objects/battle-action
 import { BattleReward } from '@/domain/combat/value-objects/battle-reward'
 import { BattleSnapshot } from '@/domain/combat/value-objects/battle-snapshot'
 import { BattleLoot } from '@/domain/economy/value-objects/battle-loot'
+import { EventBattleOutcome } from '@/domain/events/value-objects/event-battle-outcome'
 
 export const battleInclude = {
   actions: { orderBy: { sequence: 'asc' } },
@@ -46,6 +47,12 @@ export class PrismaBattleMapper {
         finishedAt: raw.finishedAt,
         rewards: raw.rewards as unknown as BattleReward[],
         loot: (raw.loot as unknown as BattleLoot | null) ?? null,
+        event:
+          raw.eventId !== null && raw.eventStage !== null
+            ? { eventId: raw.eventId, stage: raw.eventStage }
+            : null,
+        eventOutcome:
+          (raw.eventOutcome as unknown as EventBattleOutcome | null) ?? null,
       },
       new UniqueEntityId(raw.id)
     )
@@ -73,6 +80,11 @@ export class PrismaBattleMapper {
       finishedAt: battle.finishedAt,
       rewards: json(battle.rewards),
       loot: battle.loot ? json(battle.loot) : Prisma.DbNull,
+      eventId: battle.event?.eventId ?? null,
+      eventStage: battle.event?.stage ?? null,
+      eventOutcome: battle.eventOutcome
+        ? json(battle.eventOutcome)
+        : Prisma.DbNull,
     }
   }
 

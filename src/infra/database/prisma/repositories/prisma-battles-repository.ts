@@ -109,10 +109,10 @@ export class PrismaBattlesRepository implements BattlesRepository {
   }
 
   async saveRewards(battle: Battle): Promise<void> {
-    const { rewards, loot } = PrismaBattleMapper.toPrisma(battle)
+    const { rewards, loot, eventOutcome } = PrismaBattleMapper.toPrisma(battle)
     await this.prisma.battle.update({
       where: { id: battle.id.toString() },
-      data: { rewards, loot },
+      data: { rewards, loot, eventOutcome },
     })
   }
 }

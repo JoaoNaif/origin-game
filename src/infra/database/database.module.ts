@@ -24,6 +24,10 @@ import { PrismaChestsRepository } from './prisma/repositories/prisma-chests-repo
 import { PrismaWalletsRepository } from './prisma/repositories/prisma-wallets-repository'
 import { PrismaGearRepository } from './prisma/repositories/prisma-gear-repository'
 import { PrismaBeastsRepository } from './prisma/repositories/prisma-beasts-repository'
+import { PrismaEventEntriesRepository } from './prisma/repositories/prisma-event-entries-repository'
+import { PrismaPendingRewardsRepository } from './prisma/repositories/prisma-pending-rewards-repository'
+import { EventEntriesRepository } from '@/domain/events/applications/repositories/event-entries-repository'
+import { PendingRewardsRepository } from '@/domain/events/applications/repositories/pending-rewards-repository'
 
 @Module({
   providers: [
@@ -39,6 +43,11 @@ import { PrismaBeastsRepository } from './prisma/repositories/prisma-beasts-repo
     { provide: ChestsRepository, useClass: PrismaChestsRepository },
     { provide: GearRepository, useClass: PrismaGearRepository },
     { provide: BeastsRepository, useClass: PrismaBeastsRepository },
+    { provide: EventEntriesRepository, useClass: PrismaEventEntriesRepository },
+    {
+      provide: PendingRewardsRepository,
+      useClass: PrismaPendingRewardsRepository,
+    },
     // pré-batalha dura minutos: fica em memória no MVP (memory-battle-drafts-repository.ts)
     { provide: BattleDraftsRepository, useClass: MemoryBattleDraftsRepository },
   ],
@@ -56,6 +65,8 @@ import { PrismaBeastsRepository } from './prisma/repositories/prisma-beasts-repo
     ChestsRepository,
     GearRepository,
     BeastsRepository,
+    EventEntriesRepository,
+    PendingRewardsRepository,
   ],
 })
 export class DatabaseModule {}

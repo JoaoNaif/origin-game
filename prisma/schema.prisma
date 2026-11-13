@@ -379,15 +379,17 @@ model Account {
   createdAt    DateTime    @default(now()) @map("created_at")
   updatedAt    DateTime    @updatedAt @map("updated_at")
 
-  characters    Character[]
-  squads        Squad[]
-  battles       Battle[]
-  sessions      Session[]
-  wallet        Wallet?
-  walletEntries WalletEntry[]
-  chests        Chest[]
-  gear          Gear[]
-  beasts        Beast[]
+  characters     Character[]
+  squads         Squad[]
+  battles        Battle[]
+  sessions       Session[]
+  wallet         Wallet?
+  walletEntries  WalletEntry[]
+  chests         Chest[]
+  gear           Gear[]
+  beasts         Beast[]
+  eventEntries   EventEntry[]
+  pendingRewards PendingReward[]
 
   @@map("accounts")
 }
@@ -424,6 +426,7 @@ enum WalletReason {
   INVENTORY_EXPANSION
   GEAR_SALE
   BEAST_SALE
+  EVENT_REWARD
 }
 
 // Registro de cada entrada e saída da carteira (auditoria). `coins` e `fragments` são a variação;
@@ -447,6 +450,7 @@ model WalletEntry {
 enum ChestSource {
   PURCHASE
   BATTLE
+  EVENT
 }
 
 // Baú da conta (D79, D100): o nível usa a escala de raridade. Fechado até abrir; `contents` guarda o
@@ -473,6 +477,7 @@ model Chest {
 enum GearSource {
   CHEST
   ADMIN
+  EVENT
 }
 
 // Equipamento vivo da conta (D62, D100): ocupa 1 espaço do inventário. characterId = no slot daquele personagem
@@ -828,17 +833,24 @@ model Battle {
   rewards        Json             @default("[]")
   // Moeda, fragmentos e baú do fim (D100, D104, D150): { coins, fragments, chest }; nulo até lá e na desistência
   loot           Json?
+  // Batalha de evento (D155): o evento e a etapa (base 0); nulos = PvE comum
+  eventId        String?          @map("event_id")
+  eventStage     Int?             @map("event_stage")
+  // O que rendeu no evento (EventBattleOutcome: etapa, captura, prêmios); nulo até o fim e fora de evento
+  eventOutcome   Json?            @map("event_outcome")
   createdAt      DateTime         @default(now()) @map("created_at")
   updatedAt      DateTime         @updatedAt @map("updated_at")
 
   account  Account        @relation(fields: [accountId], references: [id], onDelete: Cascade)
   squad    Squad?         @relation(fields: [squadId], references: [id], onDelete: SetNull)
   npcSquad NpcSquad?      @relation(fields: [npcSquadId], references: [id], onDelete: SetNull)
+  event    EventTemplate? @relation(fields: [eventId], references: [id], onDelete: SetNull)
   actions  BattleAction[]
   chests   Chest[]
 
   @@index([accountId, startedAt])
   @@index([npcSquadId])
+  @@index([eventId])
   @@map("battles")
 }
 
@@ -901,4 +913,95 @@ model BattleFieldTrait {
   @@id([fieldId, traitId])
   @@index([traitId])
   @@map("battle_field_traits")
+}
+
+// ---------------------------------------------------------------------------
+// Eventos (D155, `events_brief.md`)
+// ---------------------------------------------------------------------------
+
+// Tipo do evento (os que já rodam no motor; ondas, chefe mundial, ranking, organização e família depois).
+enum EventKind {
+  TOWER
+  CHARACTER_LAUNCH
+  HUNT
+  RESEARCH
+  UNIQUE_BOSS
+}
+
+// Squad fixo (trava na primeira batalha) ou livre.
+enum EventSquadMode {
+  FIXED
+  FREE
+}
+
+// Evento do catálogo (admin). As ligações vão pela `key` dentro do JSON (validadas pelo catálogo inteiro):
+// requirements = [{ type, ... }], attemptLimit = { count, per: DAY | EVENT } | nulo, modifiers = [{ type, ... }],
+// stages = [{ name, npcSquadKey, rewards, captureBeastKey }], *Rewards = [{ type, ... }].
+model EventTemplate {
+  id                   String         @id @default(uuid())
+  key                  String         @unique
+  name                 String
+  description          String?
+  kind                 EventKind
+  announceAt           DateTime       @map("announce_at")
+  startsAt             DateTime       @map("starts_at")
+  endsAt               DateTime       @map("ends_at")
+  requirements         Json           @default("[]")
+  attemptLimit         Json?          @map("attempt_limit")
+  squadMode            EventSquadMode @map("squad_mode")
+  fieldKey             String?        @map("field_key")
+  modifiers            Json           @default("[]")
+  stages               Json
+  completionRewards    Json           @default("[]") @map("completion_rewards")
+  participationRewards Json           @default("[]") @map("participation_rewards")
+  createdAt            DateTime       @default(now()) @map("created_at")
+  updatedAt            DateTime       @updatedAt @map("updated_at")
+
+  entries EventEntry[]
+  battles Battle[]
+
+  @@index([endsAt])
+  @@map("event_templates")
+}
+
+// Participação da conta no evento: etapas vencidas, tentativas, squad travado e prêmios já recebidos.
+// Apagar o evento com participações é recusado (Restrict, 409), como o resto do dado de jogador.
+model EventEntry {
+  id                 String    @id @default(uuid())
+  accountId          String    @map("account_id")
+  eventId            String    @map("event_id")
+  clearedStages      Int       @default(0) @map("cleared_stages")
+  captureFailures    Int       @default(0) @map("capture_failures")
+  // ids dos personagens travados (squad fixo); nulo = ainda não travou ou squad livre
+  lockedCharacterIds Json?     @map("locked_character_ids")
+  attemptsDay        String?   @map("attempts_day")
+  attemptsToday      Int       @default(0) @map("attempts_today")
+  attemptsTotal      Int       @default(0) @map("attempts_total")
+  participated       Boolean   @default(false)
+  completedAt        DateTime? @map("completed_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  account Account       @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  event   EventTemplate @relation(fields: [eventId], references: [id], onDelete: Restrict)
+
+  @@unique([accountId, eventId])
+  @@index([eventId])
+  @@map("event_entries")
+}
+
+// Caixa de recompensas (D155, 4.4): prêmio que não coube no inventário (equipamento ou besta).
+// `reward` = { type, ... } (EventReward); some em `expiresAt` (14 dias).
+model PendingReward {
+  id        String   @id @default(uuid())
+  accountId String   @map("account_id")
+  eventId   String?  @map("event_id")
+  reward    Json
+  createdAt DateTime @default(now()) @map("created_at")
+  expiresAt DateTime @map("expires_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, expiresAt])
+  @@map("pending_rewards")
 }
