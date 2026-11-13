@@ -86,6 +86,30 @@ export async function seedDatabase(prisma: PrismaClient): Promise<string> {
         })
       }
 
+      for (const e of content.events.values()) {
+        const data = {
+          name: e.name,
+          description: e.description,
+          kind: e.kind,
+          announceAt: e.announceAt,
+          startsAt: e.startsAt,
+          endsAt: e.endsAt,
+          requirements: json(e.requirements),
+          attemptLimit: e.attemptLimit ? json(e.attemptLimit) : Prisma.DbNull,
+          squadMode: e.squadMode,
+          fieldKey: e.fieldKey,
+          modifiers: json(e.modifiers),
+          stages: json(e.stages),
+          completionRewards: json(e.completionRewards),
+          participationRewards: json(e.participationRewards),
+        }
+        await tx.eventTemplate.upsert({
+          where: { key: e.key },
+          create: { id: e.id.toValue(), key: e.key, ...data },
+          update: data,
+        })
+      }
+
       for (const t of content.traits.values()) {
         const data = {
           name: t.name,
@@ -236,6 +260,7 @@ export async function seedDatabase(prisma: PrismaClient): Promise<string> {
     `seed: ${content.variants.size} variantes, ${content.traits.size} traços, ` +
     `${content.characters.length} personagens, ${content.catalog.skills.size} skills, ` +
     `${content.fields.length} campos, ${content.npcSquads.length} squads de NPC, ` +
-    `${content.awakenings.size} despertares, ${content.gear.size} equipamentos, ${content.beasts.size} bestas`
+    `${content.awakenings.size} despertares, ${content.gear.size} equipamentos, ${content.beasts.size} bestas, ` +
+    `${content.events.size} eventos`
   )
 }
