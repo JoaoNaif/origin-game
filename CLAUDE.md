@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-> O **design de jogo está fechado até o D154** (regras e valores iniciais do MVP). **Feito:** motor de combate, IA e
+> O **design de jogo está fechado até o D156** (regras e valores iniciais do MVP). **Feito:** motor de combate, IA e
 > simulação (D122 a D132), schema do Prisma, seed e o **servidor do MVP** (contas, catálogo, personagens, squads e
 > batalha contra a máquina, com XP no fim e as ações possíveis da vez), com login (username + senha), as **rotas de
 > admin** (editar o catálogo, ver contas, dar personagem) e a **economia** (carteira com moeda e fragmentos, baús,
@@ -8,7 +8,9 @@
 > no nível 80, missões ocultas, dica e blocos de recuperação, D151), o **DOM** (4 pilares, feitos medidos na batalha,
 > janela de 150 de peso, skills únicas do avançado e rota de admin, D152) e o **equipamento vivo** (catálogo `GearTemplate`,
 > inventário com compra de espaços, elo por requisitos, passivas no motor, baú e venda ao sistema, D153) e os **contratos com bestas** (catálogo `BeastTemplate`, contrato no slot da
-> build, invocação no motor, Dominância jogada pela IA, Igualdade com buffer, D154). Contrato da API em [`docs/api.md`](./docs/api.md).
+> build, invocação no motor, Dominância jogada pela IA, Igualdade com buffer, D154) e os **eventos** (catálogo `EventTemplate`, etapas em
+> sequência sobre o PvE, requisitos, tentativas, squad fixo, modificadores da pesquisa no motor, captura na caça, prêmios e a caixa
+> de recompensas, D155 e D156; torre, lançamento, caça, pesquisa e chefe único). Contrato da API em [`docs/api.md`](./docs/api.md).
 > Contexto permanente do projeto para o Claude. Leia antes de mexer em qualquer coisa.
 
 ## O que é Origin
@@ -22,7 +24,7 @@ e **escrever a resposta no doc**. Não inventar regra de combate.
 
 ## Estado atual
 
-**As regras e os valores iniciais estão fechados** (registro das decisões D1 a D154 em
+**As regras e os valores iniciais estão fechados** (registro das decisões D1 a D156 em
 [`docs/game_design.md`](./docs/game_design.md)). Combate: fila em barra de ação (0 a 1000, Velocidade soma por tick),
 grade 3x3, 4 personagens com 4 skills cada, 7 stats, fórmula de dano `Poder × Ataque² / (Ataque + Defesa) × escala` (×1,2 até o nível 20, descendo até ×0,9 no 40; D131, D137, D148), Exaustão a partir da rodada 4 para a batalha fechar em ~12 rodadas (D138), Desgaste
 como risco x retorno (piso de 80%), vitória por eliminação ou por dano causado na rodada 30 (D122). Os valores são **placeholders
@@ -41,6 +43,7 @@ aprovados**, a calibrar por simulação (IA contra IA).
 | DOM, despertar | [`docs/dom_brief.md`](./docs/dom_brief.md), [`docs/awakening_brief.md`](./docs/awakening_brief.md) |
 | Equipamento vivo, contratos com bestas | [`docs/living_gear_brief.md`](./docs/living_gear_brief.md), [`docs/beast_contracts_brief.md`](./docs/beast_contracts_brief.md) |
 | Família e organizações | [`docs/family_faction_brief.md`](./docs/family_faction_brief.md) |
+| Eventos (tipos, requisitos, recompensas) | [`docs/events_brief.md`](./docs/events_brief.md) |
 | PvP, ranqueado, faixas, IA | [`docs/pvp_brief.md`](./docs/pvp_brief.md) |
 | Modelo de dados (Prisma e entidades) | [`docs/data_model.md`](./docs/data_model.md) |
 | Motor de combate (fórmulas e peças) | [`docs/engine.md`](./docs/engine.md) |
@@ -86,10 +89,11 @@ src/
     ai/                       IA da máquina: pontuação, sorteio com Rng, log do jogador
     squads/                   formação (4 personagens na grade 3x3)
     accounts/                 conta do jogador, login (sessões, portas de criptografia)
-    catalog/                  porta do catálogo (modelos, skills, traços, campos, squads de NPC, despertares) e a edição do admin
+    catalog/                  porta do catálogo (modelos, skills, traços, campos, squads de NPC, despertares, equipamentos, bestas, eventos) e a edição do admin
     economy/                  carteira (moeda, fragmentos e espaços do inventário), baús, sorteios e valores (`economy-values.ts`)
     gear/                     equipamento vivo: modelo do catálogo, item da conta, elo, efeito e valores (`gear-values.ts`)
     beasts/                   contratos com bestas: besta do catálogo, besta da conta, regras do contrato e valores (`beast-values.ts`)
+    events/                   eventos: evento do catálogo, participação da conta, caixa de recompensas, requisitos, modificadores e valores (`event-values.ts`)
   infra/
     auth/                     JWT (estratégia, guard global, @Public, @CurrentUser)
     cryptography/             bcrypt, JWT e refresh token (portas de accounts)
@@ -130,7 +134,7 @@ test/                         factories, in-memory repositories, fakes (incluind
 - Casos de uso entram no Nest por `useFactory` em `infra/http/use-cases/<contexto>.providers.ts` (o domínio não tem
   decorators); a classe do caso de uso é o token de DI.
 - Um controller por caso de uso em `infra/http/controllers/<contexto>/` (`accounts`, `catalog`, `characters`, `squads`,
-  `battles`, `economy`, `gear`, `beasts`, `admin`; o `health` fica na raiz), com o `*.e2e-spec.ts` ao lado. Validação no
+  `battles`, `economy`, `gear`, `beasts`, `events`, `admin`; o `health` fica na raiz), com o `*.e2e-spec.ts` ao lado. Validação no
   `@Body(new ZodValidationPipe(schema))`; erro do `Either` vira exceção HTTP num `switch (error.constructor)`; saída
   sempre por presenter (`infra/http/presenters/`). Schemas reaproveitados em `infra/http/schemas/`.
 - e2e: `npm run test:e2e` (precisa do Postgres: `npm run services:up`); cada arquivo roda num schema próprio
@@ -160,6 +164,7 @@ test/                         factories, in-memory repositories, fakes (incluind
 - **Depois do MVP:** PvP (pontos do Elo, limites de pontos, temporada, reconexão, top 3, fila), perfil próprio para
   chefes, previsão de turnos da IA, memória entre batalhas, e os caminhos Enxerto, Rede e Selo. Das camadas de
   aprimoramento, o despertar (D151), o DOM (D152), o equipamento vivo (D153) e os contratos com bestas (D154) estão feitos.
+- **Eventos (D155, D156):** torre, lançamento, caça, pesquisa e chefe único no servidor; faltam ondas, chefe mundial, ranking por pontos (e o prêmio por ranking), organização e família (`events_brief.md` 8 e 10), e o front dos eventos e da caixa de recompensas. Vêm antes das organizações e do mercado, que dependem deles. Missões são conversa própria.
 - **Economia, depois:** mercado entre jogadores (o inventário e a venda ao sistema já entraram no D153).
 - **Servidor, a seguir:** o front dos contratos com bestas (lista, firmar com a prévia dos requisitos, trocar o slot, desfazer com confirmação, a invocação e as unidades das bestas na batalha, a Igualdade no dono e o catálogo no admin); os do despertar, do DOM e do equipamento vivo já estão feitos. O relógio do turno (20 s, Defender automático) entra com o PvP; no PvE não há limite (D147).
 

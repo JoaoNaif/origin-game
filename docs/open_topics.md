@@ -48,6 +48,19 @@ conta, fora do combate. Só restam valores, tabela de famílias x variante e eve
   estágios; os dois sentidos do lore são só flavor.
 - **Éon** (conflito 4): **descartado** como termo (nome técnico da Sombra para variante, sem relevância no jogo).
 
+### ~~1.6 Eventos~~ (fechado)
+
+Modelo fechado em [`events_brief.md`](./events_brief.md) e D155 (`game_design.md`): catálogo do admin, sempre com fim,
+requisitos opcionais, 4 formas de recompensa, caixa de recompensas e 10 tipos (torre, lançamento, caça, pesquisa, chefe
+único, chefe mundial, ondas, ranking, organização e família). **Ficam para depois:** equipe 3 contra 3 (com o PvP) e
+eventos ocultos. **No servidor (D156):** torre, lançamento, caça, pesquisa e chefe único; faltam ondas, chefe mundial,
+ranking por pontos (e o prêmio por ranking), organização e família.
+
+### 1.7 Missões [ABERTO]
+
+Sistema separado dos eventos (D155), podendo ser temporário ou não. Já citadas: missões de baú, de periculosidade e as
+que dão reputação. Precisa de conversa própria.
+
 ---
 
 ## Parte 2. Outros tópicos em aberto

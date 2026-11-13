@@ -155,12 +155,12 @@ O squad: `{ id, name, members: [{ characterId, row, column }] }`. `row` 0 a 2 (l
 | Rota | Respostas |
 |---|---|
 | `POST /me/battle-drafts` `{ npcSquadKey }` | 201 `{ draft: { id, opponent: { key, name, profile, difficulty }, field } }`; 404 NPC. `field` traz `requiredTraitKeys` (quem tem qualquer um ganha o bônus, D98) e os dois bônus. Vale por 30 minutos |
-| `POST /battles` `{ draftId, squadId }` | 201 `{ battle, events, rewards, loot }`; 403 pré-batalha ou squad de outra conta; 404 pré-batalha (já usada, inclusive por um clique duplo, ou expirada) ou squad; 400 squad incompleto ou personagem sem build |
+| `POST /battles` `{ draftId, squadId }` | 201 `{ battle, events, rewards, loot, eventOutcome }`; 403 pré-batalha ou squad de outra conta; 404 pré-batalha (já usada, inclusive por um clique duplo, ou expirada) ou squad; 400 squad incompleto ou personagem sem build. Pré-batalha de evento (D155): também 400 com evento fechado, sem tentativas, etapa mudada, squad diferente do travado (squad fixo) ou requisito não cumprido (a mensagem diz qual) |
 | `GET /me/battles?status=` | 200 `{ battles }`: as batalhas da conta, da mais recente para a mais antiga (até 50), sem a foto e sem o log: `{ id, mode, status, squadId, npcSquadId, opponent: { name, profile, difficulty }, winner, endReason, rounds, startedAt, finishedAt }`. `status=IN_PROGRESS` acha a batalha para retomar (aba fechada, outro aparelho); `FINISHED` é o histórico |
 | `GET /battles/:id` | 200 `{ battle, events }` com **todos** os eventos (retomar a tela ou rever); 403 de outra conta |
 | `POST /battles/:id/forfeit` | 200 `{ battle }`: desistir (W.O.). A máquina vence (`endReason: ABANDON`) e não há XP (D136, D147); 403 de outra conta; 409 se a batalha já acabou (inclusive por uma jogada que terminou ao mesmo tempo) |
 | `GET /battles/:id/options` | 200 `{ turn, options }`: as jogadas legais da vez do jogador (abaixo); 403 de outra conta; 409 se não é a vez do jogador ou a batalha acabou |
-| `POST /battles/:id/actions` (jogada) | 200 `{ battle, events, rewards, loot }` com os eventos **desta** jogada e das vezes da máquina que vieram depois; 400 jogada ilegal (nada muda); 403 de outra conta; 409 batalha encerrada ou outra jogada entrou antes (nada desta fica gravado) |
+| `POST /battles/:id/actions` (jogada) | 200 `{ battle, events, rewards, loot, eventOutcome }` com os eventos **desta** jogada e das vezes da máquina que vieram depois; 400 jogada ilegal (nada muda); 403 de outra conta; 409 batalha encerrada ou outra jogada entrou antes (nada desta fica gravado) |
 
 **Jogada** (`data_model.md` 3.11):
 
@@ -190,7 +190,8 @@ sai da seed. Em mover, trocar e defender, `preview` é nulo.
 | `round`, `turn`, `timeline` | rodada (até 30); de quem é a vez (`{ ref, side }`, nulo no fim); as próximas 8 vezes |
 | `field`, `fields` | o campo valendo (`key`, `untilRound`, `isInitial`) e o catálogo para as trocas |
 | `units` | as 8 unidades (`PLAYER:0..3`, `OPPONENT:0..3`): modelo (`templateKey`, também o nome da imagem em `origin-front/public/characters/`), HP, escudo, posição, status, Provocado/Protegido, parceiro do Ligado (`linkedWith`), `invulnerable` (Indestrutível do DOM, até o próximo turno dele), Engajado, classe, nível e traços |
-| `result` | no fim: `winner`, `endReason` (`ELIMINATION`, `ROUND_LIMIT` ou `ABANDON`), `rounds`, `rewards` (o XP entregue, o mesmo da resposta da última jogada; vazio na desistência) e `loot` (moeda, fragmentos e baú; nulo na desistência) |
+| `result` | no fim: `winner`, `endReason` (`ELIMINATION`, `ROUND_LIMIT` ou `ABANDON`), `rounds`, `rewards` (o XP entregue, o mesmo da resposta da última jogada; vazio na desistência), `loot` (moeda, fragmentos e baú; nulo na desistência) e `eventOutcome` (batalha de evento: o mesmo da resposta; nulo fora de evento e na desistência) |
+| `event` | batalha de evento (D155): `{ eventId, stage }` (etapa base 0); nulo no PvE comum |
 
 **O que o jogador vê do inimigo** (`pvp_brief.md` 3): classe, nível, traços e o estado em campo. **Não** vê os
 `stats` (vêm nulos) nem as skills que ele ainda não usou: `skills` do inimigo só traz as já vistas. Das próprias
@@ -215,6 +216,9 @@ caiu um pilar do DOM (`from`/`to` nulo = sem o pilar, D152). Ficam guardados na 
 Moeda (vitória 130, derrota 70) e fragmentos (2 / 1, do tipo das variantes da squad; sem variante = Neutro), os dois
 com os modificadores do XP (dificuldade e mesmo NPC). O baú, quando cai, fica fechado na conta (`GET /me/chests`).
 Já está na carteira quando a resposta chega; também fica em `result.loot`.
+
+**`eventOutcome`** (batalha de evento que acabou; nulo antes, fora de evento e na desistência): `{ eventKey, stage, won,
+stageCleared, capture, completed, rewards }`. Detalhe na seção de eventos abaixo.
 
 **Jogada enviada duas vezes** (clique duplo, duas abas): só a primeira entra. A outra recebe 409 e nada dela fica
 gravado, nem o XP. O front deve recarregar com `GET /battles/:id`.
@@ -318,6 +322,55 @@ pode firmar e entrar em batalha (o Mestre pede todos; o título da lista vale 1)
   (`amount` que o dono levou).
 - **Bloqueio:** se o personagem não cumpre os requisitos do contrato Mestre, `POST /battles` dá 400.
 
+## Eventos (`events`, D155)
+
+Regras em `events_brief.md`. A batalha de evento é a do PvE (mesmo motor, mesma IA, mesmo XP e loot): muda o
+adversário (o squad de NPC da etapa), o campo (o fixo do evento ou sorteado) e, na pesquisa, as regras.
+
+**Fluxo:** `GET /events` → `POST /events/:key/draft` (pré-batalha da próxima etapa) → `POST /battles` com o
+`draftId` e o squad (confere a entrada e conta a tentativa) → jogadas de sempre → no fim, `eventOutcome` na resposta.
+
+| Rota | Respostas |
+|---|---|
+| `GET /events` | 200 `{ events, serverTime }`: abertos, anunciados (`phase: ANNOUNCED`, "começa em `startsAt`") e os encerrados em que a conta jogou. Os que ainda não foram anunciados não aparecem |
+| `GET /events/:key` | 200 `{ event, serverTime }`; 404 antes do anúncio ou `key` que não existe |
+| `POST /events/:key/draft` | 201 `{ draft: { id, event: { key, name, stage, stageName, squadMode, modifiers }, opponent, field } }`; 404 evento ou squad de NPC; 400 evento não aberto, concluído ou sem tentativas. Vale 30 minutos, como a do PvE |
+| `GET /me/reward-box` | 200 `{ rewards: [{ id, reward, eventId, createdAt, expiresAt }] }`: a caixa de recompensas (o que não coube no inventário), só as no prazo. O front mostra `expiresAt` |
+| `POST /me/reward-box/:id/claim` | 200 `{ granted }` (formato de `eventOutcome.rewards`); 400 inventário cheio ou prazo vencido; 403 de outra conta; 404 |
+| `DELETE /me/reward-box/:id` | 204: descarta (some de vez, sem moeda); 403; 404 |
+
+**O evento** (`GET /events`, `GET /events/:key`): a definição do admin (`key`, `name`, `description`, `kind`,
+`announceAt`, `startsAt`, `endsAt`, `requirements`, `attemptLimit`, `squadMode`, `fieldKey`, `modifiers`,
+`stages`, `completionRewards`, `participationRewards`), mais:
+- `phase`: `ANNOUNCED`, `OPEN` ou `ENDED`.
+- `stages[]`: `{ name, npcSquadKey, npcSquadName, rewards, captureBeastKey, cleared }`.
+- `progress`: `{ clearedStages, totalStages, nextStage (nulo se concluiu), completed, completedAt, attemptsLeft (nulo =
+  à vontade), attemptsTotal, lockedCharacterIds (squad fixo já travado), participated, captureChance (caça: a chance da
+  etapa atual, com as falhas) }`.
+
+`kind`: `TOWER` (torre), `CHARACTER_LAUNCH` (lançamento de personagem), `HUNT` (caça), `RESEARCH` (pesquisa) e
+`UNIQUE_BOSS` (chefe único, uma tentativa só). `attemptLimit`: `{ count, per: DAY | EVENT }` ou nulo; o dia vira à
+meia-noite UTC. `squadMode`: `FIXED` (trava os 4 personagens na primeira batalha, em qualquer posição) ou `FREE`.
+
+**Requisitos** (`requirements[]`, conferidos no squad a cada batalha): `MIN_LEVEL { level }` (todos), `CLASS_COUNT
+{ characterClass, min }`, `LINEAGE { lineage, min }`, `FAMILY { traitKey, min }`, `MIN_DANGER { level }` (todos) e
+`MAX_RARITY { rarity }` (todos).
+
+**Modificadores** (`modifiers[]`, na foto da batalha): `LEVELED_STATS { level }` (os dois lados jogam neste nível),
+`EARLY_EXHAUSTION { afterRound }` (0 a 2), `NO_HEALING` (cura zero; escudo continua) e `EQUAL_SPEED` (todos com a
+média). A batalha traz `snapshot.rules` só no servidor; o front lê os modificadores do evento.
+
+**Prêmios** (`EventReward`): `COINS { amount }`, `FRAGMENTS { lineage, amount }`, `CHEST { tier }`, `CHARACTER
+{ templateKey }`, `GEAR { gearKey }` e `BEAST { beastKey }`.
+
+**`eventOutcome`:** `{ eventKey, stage, won, stageCleared, capture: { beastKey, chance, captured } | null, completed,
+rewards: [{ reward, source, status, ... }] }`. `source`: `PARTICIPATION` (primeira batalha terminada, vença ou perca),
+`STAGE`, `CAPTURE` (a besta da caça) ou `COMPLETION` (o principal). `status`: `DELIVERED` (com `refId`: o
+personagem, o equipamento, a besta ou o baú criado; nulo em moeda e fragmentos), `CONVERTED` (personagem repetido
+virou moeda: `coins`), `PENDING` (foi para a caixa: `pendingId`, `expiresAt`) ou `MISSING` (a `key` saiu do
+catálogo). Perder não volta etapa: a próxima pré-batalha é da mesma etapa. Na caça, vencer sem capturar não conta a
+etapa e soma +10 pontos na chance.
+
 ## Admin (`/admin/...`, papel `ADMIN`)
 
 Toda rota daqui dá 403 para quem não é admin (401 sem login). O front mostra as telas pelo `role` de `GET /me`.
@@ -326,8 +379,8 @@ Toda rota daqui dá 403 para quem não é admin (401 sem login). O front mostra 
 
 | Rota | Resposta |
 |---|---|
-| `GET /admin/catalog` | 200 `{ catalog: { version, variants, traits, templates, skills, fields, npcSquads, awakenings, gear, beasts } }`: tudo, pela `key`, inclusive a formação e as skills dos NPCs (que o jogador não vê). Cada item vem **no formato do corpo da edição** (abaixo) mais campos só de leitura, então a tela pode editar e devolver o mesmo objeto |
-| `GET /admin/options` | 200 `{ options }`: as listas dos selects (linhagens, classes, raridades, periculosidade, exclusividade, stats, categorias e origens de traço, tiers, alvos, alcances, áreas, papéis do kit, status, perfis e dificuldades da IA, `awakeningRequirementLevels`, `awakeningMissionCategories` e `awakeningMissionKinds` com a categoria e o limiar padrão de cada tipo, `gearGrades`, `gearKinds`, `beastContracts`, `beastGrades` e `titles`, os títulos que existem), os tipos de efeito (`effectTypes.trait`, `.skill`, `.passiveTrigger`, `.passiveEffect`) e as regras (`rules`: orçamento por classe e tolerância, referência por tier, Poder máximo, nível do despertar, faixa de nível dos NPCs por dificuldade, limites de traços, variantes e campos, `awakeningRequirements`, `awakeningMissionRules`, `gear` (bônus por grau, ajuste do admin, requisitos por grau e limites dos títulos) e `beast` (skills por besta e requisitos do Mestre por grau)) |
+| `GET /admin/catalog` | 200 `{ catalog: { version, variants, traits, templates, skills, fields, npcSquads, awakenings, gear, beasts, events } }`: tudo, pela `key`, inclusive a formação e as skills dos NPCs (que o jogador não vê). Cada item vem **no formato do corpo da edição** (abaixo) mais campos só de leitura, então a tela pode editar e devolver o mesmo objeto |
+| `GET /admin/options` | 200 `{ options }`: as listas dos selects (linhagens, classes, raridades, periculosidade, exclusividade, stats, categorias e origens de traço, tiers, alvos, alcances, áreas, papéis do kit, status, perfis e dificuldades da IA, `awakeningRequirementLevels`, `awakeningMissionCategories` e `awakeningMissionKinds` com a categoria e o limiar padrão de cada tipo, `gearGrades`, `gearKinds`, `beastContracts`, `beastGrades` e `titles`, os títulos que existem), os tipos de efeito (`effectTypes.trait`, `.skill`, `.passiveTrigger`, `.passiveEffect`) e as regras (`rules`: orçamento por classe e tolerância, referência por tier, Poder máximo, nível do despertar, faixa de nível dos NPCs por dificuldade, limites de traços, variantes e campos, `awakeningRequirements`, `awakeningMissionRules`, `gear` (bônus por grau, ajuste do admin, requisitos por grau e limites dos títulos), `beast` (skills por besta e requisitos do Mestre por grau) e `event` (limites, chance de captura por grau, bônus por falha e dias da caixa)). Dos eventos: `eventKinds`, `eventSquadModes`, `eventRequirementTypes`, `eventModifierTypes` e `eventRewardTypes` |
 | `GET /admin/skills/reference?tier=&target=&range=&area=&isNone=&isAwakened=` | 200 `{ reference: { power, desgastePercent, cooldown, minLevel } }`: os valores de referência do tipo + forma (D16, D92) enquanto o admin monta a skill. `range` só em skill de inimigo; `isNone=true` para skill sem variante; `isAwakened=true` para skill de variante despertada (Poder ×1,25 até 2,5, Desgaste ×1,5, nível mínimo 80, D96) |
 
 Campos só de leitura no `GET /admin/catalog`: modelo `skillKeys` (as skills dele, kit primeiro); skill `lineage`,
@@ -336,8 +389,8 @@ No `PUT` eles são ignorados.
 
 ### Criar, editar e apagar
 
-`:collection` = `variants`, `traits`, `templates`, `skills`, `fields`, `npc-squads`, `awakenings`, `gear` ou `beasts`
-(outro valor dá 400).
+`:collection` = `variants`, `traits`, `templates`, `skills`, `fields`, `npc-squads`, `awakenings`, `gear`, `beasts` ou
+`events` (outro valor dá 400).
 
 | Rota | Respostas |
 |---|---|
@@ -400,7 +453,24 @@ andamento segue com a foto do início. `version` muda a cada gravação. **Rodar
 { "name": "Lobo de Cinzas", "description": null, "contract": "DOMINANCE", "grade": "KNIGHT", "lineage": "ELEMENTAL",
   "skills": [{ "name": "Mordida", "tier": "BASIC", "target": "ENEMY", "range": "MELEE", "area": "SINGLE",
                "cooldown": 0, "baseHitChance": 0.9, "effects": [{ "type": "DAMAGE", "power": 0.8 }] }, { ... }] }
+// events (D155; datas ISO; announceAt <= startsAt < endsAt; stages em sequência, 1 a 30; captureBeastKey só na caça
+//         (HUNT, em toda etapa, nunca sagrada); UNIQUE_BOSS = 1 etapa e attemptLimit { count: 1, per: "EVENT" };
+//         CHARACTER_LAUNCH dá um CHARACTER; RESEARCH tem modificador ou fieldKey; opcionais: requirements,
+//         attemptLimit, fieldKey, modifiers, completionRewards, participationRewards)
+{ "name": "Torre do Eco", "description": null, "kind": "TOWER",
+  "announceAt": "2026-10-01T00:00:00Z", "startsAt": "2026-10-10T00:00:00Z", "endsAt": "2027-12-31T23:59:59Z",
+  "requirements": [{ "type": "MIN_LEVEL", "level": 20 }], "attemptLimit": { "count": 3, "per": "DAY" },
+  "squadMode": "FREE", "fieldKey": null, "modifiers": [],
+  "stages": [{ "name": "Piso 1", "npcSquadKey": "aggressive-beginner", "rewards": [{ "type": "COINS", "amount": 150 }],
+               "captureBeastKey": null }],
+  "completionRewards": [{ "type": "CHEST", "tier": "B" }, { "type": "GEAR", "gearKey": "egide-cinzenta" }],
+  "participationRewards": [{ "type": "FRAGMENTS", "lineage": "NONE", "amount": 5 }] }
 ```
+
+**Eventos no catálogo:** as `keys` (squads de NPC, campo, traço de família, prêmios e a besta da caça) são conferidas
+com o catálogo inteiro: ligação que não existe dá 400. Apagar um squad de NPC, campo, modelo, equipamento ou besta que
+um evento usa dá 409 (nome do evento). Apagar um evento em que alguma conta já jogou dá 409 ("jogadores"). Mudar o
+evento vale na hora (datas, prêmios, etapas); a batalha em andamento segue com a foto do início.
 
 **Equipamento no catálogo:** apagar um modelo que alguma conta tem dá 409 ("jogadores"). Mudar o modelo vale na hora
 para quem já tem (o item guarda só a ligação); a batalha em andamento segue com a foto do início.

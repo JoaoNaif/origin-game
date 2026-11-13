@@ -57,6 +57,7 @@
 | 15 | Coluna `dom` em `Character` (DOM: níveis e janela de feitos) | Jogador | Character | **feito** (D152, 3.15) |
 | 16 | `GearTemplate` (+ enums `GearKind`, `GearGrade`) e `Gear` (+ enum `GearSource`), `Wallet.inventorySlots` | Catálogo e jogador | Account, Character | **feito** (D153, 3.16) |
 | 17 | `BeastTemplate` (+ enums `BeastContract`, `BeastGrade`) e `Beast` (+ enum `BeastSource`) | Catálogo e jogador | Account, Character | **feito** (D154, 3.17) |
+| 18 | `EventTemplate` (+ enums `EventKind`, `EventSquadMode`), `EventEntry`, `PendingReward` e colunas do evento em `Battle` | Catálogo, jogador e batalha | Account, Battle | **feito** (D155, D156, 3.18) |
 
 **Fora do MVP** (cada um vira migração própria quando a camada chegar): mercado e organizações.
 
@@ -1215,6 +1216,49 @@ Desfazer o contrato apaga a linha (a besta se perde).
 (ref `PLAYER:B0`, `PLAYER:B0-2`), com `stats` fixos e `beast: { key, name, contract, grade, ownerRef, duration,
 ownerWillCost, auto }`, fora de campo até a invocação. Batalha antiga, sem `beasts`, joga como antes.
 
+### 3.18 EventTemplate (catálogo), EventEntry e PendingReward (jogador)
+
+Os eventos (D155, D156; regra em `events_brief.md`). Domínio em `src/domain/events/`.
+
+**`EventTemplate`** (catálogo do admin, `/admin/events`):
+
+| Campo | Tipo | Regra |
+|---|---|---|
+| `id`, `key` (único), `name`, `description` | | |
+| `kind` | `EventKind` | `TOWER`, `CHARACTER_LAUNCH`, `HUNT`, `RESEARCH`, `UNIQUE_BOSS` |
+| `announceAt`, `startsAt`, `endsAt` | datas | anúncio ≤ início < fim (sempre tem fim) |
+| `requirements` | JSON `[{ type, ... }]` | `MIN_LEVEL`, `CLASS_COUNT`, `LINEAGE`, `FAMILY` (traço pela `key`), `MIN_DANGER`, `MAX_RARITY` |
+| `attemptLimit` | JSON `{ count, per: DAY | EVENT }` ou nulo | nulo = à vontade |
+| `squadMode` | `EventSquadMode` | `FIXED` ou `FREE` |
+| `fieldKey` | texto opcional | campo fixo (pela `key`); nulo = sorteado |
+| `modifiers` | JSON `[{ type, ... }]` | `LEVELED_STATS`, `EARLY_EXHAUSTION`, `NO_HEALING`, `EQUAL_SPEED`; sem repetir |
+| `stages` | JSON `[{ name, npcSquadKey, rewards, captureBeastKey }]` | 1 a 30, em sequência; captura só na caça |
+| `completionRewards`, `participationRewards` | JSON `[{ type, ... }]` | `COINS`, `FRAGMENTS`, `CHEST`, `CHARACTER`, `GEAR`, `BEAST` |
+
+As ligações vão pela `key` dentro do JSON; o catálogo inteiro confere que existem (`catalogIntegrityError`) e
+`catalogUsages` recusa apagar o que um evento usa. **Fora da `version`** do catálogo: a batalha guarda as regras na
+foto (`BattleSnapshot.rules`) e o nível nivelado nas unidades.
+
+**`EventEntry`** (participação da conta, uma por conta e evento, `@@unique([accountId, eventId])`):
+
+| Campo | Tipo | Regra |
+|---|---|---|
+| `accountId` (FK, cascata), `eventId` (FK, `Restrict`) | | apagar evento com participação dá 409 |
+| `clearedStages` | inteiro | etapas vencidas; a próxima é esta (base 0) |
+| `captureFailures` | inteiro | caça: falhas na etapa atual (+10 pontos cada); zera ao vencer a etapa |
+| `lockedCharacterIds` | JSON opcional | squad fixo: os 4 da primeira batalha |
+| `attemptsDay`, `attemptsToday`, `attemptsTotal` | | o dia (UTC) e as contagens; a tentativa conta quando a batalha começa |
+| `participated` | booleano | já recebeu o prêmio de participação |
+| `completedAt` | data opcional | concluiu (venceu a última etapa) |
+
+**`PendingReward`** (caixa de recompensas): `accountId` (FK, cascata), `eventId` (opcional, sem FK), `reward`
+(JSON `EventReward`), `createdAt`, `expiresAt` (14 dias depois). Só equipamento e besta vão para a caixa (o que
+ocupa inventário).
+
+**`Battle`** ganha `eventId` (FK opcional, `SetNull`), `eventStage` e `eventOutcome` (JSON `EventBattleOutcome`,
+gravado no fim junto do XP e do loot, `saveRewards`). **`BattleDraft`** (memória) ganha `event: { eventId, stage }`.
+Enums: `ChestSource`, `GearSource` ganham `EVENT`; `WalletReason` ganha `EVENT_REWARD`.
+
 ## 4. Seed do MVP (conteúdo)
 
 Código: `prisma/seed/content/` (o conteúdo, criado pelas entidades do domínio e validado por elas) e `prisma/seed.ts`
@@ -1303,6 +1347,13 @@ conquistado.
 | Cauteloso | Muralha da CORE | Tank, Derik | Gaia, Rolf |
 | Focado em abater | Caçada | Nox, Tyir | Lucky, Sunna |
 | Equilibrado | CORE | Kael, Tyir | Lucky, Gaia |
+
+**Eventos de exemplo (5, D155, `prisma/seed/content/events.ts`):** um de cada tipo, abertos de 10/10/2026 até o fim de
+2027, com os squads de NPC do PvE. **Torre do Eco** (5 pisos, 150 M por piso; baú B e a Égide Cinzenta no fim;
+5 fragmentos Neutros de participação), **Caça ao Lobo de Cinzas** (1 etapa, 5 tentativas por dia, campo Planície),
+**Laboratório da Sombra** (pesquisa: stats no 30, sem cura, Arena, squad fixo, 3 tentativas por dia), **O Guardião das
+Cinzas** (chefe único no Grão-mestre, nível 40+, dá a Fênix e o Relicário de Alpha) e **A Chegada de Dax Zarek**
+(lançamento: 2 desafios, dá o Dax). São de demonstração; os eventos de verdade são do admin.
 
 **Conta de teste:** o seed também cria a `tester_01` (D133) pelo mesmo caso de uso do servidor, com os 12 personagens
 no nível 18 e a distribuição padrão dos pontos livres. Se ela já existe, fica como está (o progresso não é apagado).
