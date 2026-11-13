@@ -11,6 +11,7 @@ import { BattleField } from '@/domain/combat/entities/battle-field'
 import { GearTemplate } from '@/domain/gear/entities/gear-template'
 import { BeastTemplate } from '@/domain/beasts/entities/beast-template'
 import { beastSaleValue } from '@/domain/beasts/beast-values'
+import { EventPresenter } from './event-presenter'
 import { gearSaleValue } from '@/domain/gear/gear-values'
 import { Skill } from '@/domain/skills/entities/skill'
 import { skillReference } from '@/domain/skills/services/skill-reference'
@@ -60,6 +61,9 @@ export class AdminCatalogPresenter {
       beasts: byKey(catalog.beastTemplates.values()).map((b) =>
         AdminCatalogPresenter.beast(b)
       ),
+      events: byKey(catalog.events.values()).map((e) =>
+        EventPresenter.admin(e)
+      ),
     }
   }
 
@@ -83,6 +87,8 @@ export class AdminCatalogPresenter {
         return AdminCatalogPresenter.gear(entity)
       case 'BEAST':
         return AdminCatalogPresenter.beast(entity)
+      case 'EVENT':
+        return EventPresenter.admin(entity)
     }
   }
 

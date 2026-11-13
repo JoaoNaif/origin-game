@@ -38,7 +38,12 @@ describe('Delete Catalog Entry (e2e)', () => {
 
   test('[DELETE] /admin/npc-squads/:key', async () => {
     const agent = await signUpAdmin(app, prisma, 'admin_apaga')
-    const [squad] = (await adminCatalog(agent)).npcSquads
+    // os eventos do seed usam alguns squads de NPC (D155), e esses não saem: pega um que nenhum usa
+    const catalog = await adminCatalog(agent)
+    const used = new Set(
+      catalog.events.flatMap((e) => e.stages.map((s) => s.npcSquadKey))
+    )
+    const squad = catalog.npcSquads.find((s) => !used.has(s.key))!
 
     const response = await agent.delete(`/admin/npc-squads/${squad.key}`)
 

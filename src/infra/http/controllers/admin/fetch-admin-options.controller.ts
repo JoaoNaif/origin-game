@@ -50,6 +50,14 @@ import { AWAKENING_MISSION_RULES } from '@/domain/characters/services/awakening-
 import { KNOWN_TITLES } from '@/domain/characters/services/dom-rules'
 import { GearGrade } from '@/domain/gear/enums/gear-grade'
 import { BeastContract } from '@/domain/beasts/enums/beast-contract'
+import { EventKind } from '@/domain/events/enums/event-kind'
+import { EventSquadMode } from '@/domain/events/enums/event-squad-mode'
+import {
+  EVENT_LIMITS,
+  HUNT_CAPTURE_CHANCE,
+  HUNT_FAILURE_BONUS,
+  REWARD_BOX_DAYS,
+} from '@/domain/events/event-values'
 import { BeastGrade } from '@/domain/beasts/enums/beast-grade'
 import {
   BEAST_SKILL_COUNT,
@@ -67,6 +75,7 @@ import {
   passiveTriggerSchema,
   skillEffectSchema,
   traitEffectSchema,
+  eventRewardSchema,
 } from '../../schemas/catalog'
 
 const values = (enumObject: Record<string, string>) => Object.values(enumObject)
@@ -110,6 +119,23 @@ export class FetchAdminOptionsController {
         gearKinds: values(GearKind),
         beastContracts: values(BeastContract),
         beastGrades: values(BeastGrade),
+        eventKinds: values(EventKind),
+        eventSquadModes: values(EventSquadMode),
+        eventRequirementTypes: [
+          'MIN_LEVEL',
+          'CLASS_COUNT',
+          'LINEAGE',
+          'FAMILY',
+          'MIN_DANGER',
+          'MAX_RARITY',
+        ],
+        eventModifierTypes: [
+          'LEVELED_STATS',
+          'EARLY_EXHAUSTION',
+          'NO_HEALING',
+          'EQUAL_SPEED',
+        ],
+        eventRewardTypes: types(eventRewardSchema),
         /** Títulos que existem hoje (a lista do equipamento só aceita estes). */
         titles: KNOWN_TITLES,
         effectTypes: {
@@ -148,6 +174,12 @@ export class FetchAdminOptionsController {
           beast: {
             skillCount: BEAST_SKILL_COUNT,
             masterRequirementCount: MASTER_REQUIREMENT_COUNT,
+          },
+          event: {
+            limits: EVENT_LIMITS,
+            huntCaptureChance: HUNT_CAPTURE_CHANCE,
+            huntFailureBonus: HUNT_FAILURE_BONUS,
+            rewardBoxDays: REWARD_BOX_DAYS,
           },
         },
       },

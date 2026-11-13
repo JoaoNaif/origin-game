@@ -175,8 +175,12 @@ export class BattlePresenter {
             rewards: battle.rewards,
             // moeda, fragmentos e baú (D150); nulo na desistência
             loot: battle.loot,
+            // o que rendeu no evento (D155): etapa, captura e prêmios; nulo fora de evento e na desistência
+            eventOutcome: battle.eventOutcome,
           }
         : null,
+      // batalha de evento (D155): o evento e a etapa (base 0); nulo = PvE comum
+      event: battle.event,
       startedAt: battle.startedAt,
     }
   }

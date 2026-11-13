@@ -71,6 +71,13 @@ import { MoveBeastSlotController } from './controllers/beasts/move-beast-slot.co
 import { ReleaseBeastController } from './controllers/beasts/release-beast.controller'
 import { SellBeastController } from './controllers/beasts/sell-beast.controller'
 import { battlesUseCases } from './use-cases/battles.providers'
+import { eventsUseCases } from './use-cases/events.providers'
+import { FetchEventsController } from './controllers/events/fetch-events.controller'
+import { GetEventController } from './controllers/events/get-event.controller'
+import { DraftEventBattleController } from './controllers/events/draft-event-battle.controller'
+import { FetchRewardBoxController } from './controllers/events/fetch-reward-box.controller'
+import { ClaimPendingRewardController } from './controllers/events/claim-pending-reward.controller'
+import { DiscardPendingRewardController } from './controllers/events/discard-pending-reward.controller'
 import { accountsUseCases } from './use-cases/accounts.providers'
 import { charactersUseCases } from './use-cases/characters.providers'
 import { economyUseCases } from './use-cases/economy.providers'
@@ -126,6 +133,13 @@ import { squadsUseCases } from './use-cases/squads.providers'
     ContractBeastController,
     MoveBeastSlotController,
     SellBeastController,
+    // eventos (D155)
+    FetchEventsController,
+    GetEventController,
+    DraftEventBattleController,
+    FetchRewardBoxController,
+    ClaimPendingRewardController,
+    DiscardPendingRewardController,
     ReleaseBeastController,
     // squads
     CreateSquadController,
@@ -164,6 +178,7 @@ import { squadsUseCases } from './use-cases/squads.providers'
     ...economyUseCases,
     ...gearUseCases,
     ...beastsUseCases,
+    ...eventsUseCases,
   ],
 })
 export class HttpModule {}

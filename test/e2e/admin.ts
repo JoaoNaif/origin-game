@@ -30,6 +30,7 @@ export interface AdminCatalogBody {
   awakenings: AdminItem[]
   gear: AdminItem[]
   beasts: AdminItem[]
+  events: (AdminItem & { stages: { npcSquadKey: string }[] })[]
 }
 
 export async function adminCatalog(agent: Agent): Promise<AdminCatalogBody> {

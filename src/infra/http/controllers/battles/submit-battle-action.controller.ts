@@ -32,13 +32,14 @@ export class SubmitBattleActionController {
 
     if (result.isLeft()) throw battleHttpError(result.value)
 
-    const { battle, engine, events, rewards, loot } = result.value
+    const { battle, engine, events, rewards, loot, eventOutcome } = result.value
 
     return {
       battle: BattlePresenter.toHTTP(battle, engine),
       events,
       rewards,
       loot,
+      eventOutcome,
     }
   }
 }

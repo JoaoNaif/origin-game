@@ -22,6 +22,8 @@ import { GearGrade } from '@/domain/gear/enums/gear-grade'
 import { BeastContract } from '@/domain/beasts/enums/beast-contract'
 import { BeastGrade } from '@/domain/beasts/enums/beast-grade'
 import { GearKind } from '@/domain/gear/enums/gear-kind'
+import { EventKind } from '@/domain/events/enums/event-kind'
+import { EventSquadMode } from '@/domain/events/enums/event-squad-mode'
 import { gridPositionSchema, statBlockSchema } from './common'
 
 // Corpo das rotas de admin do catálogo. Aqui só o formato (tipos, campos de cada efeito); as regras (limites, Poder,
@@ -297,6 +299,89 @@ const beastSchema = z.object({
   titles: z.array(z.string().max(80)).optional(),
 })
 
+/** Prêmio de evento (`EventReward`): as ligações pela `key`. */
+export const eventRewardSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('COINS'), amount: z.number().int() }),
+  z.object({
+    type: z.literal('FRAGMENTS'),
+    lineage: z.nativeEnum(Lineage),
+    amount: z.number().int(),
+  }),
+  z.object({ type: z.literal('CHEST'), tier: z.nativeEnum(Rarity) }),
+  z.object({ type: z.literal('CHARACTER'), templateKey: catalogKeySchema }),
+  z.object({ type: z.literal('GEAR'), gearKey: catalogKeySchema }),
+  z.object({ type: z.literal('BEAST'), beastKey: catalogKeySchema }),
+])
+
+const eventRewards = z.array(eventRewardSchema)
+
+const eventSchema = z.object({
+  name,
+  description,
+  kind: z.nativeEnum(EventKind),
+  announceAt: z.coerce.date(),
+  startsAt: z.coerce.date(),
+  endsAt: z.coerce.date(),
+  requirements: z
+    .array(
+      z.discriminatedUnion('type', [
+        z.object({ type: z.literal('MIN_LEVEL'), level: z.number().int() }),
+        z.object({
+          type: z.literal('CLASS_COUNT'),
+          characterClass: z.nativeEnum(CharacterClass),
+          min: z.number().int(),
+        }),
+        z.object({
+          type: z.literal('LINEAGE'),
+          lineage: z.nativeEnum(Lineage),
+          min: z.number().int(),
+        }),
+        z.object({
+          type: z.literal('FAMILY'),
+          traitKey: catalogKeySchema,
+          min: z.number().int(),
+        }),
+        z.object({
+          type: z.literal('MIN_DANGER'),
+          level: z.nativeEnum(DangerLevel),
+        }),
+        z.object({
+          type: z.literal('MAX_RARITY'),
+          rarity: z.nativeEnum(Rarity),
+        }),
+      ])
+    )
+    .optional(),
+  attemptLimit: z
+    .object({ count: z.number().int(), per: z.enum(['DAY', 'EVENT']) })
+    .nullish(),
+  squadMode: z.nativeEnum(EventSquadMode),
+  fieldKey: optionalKey,
+  modifiers: z
+    .array(
+      z.discriminatedUnion('type', [
+        z.object({ type: z.literal('LEVELED_STATS'), level: z.number().int() }),
+        z.object({
+          type: z.literal('EARLY_EXHAUSTION'),
+          afterRound: z.number().int(),
+        }),
+        z.object({ type: z.literal('NO_HEALING') }),
+        z.object({ type: z.literal('EQUAL_SPEED') }),
+      ])
+    )
+    .optional(),
+  stages: z.array(
+    z.object({
+      name,
+      npcSquadKey: catalogKeySchema,
+      rewards: eventRewards,
+      captureBeastKey: optionalKey,
+    })
+  ),
+  completionRewards: eventRewards.optional(),
+  participationRewards: eventRewards.optional(),
+})
+
 /** Tipo do item pelo pedaço da URL (`/admin/variants`, `/admin/npc-squads`...). */
 export const CATALOG_COLLECTIONS = {
   variants: 'VARIANT',
@@ -308,6 +393,7 @@ export const CATALOG_COLLECTIONS = {
   awakenings: 'AWAKENING',
   gear: 'GEAR',
   beasts: 'BEAST',
+  events: 'EVENT',
 } as const satisfies Record<string, CatalogKind>
 
 export type CatalogCollection = keyof typeof CATALOG_COLLECTIONS
@@ -327,4 +413,5 @@ export const catalogBodySchemas = {
   AWAKENING: awakeningSchema,
   GEAR: gearSchema,
   BEAST: beastSchema,
+  EVENT: eventSchema,
 } satisfies Record<CatalogKind, z.ZodTypeAny>
