@@ -44,6 +44,7 @@ describe('Get Battle', () => {
       world.chests,
       world.gear,
       world.beasts,
+      world.eventBattles,
       world.clock
     ).execute({
       accountId: world.account.id.toString(),

@@ -7,6 +7,8 @@ import { SkillOffersRepository } from '@/domain/characters/applications/reposito
 import { ChestsRepository } from '@/domain/economy/applications/repositories/chests-repository'
 import { WalletsRepository } from '@/domain/economy/applications/repositories/wallets-repository'
 import { BattleLoot } from '@/domain/economy/value-objects/battle-loot'
+import { EventBattles } from '@/domain/events/applications/services/event-battles'
+import { EventBattleOutcome } from '@/domain/events/value-objects/event-battle-outcome'
 import { BattleEngine } from '../../engine/battle-engine'
 import { BattleEvent } from '../../engine/battle-events'
 import { Battle } from '../../entities/battle'
@@ -46,6 +48,8 @@ type SubmitBattleActionUseCaseResponse = Either<
     events: readonly BattleEvent[]
     rewards: CharacterReward[]
     loot: BattleLoot | null
+    /** Batalha de evento que terminou nesta jogada: a etapa, a captura e os prêmios (D155). */
+    eventOutcome: EventBattleOutcome | null
   }
 >
 
@@ -61,6 +65,7 @@ export class SubmitBattleActionUseCase {
     private catalogRepository: CatalogRepository,
     private walletsRepository: WalletsRepository,
     private chestsRepository: ChestsRepository,
+    private eventBattles: EventBattles,
     private clock: Clock
   ) {}
 
@@ -105,15 +110,21 @@ export class SubmitBattleActionUseCase {
       )
     }
 
+    const catalog = await this.catalogRepository.load()
     const { rewards, loot } = await deliverBattleRewards(battle, engine, {
       charactersRepository: this.charactersRepository,
       battlesRepository: this.battlesRepository,
       skillOffersRepository: this.skillOffersRepository,
       walletsRepository: this.walletsRepository,
       chestsRepository: this.chestsRepository,
-      catalog: await this.catalogRepository.load(),
+      catalog,
       now: this.clock.now(),
     })
+    const eventOutcome = await this.eventBattles.deliver(
+      battle,
+      catalog,
+      this.clock.now()
+    )
 
     return right({
       battle,
@@ -121,6 +132,7 @@ export class SubmitBattleActionUseCase {
       events: eventsSince(engine, from),
       rewards,
       loot,
+      eventOutcome,
     })
   }
 }

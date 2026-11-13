@@ -57,6 +57,7 @@ export async function playPveBattle(
     world.chests,
     world.gear,
     world.beasts,
+    world.eventBattles,
     world.clock
   ).execute({
     accountId,
@@ -72,6 +73,7 @@ export async function playPveBattle(
     world.catalogRepository,
     world.wallets,
     world.chests,
+    world.eventBattles,
     world.clock
   )
 

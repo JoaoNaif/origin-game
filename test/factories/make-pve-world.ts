@@ -20,6 +20,9 @@ import { InMemoryChestsRepository } from 'test/repositories/in-memory-chests-rep
 import { InMemoryGearRepository } from 'test/repositories/in-memory-gear-repository'
 import { InMemoryBeastsRepository } from 'test/repositories/in-memory-beasts-repository'
 import { InMemorySquadsRepository } from 'test/repositories/in-memory-squads-repository'
+import { InMemoryEventEntriesRepository } from 'test/repositories/in-memory-event-entries-repository'
+import { InMemoryPendingRewardsRepository } from 'test/repositories/in-memory-pending-rewards-repository'
+import { EventBattles } from '@/domain/events/applications/services/event-battles'
 import { makeAccount } from './make-account'
 import { characterOf, makeRoster } from './make-roster'
 import { makeSquad } from './make-squad'
@@ -58,6 +61,15 @@ export async function makePveWorld(level = 18) {
   await characters.createMany(roster)
   await squads.create(squad)
 
+  const battles = new InMemoryBattlesRepository()
+  const skillOffers = new InMemorySkillOffersRepository()
+  const wallets = new InMemoryWalletsRepository()
+  const chests = new InMemoryChestsRepository()
+  const gear = new InMemoryGearRepository()
+  const beasts = new InMemoryBeastsRepository()
+  const eventEntries = new InMemoryEventEntriesRepository()
+  const pendingRewards = new InMemoryPendingRewardsRepository()
+
   return {
     catalog,
     account,
@@ -68,12 +80,22 @@ export async function makePveWorld(level = 18) {
     squads,
     catalogRepository: new InMemoryCatalogRepository(catalog),
     drafts: new InMemoryBattleDraftsRepository(),
-    battles: new InMemoryBattlesRepository(),
-    skillOffers: new InMemorySkillOffersRepository(),
-    wallets: new InMemoryWalletsRepository(),
-    chests: new InMemoryChestsRepository(),
-    gear: new InMemoryGearRepository(),
-    beasts: new InMemoryBeastsRepository(),
+    battles,
+    skillOffers,
+    wallets,
+    chests,
+    gear,
+    beasts,
+    eventEntries,
+    pendingRewards,
+    eventBattles: new EventBattles(eventEntries, accounts, battles, {
+      charactersRepository: characters,
+      walletsRepository: wallets,
+      chestsRepository: chests,
+      gearRepository: gear,
+      beastsRepository: beasts,
+      pendingRewardsRepository: pendingRewards,
+    }),
     seeds: new FakeSeedGenerator(),
     clock: new FakeClock(),
   }
@@ -106,6 +128,7 @@ export async function startWorldBattle(world: PveWorld) {
     world.chests,
     world.gear,
     world.beasts,
+    world.eventBattles,
     world.clock
   ).execute({
     accountId,

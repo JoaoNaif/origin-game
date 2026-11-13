@@ -1,3 +1,4 @@
+import { EventTemplate } from '@/domain/events/entities/event-template'
 import {
   CatalogEntry,
   CatalogKind,
@@ -50,6 +51,10 @@ export function findCatalogEntry(
       const entity = byKey(catalog.beastTemplates.values())
       return entity ? { kind, entity } : null
     }
+    case 'EVENT': {
+      const entity = byKey(catalog.events.values())
+      return entity ? { kind, entity } : null
+    }
   }
 }
 
@@ -66,6 +71,24 @@ export function catalogUsages(
   const members = catalog.npcSquads.flatMap((squad) =>
     squad.members.map((member) => ({ squad, member }))
   )
+  // os eventos apontam pela `key` (D155): squads de NPC, campo, traço de família e prêmios
+  const events = [...catalog.events.values()]
+  const eventsUsing = (uses: (event: EventTemplate) => boolean) => {
+    for (const event of events)
+      if (uses(event)) usages.push(`evento ${event.key}`)
+  }
+  const rewards = (
+    event: EventTemplate,
+    type: 'CHARACTER' | 'GEAR' | 'BEAST'
+  ) =>
+    event.allRewards.some(
+      (r) =>
+        (r.type === 'CHARACTER' &&
+          type === r.type &&
+          r.templateKey === entity.key) ||
+        (r.type === 'GEAR' && type === r.type && r.gearKey === entity.key) ||
+        (r.type === 'BEAST' && type === r.type && r.beastKey === entity.key)
+    )
 
   switch (kind) {
     case 'VARIANT':
@@ -90,6 +113,11 @@ export function catalogUsages(
       for (const f of catalog.fields)
         if (f.requiredTraitIds.some((t) => t.equals(id)))
           usages.push(`campo ${f.key}`)
+      eventsUsing((e) =>
+        e.requirements.some(
+          (r) => r.type === 'FAMILY' && r.traitKey === entity.key
+        )
+      )
       for (const { squad, member } of members)
         if (member.traitIds.some((t) => t.equals(id)))
           usages.push(`squad de NPC ${squad.key}`)
@@ -100,22 +128,36 @@ export function catalogUsages(
       for (const { squad, member } of members)
         if (member.templateId.equals(id))
           usages.push(`squad de NPC ${squad.key}`)
+      eventsUsing((e) => rewards(e, 'CHARACTER'))
       break
     case 'SKILL':
       for (const { squad, member } of members)
         if (member.skillIds.some((s) => s.equals(id)))
           usages.push(`squad de NPC ${squad.key}`)
       break
-    // a batalha guarda o campo e o rival como valor (foto): ninguém do catálogo aponta para eles
+    // a batalha guarda o campo e o rival como valor (foto); só os eventos apontam para eles
     case 'FIELD':
+      eventsUsing((e) => e.fieldKey === entity.key)
+      break
     case 'NPC_SQUAD':
+      eventsUsing((e) => e.stages.some((s) => s.npcSquadKey === entity.key))
       break
     // só o personagem que sorteou aponta para o despertar (dado de jogador: quem confere é o repositório)
     case 'AWAKENING':
       break
     // só o equipamento das contas aponta para o modelo (dado de jogador: quem confere é o repositório)
     case 'GEAR':
+      eventsUsing((e) => rewards(e, 'GEAR'))
+      break
     case 'BEAST':
+      eventsUsing(
+        (e) =>
+          rewards(e, 'BEAST') ||
+          e.stages.some((s) => s.captureBeastKey === entity.key)
+      )
+      break
+    // a participação das contas aponta para o evento (dado de jogador: quem confere é o repositório)
+    case 'EVENT':
       break
   }
 

@@ -16,7 +16,15 @@ describe('Delete Catalog Entry', () => {
   })
 
   it('should be able to delete an unused entry', async () => {
-    const [squad] = catalogRepository.catalog.npcSquads
+    // os eventos do seed usam alguns squads de NPC (D155): pega um que nenhum usa
+    const used = new Set(
+      [...catalogRepository.catalog.events.values()].flatMap((e) =>
+        e.stages.map((s) => s.npcSquadKey)
+      )
+    )
+    const squad = catalogRepository.catalog.npcSquads.find(
+      (s) => !used.has(s.key)
+    )!
 
     const result = await sut.execute({ kind: 'NPC_SQUAD', key: squad.key })
 

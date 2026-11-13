@@ -5,6 +5,7 @@ import { CharacterTemplate } from '@/domain/characters/entities/character-templa
 import { Trait } from '@/domain/characters/entities/trait'
 import { Variant } from '@/domain/characters/entities/variant'
 import { BeastTemplate } from '@/domain/beasts/entities/beast-template'
+import { EventTemplate } from '@/domain/events/entities/event-template'
 import { GearTemplate } from '@/domain/gear/entities/gear-template'
 import { BattleField } from '@/domain/combat/entities/battle-field'
 import { SnapshotCatalog } from '@/domain/combat/services/build-snapshot'
@@ -25,6 +26,8 @@ export interface GameCatalog extends SnapshotCatalog {
   gearTemplates: ReadonlyMap<string, GearTemplate>
   /** Bestas por id (D154). Fora da `version`: a batalha guarda a besta como valor. */
   beastTemplates: ReadonlyMap<string, BeastTemplate>
+  /** Eventos por id (D155). Fora da `version`: a batalha guarda as regras do evento na foto. */
+  events: ReadonlyMap<string, EventTemplate>
   /** Identifica o conteúdo (gravado na batalha: o replay só é garantido com o mesmo conteúdo). */
   version: string
 }
@@ -40,6 +43,7 @@ export type CatalogEntry =
   | { kind: 'AWAKENING'; entity: Awakening }
   | { kind: 'GEAR'; entity: GearTemplate }
   | { kind: 'BEAST'; entity: BeastTemplate }
+  | { kind: 'EVENT'; entity: EventTemplate }
 
 export type CatalogKind = CatalogEntry['kind']
 

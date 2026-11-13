@@ -3,6 +3,7 @@ import {
   BattleSummary,
   BattlesRepository,
 } from '@/domain/combat/applications/repositories/battles-repository'
+import { EventBattleOutcome } from '@/domain/events/value-objects/event-battle-outcome'
 import { Battle } from '@/domain/combat/entities/battle'
 import { BattleSnapshot } from '@/domain/combat/value-objects/battle-snapshot'
 
@@ -29,6 +30,8 @@ function copy(battle: Battle): Battle {
       finishedAt: battle.finishedAt,
       rewards: [...battle.rewards],
       loot: battle.loot,
+      event: battle.event ? { ...battle.event } : null,
+      eventOutcome: battle.eventOutcome as EventBattleOutcome | null,
     },
     battle.id
   )

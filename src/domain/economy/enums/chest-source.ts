@@ -2,6 +2,8 @@
 export const ChestSource = {
   PURCHASE: 'PURCHASE',
   BATTLE: 'BATTLE',
+  /** Prêmio de evento (D155). */
+  EVENT: 'EVENT',
 } as const
 
 export type ChestSource = (typeof ChestSource)[keyof typeof ChestSource]

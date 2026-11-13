@@ -27,6 +27,9 @@ export function seedCatalog(): GameCatalog {
     beastTemplates: new Map(
       [...content.beasts.values()].map((b) => [b.id.toValue(), b])
     ),
+    events: new Map(
+      [...content.events.values()].map((e) => [e.id.toValue(), e])
+    ),
     version: 'seed-test',
   }
 }
@@ -65,6 +68,7 @@ function withEntry(
     awakenings: map(catalog.awakenings, kind === 'AWAKENING'),
     gearTemplates: map(catalog.gearTemplates, kind === 'GEAR'),
     beastTemplates: map(catalog.beastTemplates, kind === 'BEAST'),
+    events: map(catalog.events, kind === 'EVENT'),
     version: `${catalog.version}+`,
   }
 }

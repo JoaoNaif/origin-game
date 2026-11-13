@@ -56,6 +56,17 @@ import { SkillTier } from '@/domain/skills/enums/skill-tier'
 import { SkillEffect } from '@/domain/skills/value-objects/skill-effect'
 import { NpcSquad } from '@/domain/squads/entities/npc-squad'
 import {
+  EventAttemptLimit,
+  EventStage,
+  EventTemplate,
+} from '@/domain/events/entities/event-template'
+import { EventKind } from '@/domain/events/enums/event-kind'
+import { EventSquadMode } from '@/domain/events/enums/event-squad-mode'
+import { InvalidEventError } from '@/domain/events/errors/invalid-event-error'
+import { EventModifier } from '@/domain/events/value-objects/event-modifier'
+import { EventRequirement } from '@/domain/events/value-objects/event-requirement'
+import { EventReward } from '@/domain/events/value-objects/event-reward'
+import {
   CatalogEntry,
   GameCatalog,
 } from '../applications/repositories/catalog-repository'
@@ -178,6 +189,23 @@ export interface BeastInput {
   titles?: string[]
 }
 
+export interface EventInput {
+  name: string
+  description?: string | null
+  kind: EventKind
+  announceAt: Date
+  startsAt: Date
+  endsAt: Date
+  requirements?: EventRequirement[]
+  attemptLimit?: EventAttemptLimit | null
+  squadMode: EventSquadMode
+  fieldKey?: string | null
+  modifiers?: EventModifier[]
+  stages: EventStage[]
+  completionRewards?: EventReward[]
+  participationRewards?: EventReward[]
+}
+
 /** O pedido do admin, pelo tipo do item. */
 export type CatalogInput =
   | { kind: 'VARIANT'; data: VariantInput }
@@ -189,6 +217,7 @@ export type CatalogInput =
   | { kind: 'AWAKENING'; data: AwakeningInput }
   | { kind: 'GEAR'; data: GearInput }
   | { kind: 'BEAST'; data: BeastInput }
+  | { kind: 'EVENT'; data: EventInput }
 
 /** Ligação (`key`) que não existe, ou regra do `create` do item. */
 export type CatalogEntryError =
@@ -203,6 +232,7 @@ export type CatalogEntryError =
   | InvalidAwakeningError
   | InvalidGearError
   | InvalidBeastError
+  | InvalidEventError
 
 type Built = Either<CatalogEntryError, CatalogEntry>
 
@@ -406,6 +436,26 @@ function build(
           ...input.data,
           requirements: input.data.requirements ?? [],
           titles: input.data.titles ?? [],
+        },
+        id
+      )
+      return result.isLeft()
+        ? left(result.value)
+        : right({ kind: input.kind, entity: result.value })
+    }
+
+    // as `keys` do evento (squads, campo, prêmios) são conferidas pelo catálogo inteiro (`catalogIntegrityError`)
+    case 'EVENT': {
+      const result = EventTemplate.create(
+        {
+          key,
+          ...input.data,
+          requirements: input.data.requirements ?? [],
+          attemptLimit: input.data.attemptLimit ?? null,
+          fieldKey: input.data.fieldKey ?? null,
+          modifiers: input.data.modifiers ?? [],
+          completionRewards: input.data.completionRewards ?? [],
+          participationRewards: input.data.participationRewards ?? [],
         },
         id
       )

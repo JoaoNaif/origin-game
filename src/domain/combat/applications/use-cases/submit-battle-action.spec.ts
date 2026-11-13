@@ -61,6 +61,7 @@ describe('Submit Battle Action', () => {
       world.chests,
       world.gear,
       world.beasts,
+      world.eventBattles,
       world.clock
     ).execute({
       accountId: world.account.id.toString(),
@@ -77,6 +78,7 @@ describe('Submit Battle Action', () => {
       world.catalogRepository,
       world.wallets,
       world.chests,
+      world.eventBattles,
       world.clock
     )
   })

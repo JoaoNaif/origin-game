@@ -1,5 +1,6 @@
 import { Entity } from '@/core/entities/entity'
 import { UniqueEntityId } from '@/core/entities/unique-entity-id'
+import { BattleEventLink } from '../value-objects/battle-event-link'
 
 export interface BattleDraftProps {
   accountId: UniqueEntityId
@@ -9,6 +10,8 @@ export interface BattleDraftProps {
   /** Campo sorteado pela seed (D28); nulo = catálogo sem campos. */
   fieldKey: string | null
   createdAt: Date
+  /** Pré-batalha de evento (D155): o evento e a etapa; ausente = PvE comum. */
+  event?: BattleEventLink | null
 }
 
 /**
@@ -34,6 +37,10 @@ export class BattleDraft extends Entity<BattleDraftProps> {
 
   get createdAt() {
     return this.props.createdAt
+  }
+
+  get event(): Readonly<BattleEventLink> | null {
+    return this.props.event ?? null
   }
 
   static create(props: BattleDraftProps, id?: UniqueEntityId) {

@@ -26,6 +26,8 @@ import {
 import { BattleLoot } from '@/domain/economy/value-objects/battle-loot'
 import { BattleReward } from '../value-objects/battle-reward'
 import { BattleSnapshot, SnapshotSide } from '../value-objects/battle-snapshot'
+import { BattleEventLink } from '../value-objects/battle-event-link'
+import { EventBattleOutcome } from '@/domain/events/value-objects/event-battle-outcome'
 
 /** Maior seed aceita (cabe num inteiro de 32 bits com sinal do Postgres). */
 export const MAX_SEED = 2_147_483_647
@@ -54,6 +56,10 @@ export interface BattleProps {
   rewards: BattleReward[]
   /** Moeda, fragmentos e baú do fim (D150); nulo até lá, e na desistência. */
   loot: BattleLoot | null
+  /** Batalha de evento (D155): o evento e a etapa; nulo = PvE comum. */
+  event: BattleEventLink | null
+  /** O que rendeu no evento (etapa, captura, prêmios); nulo até o fim, na desistência e fora de evento. */
+  eventOutcome: EventBattleOutcome | null
 }
 
 export interface StartPveBattleInput {
@@ -66,6 +72,8 @@ export interface StartPveBattleInput {
   snapshot: BattleSnapshot
   /** Data vinda de fora (o domínio não lê o relógio). */
   startedAt: Date
+  /** Batalha de evento (D155). */
+  event?: BattleEventLink | null
 }
 
 export interface FinishBattleInput {
@@ -156,6 +164,14 @@ export class Battle extends Entity<BattleProps> {
     return this.props.loot
   }
 
+  get event(): Readonly<BattleEventLink> | null {
+    return this.props.event
+  }
+
+  get eventOutcome(): Readonly<EventBattleOutcome> | null {
+    return this.props.eventOutcome
+  }
+
   get isFinished() {
     return this.props.status === BattleStatus.FINISHED
   }
@@ -204,6 +220,8 @@ export class Battle extends Entity<BattleProps> {
           finishedAt: null,
           rewards: [],
           loot: null,
+          event: input.event ? { ...input.event } : null,
+          eventOutcome: null,
         },
         id
       )
@@ -334,6 +352,25 @@ export class Battle extends Entity<BattleProps> {
     }
 
     this.props.loot = { ...loot }
+
+    return right(undefined)
+  }
+
+  /** Guarda o que a batalha rendeu no evento (só numa batalha de evento encerrada, uma vez). */
+  recordEventOutcome(
+    outcome: EventBattleOutcome
+  ): Either<InvalidBattleError, void> {
+    if (!this.isFinished) {
+      return left(new InvalidBattleError('a batalha ainda não terminou'))
+    }
+    if (!this.props.event) {
+      return left(new InvalidBattleError('a batalha não é de evento'))
+    }
+    if (this.props.eventOutcome) {
+      return left(new InvalidBattleError('o evento já foi entregue'))
+    }
+
+    this.props.eventOutcome = outcome
 
     return right(undefined)
   }

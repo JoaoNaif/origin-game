@@ -13,6 +13,9 @@ import { BeastsRepository } from '@/domain/beasts/applications/repositories/beas
 import { BeastTemplate } from '@/domain/beasts/entities/beast-template'
 import { GearRepository } from '@/domain/gear/applications/repositories/gear-repository'
 import { GearTemplate } from '@/domain/gear/entities/gear-template'
+import { EventBattles } from '@/domain/events/applications/services/event-battles'
+import { InvalidEventError } from '@/domain/events/errors/invalid-event-error'
+import { EventBattleOutcome } from '@/domain/events/value-objects/event-battle-outcome'
 import { BattleEngine } from '../../engine/battle-engine'
 import { BattleEvent } from '../../engine/battle-events'
 import { Battle } from '../../entities/battle'
@@ -46,19 +49,24 @@ type StartPveBattleUseCaseResponse = Either<
   | NotAllowedError
   | BuildSnapshotError
   | InvalidBattleError
-  | InvalidActionError,
+  | InvalidActionError
+  | InvalidEventError,
   {
     battle: Battle
     engine: BattleEngine
     events: readonly BattleEvent[]
     rewards: CharacterReward[]
     loot: BattleLoot | null
+    /** Batalha de evento que já terminou (raro no início): o que rendeu no evento. */
+    eventOutcome: EventBattleOutcome | null
   }
 >
 
 /**
  * Começa a batalha da pré-batalha com o squad escolhido (D75): monta a foto dos dois lados (com o equipamento vivo de
  * cada um, D153), grava a batalha e joga as vezes da máquina até a vez do jogador. A seed e o campo vêm da pré-batalha (D28, D112).
+ * Pré-batalha de evento (D155): confere a entrada (evento aberto, etapa, tentativas, squad travado, requisitos), põe os
+ * modificadores na foto e conta a tentativa.
  */
 export class StartPveBattleUseCase {
   constructor(
@@ -73,6 +81,7 @@ export class StartPveBattleUseCase {
     private chestsRepository: ChestsRepository,
     private gearRepository: GearRepository,
     private beastsRepository: BeastsRepository,
+    private eventBattles: EventBattles,
     private clock: Clock
   ) {}
 
@@ -144,6 +153,22 @@ export class StartPveBattleUseCase {
     )
     if (snapshot.isLeft()) return left(snapshot.value)
 
+    const now = this.clock.now()
+    let battleSnapshot = snapshot.value
+    const entered = draft.event
+      ? await this.eventBattles.enter({
+          accountId,
+          eventId: draft.event.eventId,
+          stage: draft.event.stage,
+          characters,
+          snapshot: snapshot.value,
+          catalog,
+          now,
+        })
+      : null
+    if (entered?.isLeft()) return left(entered.value)
+    if (entered?.isRight()) battleSnapshot = entered.value.snapshot
+
     const started = Battle.startPve({
       account,
       squadId: squad.id,
@@ -151,8 +176,9 @@ export class StartPveBattleUseCase {
       seed: draft.seed,
       engineVersion: ENGINE_VERSION,
       contentVersion: catalog.version,
-      snapshot: snapshot.value,
-      startedAt: this.clock.now(),
+      snapshot: battleSnapshot,
+      startedAt: now,
+      event: draft.event,
     })
     if (started.isLeft()) return left(started.value)
 
@@ -170,6 +196,9 @@ export class StartPveBattleUseCase {
     if (!claimed) return left(new ResourceNotFoundError('pré-batalha'))
 
     await this.battlesRepository.create(battle)
+    if (entered?.isRight()) {
+      await this.eventBattles.recordAttempt(entered.value, characterIds, now)
+    }
 
     const { rewards, loot } = await deliverBattleRewards(battle, engine, {
       charactersRepository: this.charactersRepository,
@@ -180,7 +209,19 @@ export class StartPveBattleUseCase {
       catalog,
       now: this.clock.now(),
     })
+    const eventOutcome = await this.eventBattles.deliver(
+      battle,
+      catalog,
+      this.clock.now()
+    )
 
-    return right({ battle, engine, events: engine.events, rewards, loot })
+    return right({
+      battle,
+      engine,
+      events: engine.events,
+      rewards,
+      loot,
+      eventOutcome,
+    })
   }
 }

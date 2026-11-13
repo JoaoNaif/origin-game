@@ -9,6 +9,8 @@ export const WalletReason = {
   INVENTORY_EXPANSION: 'INVENTORY_EXPANSION',
   GEAR_SALE: 'GEAR_SALE',
   BEAST_SALE: 'BEAST_SALE',
+  /** Prêmio de evento, ou personagem repetido do evento que virou moeda (D155). */
+  EVENT_REWARD: 'EVENT_REWARD',
 } as const
 
 export type WalletReason = (typeof WalletReason)[keyof typeof WalletReason]
