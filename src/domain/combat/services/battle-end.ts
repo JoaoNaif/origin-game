@@ -11,19 +11,34 @@ export const EXHAUSTION_AFTER_ROUND = 3
 export const EXHAUSTION_HEAL_STEP = 0.05
 export const EXHAUSTION_DAMAGE_STEP = 0.12
 
-/** Quantas rodadas de Exaustão já valem (0 até a 3; 1 na 4; 27 na 30). */
-export function exhaustionStep(round: number): number {
-  return Math.max(0, round - EXHAUSTION_AFTER_ROUND)
+/**
+ * Quantas rodadas de Exaustão já valem (0 até a 3; 1 na 4; 27 na 30). `afterRound`: a pesquisa pode adiantar o começo
+ * (modificador `EARLY_EXHAUSTION`, D155).
+ */
+export function exhaustionStep(
+  round: number,
+  afterRound = EXHAUSTION_AFTER_ROUND
+): number {
+  return Math.max(0, round - afterRound)
 }
 
 /** Multiplicador da cura (e do escudo concedido) na rodada: chega a 0 na 23. */
-export function healMultiplier(round: number): number {
-  return Math.max(0, 1 - EXHAUSTION_HEAL_STEP * exhaustionStep(round))
+export function healMultiplier(
+  round: number,
+  afterRound = EXHAUSTION_AFTER_ROUND
+): number {
+  return Math.max(
+    0,
+    1 - EXHAUSTION_HEAL_STEP * exhaustionStep(round, afterRound)
+  )
 }
 
 /** Multiplicador do dano na rodada: +60% na 8, +108% na 12. */
-export function damageMultiplier(round: number): number {
-  return 1 + EXHAUSTION_DAMAGE_STEP * exhaustionStep(round)
+export function damageMultiplier(
+  round: number,
+  afterRound = EXHAUSTION_AFTER_ROUND
+): number {
+  return 1 + EXHAUSTION_DAMAGE_STEP * exhaustionStep(round, afterRound)
 }
 
 /** A batalha termina à força quando a rodada 30 fecha (D72, D106). */

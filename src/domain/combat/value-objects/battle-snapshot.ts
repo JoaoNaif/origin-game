@@ -182,6 +182,19 @@ export interface SnapshotFieldSetup {
 }
 
 /**
+ * Regras trocadas da batalha (modificadores da pesquisa, D155, `events_brief.md` 5.2). Os stats nivelados já vêm no
+ * `level` das unidades; o campo fixo, no `field`.
+ */
+export interface BattleRules {
+  /** A Exaustão começa depois desta rodada (o normal é a 3). */
+  exhaustionAfterRound?: number
+  /** Nenhuma cura (skill, passiva, regeneração); o escudo continua. */
+  noHealing?: boolean
+  /** Todas as unidades com a mesma Velocidade (a média do início). */
+  equalSpeed?: boolean
+}
+
+/**
  * Foto dos dois lados no início da batalha (D8, `data_model.md` 3.10). Com a seed e o log de ações, reproduz a
  * batalha inteira (replay), mesmo que o personagem ou o catálogo mudem depois.
  */
@@ -189,4 +202,6 @@ export interface BattleSnapshot {
   player: SnapshotSide
   opponent: SnapshotSide
   field: SnapshotFieldSetup
+  /** Regras do evento (pesquisa); ausente = as normais. */
+  rules?: BattleRules
 }

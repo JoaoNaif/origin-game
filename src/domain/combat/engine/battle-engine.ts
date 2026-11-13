@@ -30,6 +30,7 @@ import {
   BattleOutcome,
   checkElimination,
   damageMultiplier,
+  EXHAUSTION_AFTER_ROUND,
   forcedEnd,
   healMultiplier,
   SideSummary,
@@ -303,6 +304,11 @@ export class BattleEngine {
    */
   readonly damageScale: number
   private readonly healShare: number
+  /** Regras trocadas pelo evento (pesquisa, D155): Exaustão mais cedo, sem cura, Velocidade igual. */
+  private readonly exhaustionAfter: number
+  private readonly noHealing: boolean
+  /** Velocidade de todas as unidades com `equalSpeed` (a média do início); nulo = a de cada uma. */
+  private equalSpeed: number | null = null
 
   /** Foto, sorte do início e ações já jogadas: bastam para reconstruir a batalha (`fork`). */
   private readonly initialRng: Rng
@@ -318,6 +324,9 @@ export class BattleEngine {
     const level = all.reduce((sum, u) => sum + u.level, 0) / all.length
     this.damageScale = damageScale(level)
     this.healShare = healShare(level)
+    this.exhaustionAfter =
+      snapshot.rules?.exhaustionAfterRound ?? EXHAUSTION_AFTER_ROUND
+    this.noHealing = snapshot.rules?.noHealing ?? false
 
     if (source) {
       for (const [ref, u] of source.units) {
@@ -350,6 +359,7 @@ export class BattleEngine {
       this.field = { ...source.field }
       this.initialRng = source.initialRng
       this.history = [...source.history]
+      this.equalSpeed = source.equalSpeed
       return
     }
 
@@ -380,14 +390,21 @@ export class BattleEngine {
       OPPONENT: new BattleGrid(snapshot.opponent.units),
     }
 
+    const starting = [...this.units.values()].filter((u) => u.alive)
+    if (snapshot.rules?.equalSpeed) {
+      this.equalSpeed = Math.max(
+        1,
+        starting.reduce((sum, u) => sum + this.stat(u, Stat.SPEED), 0) /
+          starting.length
+      )
+    }
+
     this.queue = new TurnQueue(
-      [...this.units.values()]
-        .filter((u) => u.alive)
-        .map((u) => ({
-          ref: u.ref,
-          speed: this.stat(u, Stat.SPEED),
-          statAverage: statAverage(u.base),
-        })),
+      starting.map((u) => ({
+        ref: u.ref,
+        speed: this.equalSpeed ?? this.stat(u, Stat.SPEED),
+        statAverage: statAverage(u.base),
+      })),
       rng
     )
 
@@ -985,7 +1002,7 @@ export class BattleEngine {
             this.stat(attacker, Stat.DEFENSE),
             this.damageScale
           ) *
-            damageMultiplier(round) *
+            damageMultiplier(round, this.exhaustionAfter) *
             attacker.conditions.damageTakenMultiplier *
             (1 - this.damageReduction(attacker, true) / 100)
         )
@@ -1941,7 +1958,7 @@ export class BattleEngine {
         this.damageScale
       ) *
       falloff *
-      damageMultiplier(round) *
+      damageMultiplier(round, this.exhaustionAfter) *
       target.conditions.damageTakenMultiplier *
       traitDamageMultiplier(actor, skill.range) *
       this.coverMultiplier(skill, target) *
@@ -1999,9 +2016,11 @@ export class BattleEngine {
         ? this.woundMultiplier(target) * this.supportHealMultiplier(target)
         : 1
 
+    if (kind === 'HEAL' && this.noHealing) return 0
+
     return Math.round(
       healAmount(power, target.desgaste.maxHp, this.healShare) *
-        healMultiplier(round) *
+        healMultiplier(round, this.exhaustionAfter) *
         wound
     )
   }
@@ -2482,7 +2501,7 @@ export class BattleEngine {
         const round = this.current?.round ?? this.queue.currentRound
         const amount = Math.round(
           ((owner.desgaste.maxHp * effect.percentOfMaxHp) / 100) *
-            healMultiplier(round) *
+            (this.noHealing ? 0 : healMultiplier(round, this.exhaustionAfter)) *
             this.woundMultiplier(owner) *
             this.supportHealMultiplier(owner)
         )
@@ -2615,7 +2634,7 @@ export class BattleEngine {
     const round = this.current?.round ?? this.queue.currentRound
     const amount = Math.round(
       ((unit.desgaste.maxHp * regen.percentOfMaxHp) / 100) *
-        healMultiplier(round) *
+        (this.noHealing ? 0 : healMultiplier(round, this.exhaustionAfter)) *
         this.woundMultiplier(unit)
     )
     const healed = Math.min(amount, unit.desgaste.maxHp - unit.hp)
@@ -2714,7 +2733,7 @@ export class BattleEngine {
     this.grids[owner.side].place(beast.ref, cell)
     this.queue.add({
       ref: beast.ref,
-      speed: Math.max(1, this.stat(beast, Stat.SPEED)),
+      speed: this.speedOf(beast),
       statAverage: statAverage(beast.base),
     })
     this.log.push({
@@ -2893,10 +2912,14 @@ export class BattleEngine {
     if (unit.hp > unit.desgaste.maxHp) unit.hp = unit.desgaste.maxHp
   }
 
+  /** Velocidade na fila: a da unidade, ou a mesma para todos (`equalSpeed`, D155). */
+  private speedOf(unit: EngineUnit): number {
+    return this.equalSpeed ?? Math.max(1, this.stat(unit, Stat.SPEED))
+  }
+
   private refreshSpeeds() {
     for (const unit of this.units.values()) {
-      if (unit.alive)
-        this.queue.setSpeed(unit.ref, Math.max(1, this.stat(unit, Stat.SPEED)))
+      if (unit.alive) this.queue.setSpeed(unit.ref, this.speedOf(unit))
     }
   }
 
